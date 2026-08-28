@@ -14,6 +14,8 @@ import {
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { STUDIO_INFO } from '../data/mockData';
+import { StudioConfig } from '../types';
+import { normalizeWhatsAppNumber } from '../utils/formatters';
 
 interface NavbarProps {
   activeTab: 'showcase' | 'admin' | 'customer-portal';
@@ -26,6 +28,7 @@ interface NavbarProps {
   onGoogleSignIn?: () => void;
   onLogOut?: () => void;
   isFirebaseConnected?: boolean;
+  studioConfig?: StudioConfig;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,7 +42,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   onGoogleSignIn,
   onLogOut,
   isFirebaseConnected,
+  studioConfig,
 }) => {
+  const adminWhatsApp = normalizeWhatsAppNumber(
+    studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
+  );
+
   const handleNavClick = (sectionId: string) => {
     setActiveTab('showcase');
     setTimeout(() => {
@@ -215,7 +223,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* WhatsApp Floating link */}
             <a
-              href={`https://wa.me/${STUDIO_INFO.whatsapp}?text=${encodeURIComponent('Halo Dimensi Fotografi, saya ingin tanya info paket dan booking foto.')}`}
+              href={`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent('Halo Dimensi Fotografi, saya ingin tanya info paket dan booking foto.')}`}
               target="_blank"
               rel="noreferrer"
               className="p-2 sm:p-2.5 bg-[#141414] text-gray-300 border border-white/10 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors"

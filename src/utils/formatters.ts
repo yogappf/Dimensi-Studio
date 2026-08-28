@@ -1,5 +1,17 @@
 import { BookingOrder } from '../types';
 
+export function normalizeWhatsAppNumber(phone?: string): string {
+  if (!phone) return '6282123456789';
+  let clean = phone.replace(/\D/g, '');
+  if (!clean) return '6282123456789';
+  if (clean.startsWith('0')) {
+    clean = '62' + clean.slice(1);
+  } else if (!clean.startsWith('62')) {
+    clean = '62' + clean;
+  }
+  return clean;
+}
+
 export function formatRupiah(amount: number): string {
   if (typeof amount !== 'number' || isNaN(amount)) return 'Rp 0';
   return new Intl.NumberFormat('id-ID', {
@@ -44,8 +56,14 @@ export function formatDateIndonesian(dateString: string): string {
   }
 }
 
-export function generateWhatsAppLink(order: BookingOrder, studioPhone = '6282123456789'): string {
-  const cleanPhone = studioPhone.replace(/\D/g, '');
+export function generateWhatsAppLink(
+  order: BookingOrder,
+  studioPhone = '6282123456789',
+  paymentInfo?: { selectedBank?: string; transferProofNote?: string }
+): string {
+  const cleanPhone = normalizeWhatsAppNumber(studioPhone);
+  const dpAmount = Math.round(order.totalPrice * 0.5);
+
   let message = `Halo Dimensi Fotografi Studio! 📸✨
 
 Saya ingin mengonfirmasi pendaftaran / order jasa foto dengan rincian berikut:
@@ -57,7 +75,9 @@ Saya ingin mengonfirmasi pendaftaran / order jasa foto dengan rincian berikut:
 
 *Pilihan Paket*: ${order.packageName} (${formatRupiah(order.packagePrice)})
 *Tambahan (Add-ons)*: ${order.addOnsText || 'Tidak ada'}
-*Estimasi Total*: ${formatRupiah(order.totalPrice)} (${order.paymentPreference})
+*Total Biaya*: ${formatRupiah(order.totalPrice)}
+*Estimasi DP (50%)*: ${formatRupiah(dpAmount)}
+*Ketentuan Bayar*: ${order.paymentPreference}
 
 *Jadwal Sesi*: ${formatDateIndonesian(order.sessionDate)}
 *Waktu Sesi*: ${order.sessionTime}
@@ -65,17 +85,24 @@ Saya ingin mengonfirmasi pendaftaran / order jasa foto dengan rincian berikut:
 
 *Catatan / Konsep*: ${order.notes || '-'}`;
 
+  if (paymentInfo?.selectedBank) {
+    message += `\n\n*Rekening Tujuan Transfer*: ${paymentInfo.selectedBank}`;
+  }
+  if (paymentInfo?.transferProofNote) {
+    message += `\n*Catatan Pembayaran / Pengirim*: ${paymentInfo.transferProofNote}`;
+  }
+
   if (order.driveFolderUrl) {
     message += `\n\n*Link Google Drive*: ${order.driveFolderUrl}`;
   }
 
-  message += `\n\nMohon konfirmasi ketersediaan jadwal fotografer dan nomor rekening pembayaran DP. Terima kasih!`;
+  message += `\n\nSaya telah mencatat nomor rekening pembayaran studio dan ingin mengonfirmasi jadwal fotografer. Terima kasih! 🙏`;
 
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
 export function generateClientDeliveryWhatsAppLink(order: BookingOrder): string {
-  const cleanPhone = order.phone.replace(/\D/g, '');
+  const cleanPhone = normalizeWhatsAppNumber(order.phone);
   const message = `Halo Kak ${order.clientName}! 📸✨
 
 Terima kasih telah mempercayakan sesi foto Anda bersama *Dimensi Fotografi*.
@@ -95,10 +122,14 @@ Silakan diunduh dan disimpan ya Kak. Jika ada foto yang ingin direvisi atau dice
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
-
-export function generateDirectInquiryLink(packageName: string, packagePrice: number, studioPhone = '6282123456789'): string {
-  const cleanPhone = studioPhone.replace(/\D/g, '');
+export function generateDirectInquiryLink(
+  packageName: string,
+  packagePrice: number,
+  studioPhone = '6282123456789'
+): string {
+  const cleanPhone = normalizeWhatsAppNumber(studioPhone);
   const message = `Halo Dimensi Fotografi, saya tertarik dan ingin konsultasi mengenai *${packageName}* (${formatRupiah(packagePrice)}). Boleh dibantu info ketersediaan slot tanggal & detailnya?`;
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
+
 

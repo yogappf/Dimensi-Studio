@@ -771,6 +771,7 @@ export default function App() {
         onGoogleSignIn={handleGoogleSignIn}
         onLogOut={handleLogOut}
         isFirebaseConnected={isFirebaseConnected}
+        studioConfig={studioConfig}
       />
 
       {/* Main View Switching */}
@@ -781,6 +782,7 @@ export default function App() {
             <Hero
               onOpenBooking={handleOpenBooking}
               onSelectPackageFilter={(cat) => setSelectedCategory(cat as CategoryType)}
+              studioConfig={studioConfig}
             />
 
             {/* Package Catalog & Pricing */}
@@ -789,6 +791,7 @@ export default function App() {
               setSelectedCategory={setSelectedCategory}
               onSelectPackageForBooking={handleSelectPackageForBooking}
               packages={packages}
+              studioConfig={studioConfig}
             />
 
             {/* Interactive Addons & Price Calculator */}
@@ -821,6 +824,7 @@ export default function App() {
             orders={orders}
             currentUser={currentUser}
             onGoToBooking={handleOpenBooking}
+            studioConfig={studioConfig}
           />
         )}
 
@@ -885,12 +889,14 @@ export default function App() {
           setActiveTab('admin');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
+        studioConfig={studioConfig}
       />
 
       {/* Digital Receipt / Booking Confirmation Modal */}
       <BookingSuccessModal
         order={latestCreatedOrder}
         onClose={() => setLatestCreatedOrder(null)}
+        studioConfig={studioConfig}
       />
 
     </div>

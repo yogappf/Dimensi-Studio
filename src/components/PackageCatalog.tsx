@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { PhotoPackage, CategoryType } from '../types';
+import { PhotoPackage, CategoryType, StudioConfig } from '../types';
 import { PHOTO_PACKAGES, STUDIO_INFO } from '../data/mockData';
-import { formatRupiah, generateDirectInquiryLink } from '../utils/formatters';
+import { formatRupiah, generateDirectInquiryLink, normalizeWhatsAppNumber } from '../utils/formatters';
 import { Check, Clock, Sparkles, MessageCircle, Share2, ArrowRight, Info, Eye, X } from 'lucide-react';
 
 interface PackageCatalogProps {
@@ -9,6 +9,7 @@ interface PackageCatalogProps {
   setSelectedCategory: (cat: CategoryType) => void;
   onSelectPackageForBooking: (pkg: PhotoPackage) => void;
   packages?: PhotoPackage[];
+  studioConfig?: StudioConfig;
 }
 
 export const PackageCatalog: React.FC<PackageCatalogProps> = ({
@@ -16,9 +17,14 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
   setSelectedCategory,
   onSelectPackageForBooking,
   packages = PHOTO_PACKAGES,
+  studioConfig,
 }) => {
   const [detailModalPackage, setDetailModalPackage] = useState<PhotoPackage | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const adminWhatsApp = normalizeWhatsAppNumber(
+    studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
+  );
 
   const categories: { id: CategoryType; label: string }[] = [
     { id: 'all', label: '✨ Semua Paket' },
@@ -201,7 +207,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
 
                       {/* Tanya WhatsApp */}
                       <a
-                        href={generateDirectInquiryLink(pkg.name, pkg.price, STUDIO_INFO.whatsapp)}
+                        href={generateDirectInquiryLink(pkg.name, pkg.price, adminWhatsApp)}
                         target="_blank"
                         rel="noreferrer"
                         className="py-2 px-1 bg-[#1A1A1A] hover:bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 text-[10px] uppercase tracking-wider font-medium flex items-center justify-center gap-1 transition-colors"
@@ -328,7 +334,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                 <ArrowRight className="w-4 h-4" />
               </button>
               <a
-                href={generateDirectInquiryLink(detailModalPackage.name, detailModalPackage.price, STUDIO_INFO.whatsapp)}
+                href={generateDirectInquiryLink(detailModalPackage.name, detailModalPackage.price, adminWhatsApp)}
                 target="_blank"
                 rel="noreferrer"
                 className="py-3 px-5 bg-[#1F1F1F] hover:bg-[#2A2A2A] text-emerald-400 border border-emerald-500/40 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2"

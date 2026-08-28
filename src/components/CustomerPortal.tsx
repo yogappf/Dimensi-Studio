@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { BookingOrder, OrderStatus } from '../types';
-import { formatRupiah, formatDateIndonesian, generateWhatsAppLink } from '../utils/formatters';
+import { BookingOrder, OrderStatus, StudioConfig } from '../types';
+import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, normalizeWhatsAppNumber } from '../utils/formatters';
 import { STUDIO_INFO } from '../data/mockData';
 import {
   Search,
@@ -29,15 +29,23 @@ interface CustomerPortalProps {
   orders: BookingOrder[];
   currentUser: User | null;
   onGoToBooking: () => void;
+  studioConfig?: StudioConfig;
 }
 
 export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   orders,
   currentUser,
   onGoToBooking,
+  studioConfig,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<BookingOrder | null>(null);
+
+  const adminWhatsApp = normalizeWhatsAppNumber(
+    studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
+  );
+  const studioPhoneDisplay = studioConfig?.phone || studioConfig?.whatsapp || STUDIO_INFO.phone;
+  const studioInstagramDisplay = studioConfig?.instagram || STUDIO_INFO.instagram;
 
   // If user is logged in with email, find orders matching email or phone or createdBy
   const userOrders = useMemo(() => {
@@ -489,7 +497,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               {/* Receipt Footer */}
               <div className="border-t border-white/10 pt-3 text-center text-[10px] text-gray-500 font-mono">
                 <p>Terima kasih telah mempercayakan momen berharga Anda bersama Dimensi Fotografi.</p>
-                <p className="mt-1">WhatsApp: {STUDIO_INFO.phone} | Instagram: {STUDIO_INFO.instagram}</p>
+                <p className="mt-1">WhatsApp: {studioPhoneDisplay} | Instagram: {studioInstagramDisplay}</p>
               </div>
             </div>
 
@@ -505,7 +513,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                 <span>Cetak / Simpan PDF</span>
               </button>
               <a
-                href={generateWhatsAppLink(selectedOrder)}
+                href={generateWhatsAppLink(selectedOrder, adminWhatsApp)}
                 target="_blank"
                 rel="noreferrer"
                 className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"

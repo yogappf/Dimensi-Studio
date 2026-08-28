@@ -1,16 +1,28 @@
 import React from 'react';
 import { Camera, MapPin, Phone, Mail, Instagram, Clock, ArrowUp, Heart } from 'lucide-react';
 import { STUDIO_INFO } from '../data/mockData';
+import { StudioConfig } from '../types';
+import { normalizeWhatsAppNumber } from '../utils/formatters';
 
 interface FooterProps {
   onOpenBooking: () => void;
   onOpenAdmin: () => void;
+  studioConfig?: StudioConfig;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin, studioConfig }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const adminWhatsApp = normalizeWhatsAppNumber(
+    studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
+  );
+  const studioName = studioConfig?.studioName || 'DIMENSI';
+  const studioAddress = studioConfig?.address || STUDIO_INFO.address;
+  const studioHours = studioConfig?.operatingHours || STUDIO_INFO.operatingHours;
+  const studioEmail = studioConfig?.email || STUDIO_INFO.email;
+  const studioPhone = studioConfig?.whatsapp || studioConfig?.phone || STUDIO_INFO.phone;
 
   return (
     <footer className="bg-[#0A0A0A] text-gray-400 border-t border-white/10 pt-16 pb-12">
@@ -25,18 +37,18 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin }) =>
                 <Camera className="w-5 h-5" />
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="font-serif text-2xl font-bold tracking-tight text-white">DIMENSI</span>
+                <span className="font-serif text-2xl font-bold tracking-tight text-white">{studioName}</span>
                 <span className="text-[10px] font-mono tracking-widest uppercase text-[#D4AF37]">STUDIO</span>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-gray-400 leading-relaxed max-w-md">
-              {STUDIO_INFO.description}
+              {studioConfig?.tagline || STUDIO_INFO.description}
             </p>
 
             <div className="flex items-center gap-3 pt-2">
               <a
-                href={`https://wa.me/${STUDIO_INFO.whatsapp}`}
+                href={`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent('Halo ' + studioName + ', saya ingin bertanya mengenai layanan foto.')}`}
                 target="_blank"
                 rel="noreferrer"
                 className="p-2.5 bg-[#141414] border border-white/10 text-gray-400 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors"
@@ -54,7 +66,7 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin }) =>
                 <Instagram className="w-4 h-4" />
               </a>
               <a
-                href={`mailto:${STUDIO_INFO.email}`}
+                href={`mailto:${studioEmail}`}
                 className="p-2.5 bg-[#141414] border border-white/10 text-gray-400 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors"
                 title="Email Dimensi Studio"
               >
@@ -86,19 +98,19 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin }) =>
             <div className="space-y-2.5 text-gray-400">
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
-                <span>{STUDIO_INFO.address}</span>
+                <span>{studioAddress}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Clock className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                <span>{STUDIO_INFO.operatingHours}</span>
+                <span>{studioHours}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                <span className="font-mono">WhatsApp: +{STUDIO_INFO.whatsapp}</span>
+                <span className="font-mono">WhatsApp: +{adminWhatsApp}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                <span>Email: {STUDIO_INFO.email}</span>
+                <span>Email: {studioEmail}</span>
               </div>
             </div>
 

@@ -1,13 +1,19 @@
 import React from 'react';
 import { Camera, Sparkles, Award, ShieldCheck, Clock, ArrowRight, MessageCircle, Star, Heart } from 'lucide-react';
 import { STUDIO_INFO } from '../data/mockData';
+import { StudioConfig } from '../types';
+import { normalizeWhatsAppNumber } from '../utils/formatters';
 
 interface HeroProps {
   onOpenBooking: () => void;
   onSelectPackageFilter: (category: string) => void;
+  studioConfig?: StudioConfig;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter }) => {
+export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter, studioConfig }) => {
+  const adminWhatsApp = normalizeWhatsAppNumber(
+    studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
+  );
   return (
     <section className="relative overflow-hidden bg-[#0A0A0A] text-[#E0E0E0] pt-10 pb-16 lg:py-20 border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -56,7 +62,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
               </button>
 
               <a
-                href={`https://wa.me/${STUDIO_INFO.whatsapp}?text=Halo%20Dimensi%20Fotografi,%20saya%20tertarik%20untuk%20konsultasi%20paket%20foto`}
+                href={`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent('Halo Dimensi Fotografi, saya tertarik untuk konsultasi paket foto.')}`}
                 target="_blank"
                 rel="noreferrer"
                 className="border border-emerald-500/40 bg-emerald-950/20 text-emerald-400 hover:bg-emerald-500/10 py-3.5 px-4 text-xs font-semibold flex items-center gap-2 transition-all"
