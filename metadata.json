@@ -1,0 +1,6 @@
+{
+  "name": "Dimensi Fotografi - Booking & Katalog Layanan",
+  "description": "Aplikasi usaha fotografi profesional dengan katalog paket foto, formulir booking order, panel admin lengkap (manajemen portofolio galeri, manajemen paket foto, dan manajemen layanan add-on), panel data konsumen dengan ekspor Excel, integrasi Google Drive pengiriman hasil foto klien, serta sinkronisasi Google Cloud Firestore.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

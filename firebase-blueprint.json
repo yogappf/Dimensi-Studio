@@ -1,0 +1,251 @@
+{
+  "entities": {
+    "bookingOrder": {
+      "title": "Booking Order",
+      "description": "A photography session booking order placed by a client or created by studio admin",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Unique booking reference ID"
+        },
+        "clientName": {
+          "type": "string",
+          "maxLength": 100,
+          "minLength": 2,
+          "description": "Client full name"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30,
+          "minLength": 6,
+          "description": "Client WhatsApp / phone number"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Client email address"
+        },
+        "packageId": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Photography package identifier"
+        },
+        "packageName": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Photography package name"
+        },
+        "packagePrice": {
+          "type": "number",
+          "description": "Package base price in IDR"
+        },
+        "addOnIds": {
+          "type": "array",
+          "description": "Selected add-on service identifiers"
+        },
+        "addOnsText": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Summary of selected add-on services"
+        },
+        "addOnsTotal": {
+          "type": "number",
+          "description": "Total sum of add-on services in IDR"
+        },
+        "totalPrice": {
+          "type": "number",
+          "description": "Total grand price in IDR"
+        },
+        "sessionDate": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Session date formatted YYYY-MM-DD"
+        },
+        "sessionTime": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Session start time formatted HH:MM WIB"
+        },
+        "locationType": {
+          "type": "string",
+          "enum": ["studio", "outdoor", "venue"],
+          "description": "Type of photoshoot location"
+        },
+        "locationAddress": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Address or studio location info"
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Special requests or wardrobe concept notes"
+        },
+        "driveFolderId": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Google Drive folder ID for client deliverables"
+        },
+        "driveFolderUrl": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Google Drive folder URL link for client deliverables"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Menunggu Konfirmasi", "Terkonfirmasi & Terjadwal", "Proses Editing", "Selesai", "Dibatalkan"],
+          "description": "Booking status"
+        },
+        "paymentPreference": {
+          "type": "string",
+          "enum": ["DP 30%", "DP 50%", "Lunas"],
+          "description": "Client payment preference"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Timestamp of booking creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Timestamp of last modification"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 128,
+          "description": "Author UID or public indicator"
+        }
+      },
+      "required": [
+        "clientName",
+        "phone",
+        "packageId",
+        "packageName",
+        "packagePrice",
+        "totalPrice",
+        "sessionDate",
+        "sessionTime",
+        "locationType",
+        "locationAddress",
+        "status",
+        "paymentPreference"
+      ]
+    },
+    "admin": {
+      "title": "Studio Administrator",
+      "description": "Authorized studio administrator profile",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Admin email address"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "owner"],
+          "description": "Role of the administrator"
+        },
+        "createdAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Registration date"
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "photoPackage": {
+      "title": "Photography Package",
+      "description": "Catalog photography service package offering",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Unique package identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 150,
+          "minLength": 2,
+          "description": "Package title"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["all", "wedding", "prewedding", "wisuda", "keluarga", "produk", "event"],
+          "description": "Package category"
+        },
+        "tagline": {
+          "type": "string",
+          "maxLength": 250,
+          "description": "Short promo subtitle"
+        },
+        "price": {
+          "type": "number",
+          "description": "Package current price in IDR"
+        },
+        "originalPrice": {
+          "type": "number",
+          "description": "Package crossed original price in IDR"
+        },
+        "duration": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Photoshoot duration text"
+        },
+        "popular": {
+          "type": "boolean",
+          "description": "Whether package is highlighted as popular"
+        },
+        "features": {
+          "type": "array",
+          "description": "List of included photoshoot features"
+        },
+        "deliverables": {
+          "type": "array",
+          "description": "List of deliverables such as prints, album, cloud link"
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Banner cover image URL"
+        },
+        "recommendedFor": {
+          "type": "string",
+          "maxLength": 250,
+          "description": "Audience recommendation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Timestamp of last edit"
+        }
+      },
+      "required": [
+        "name",
+        "category",
+        "price",
+        "duration",
+        "features",
+        "deliverables"
+      ]
+    }
+  },
+  "firestore": {
+    "/bookings/{bookingId}": {
+      "schema": "bookingOrder",
+      "description": "Collection of all studio photography booking orders"
+    },
+    "/packages/{packageId}": {
+      "schema": "photoPackage",
+      "description": "Collection of studio service packages"
+    },
+    "/admins/{adminId}": {
+      "schema": "admin",
+      "description": "Collection of verified studio administrators"
+    }
+  }
+}

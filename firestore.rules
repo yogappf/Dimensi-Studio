@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isStudioAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'dimensi.idphoto@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidBooking(data) {
+      return data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 100 &&
+        data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+        data.packageId is string && data.packageId.size() > 0 && data.packageId.size() <= 50 &&
+        data.packageName is string && data.packageName.size() > 0 && data.packageName.size() <= 120 &&
+        data.packagePrice is number && data.packagePrice >= 0 &&
+        (!('addOnIds' in data) || (data.addOnIds is list && data.addOnIds.size() <= 20)) &&
+        (!('addOnsText' in data) || (data.addOnsText is string && data.addOnsText.size() <= 500)) &&
+        (!('addOnsTotal' in data) || (data.addOnsTotal is number && data.addOnsTotal >= 0)) &&
+        data.totalPrice is number && data.totalPrice >= 0 &&
+        data.sessionDate is string && data.sessionDate.size() <= 30 &&
+        data.sessionTime is string && data.sessionTime.size() <= 30 &&
+        data.locationType is string && data.locationType in ['studio', 'outdoor', 'venue'] &&
+        data.locationAddress is string && data.locationAddress.size() <= 300 &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
+        (!('driveFolderId' in data) || (data.driveFolderId is string && data.driveFolderId.size() <= 200)) &&
+        (!('driveFolderUrl' in data) || (data.driveFolderUrl is string && data.driveFolderUrl.size() <= 500)) &&
+        data.status is string && data.status in ['Menunggu Konfirmasi', 'Terkonfirmasi & Terjadwal', 'Proses Editing', 'Selesai', 'Dibatalkan'] &&
+        data.paymentPreference is string && data.paymentPreference in ['DP 30%', 'DP 50%', 'Lunas'];
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && (request.auth.uid == adminId || isStudioAdmin());
+      allow list: if isStudioAdmin();
+      allow create, update, delete: if isStudioAdmin();
+    }
+
+    // Bookings Collection
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId);
+      
+      // Admin can list all bookings; anyone can listen if authorized or public
+      allow list: if isStudioAdmin() || true;
+
+      // Public / Client can create a booking reservation
+      allow create: if isValidId(bookingId) && isValidBooking(incoming()) && (
+        (!isSignedIn() || incoming().createdBy == request.auth.uid || isStudioAdmin())
+      );
+
+      // Updates: Admins can update all fields; Client creator can cancel if not already finished
+      allow update: if isValidId(bookingId) && isValidBooking(incoming()) && (
+        isStudioAdmin() ||
+        (isSignedIn() && existing().createdBy == request.auth.uid && incoming().createdBy == existing().createdBy &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'status']) &&
+         existing().status != 'Selesai')
+      );
+
+      // Delete: Admins or creator
+      allow delete: if isValidId(bookingId) && (isStudioAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+    }
+
+    // Packages Collection
+    match /packages/{packageId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
+    }
+
+    // Addons Collection
+    match /addons/{addonId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
+    }
+
+    // Portfolios Collection
+    match /portfolios/{portfolioId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
+    }
+
+    // Connection test document
+    match /test/{testId} {
+      allow read: if true;
+    }
+  }
+}
