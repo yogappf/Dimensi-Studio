@@ -364,11 +364,11 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             <button
               onClick={onExitAdmin}
               className="px-3 py-2.5 bg-rose-950/20 hover:bg-rose-900/40 text-rose-300 border border-rose-800/40 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
-              title="Kunci & Keluar dari Panel Admin"
+              title={isMasterAdmin ? 'Kunci & Keluar dari Panel Admin' : 'Kunci & Keluar dari Portal Staf'}
               id="btn-lock-admin"
             >
               <LogOut className="w-3.5 h-3.5 text-rose-400" />
-              <span>Keluar Admin</span>
+              <span>{isMasterAdmin ? 'Keluar Admin' : 'Keluar Staf'}</span>
             </button>
           )}
 

@@ -22,6 +22,7 @@ interface NavbarProps {
   onOpenBooking: () => void;
   currentUser?: User | null;
   isAdminAuthenticated: boolean;
+  isMasterAdmin?: boolean;
   onGoogleSignIn?: () => void;
   onLogOut?: () => void;
   isFirebaseConnected?: boolean;
@@ -34,6 +35,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenBooking,
   currentUser,
   isAdminAuthenticated,
+  isMasterAdmin = false,
   onGoogleSignIn,
   onLogOut,
   isFirebaseConnected,
@@ -65,8 +67,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="text-xl sm:text-2xl font-bold tracking-widest text-white flex items-center gap-2">
                 <span>DIMENSI<span className="text-[#D4AF37]">STUDIO</span></span>
                 {isAdminAuthenticated && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 tracking-wider">
-                    ADMIN
+                  <span className={`text-[10px] font-mono px-2 py-0.5 border tracking-wider ${
+                    isMasterAdmin
+                      ? 'bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/40'
+                      : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                  }`}>
+                    {isMasterAdmin ? 'MASTER' : 'STAF'}
                   </span>
                 )}
               </div>
@@ -158,13 +164,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'bg-[#141414] text-gray-400 border-white/10 hover:border-[#D4AF37]/50 hover:text-[#D4AF37]'
                 }`}
                 id="tab-switcher-admin-btn"
-                title="Akses Portal Manajemen Admin & Data Konsumen"
+                title={isAdminAuthenticated ? (isMasterAdmin ? "Akses Panel Super Admin" : "Akses Portal Staf") : "Akses Portal Masuk Admin & Staf"}
               >
                 <Shield className="w-3.5 h-3.5 text-[#D4AF37]" />
                 <span className="hidden sm:inline">
-                  {isAdminAuthenticated ? 'Panel Admin' : 'Portal Admin'}
+                  {isAdminAuthenticated ? (isMasterAdmin ? 'Panel Master' : 'Portal Staf') : 'Portal Admin'}
                 </span>
-                <span className="sm:hidden">Admin</span>
+                <span className="sm:hidden">{isMasterAdmin ? 'Master' : 'Staf'}</span>
                 {orderCount > 0 && (
                   <span className="px-1.5 py-0.2 bg-black/50 text-[#D4AF37] text-[10px] border border-white/10 font-mono">
                     {orderCount}

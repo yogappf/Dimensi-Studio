@@ -767,6 +767,7 @@ export default function App() {
         onOpenBooking={handleOpenBooking}
         currentUser={currentUser}
         isAdminAuthenticated={isAdminAuthenticated}
+        isMasterAdmin={isMasterAdminSession || isGoogleAdminEmail}
         onGoogleSignIn={handleGoogleSignIn}
         onLogOut={handleLogOut}
         isFirebaseConnected={isFirebaseConnected}
