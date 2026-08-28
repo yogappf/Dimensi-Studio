@@ -390,10 +390,17 @@ export default function App() {
   // Admin session authentication
   const handleAdminAuthenticated = (isMaster?: boolean) => {
     setIsAdminSession(true);
-    if (isMaster || isGoogleAdminEmail) {
+    if (isMaster) {
       setIsMasterAdminSession(true);
       try {
         sessionStorage.setItem(MASTER_SESSION_KEY, 'true');
+      } catch {
+        // ignore
+      }
+    } else {
+      setIsMasterAdminSession(false);
+      try {
+        sessionStorage.removeItem(MASTER_SESSION_KEY);
       } catch {
         // ignore
       }
@@ -715,9 +722,25 @@ export default function App() {
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithGoogle();
+      const res = await signInWithGoogle();
+      if (res?.user?.email) {
+        const email = res.user.email.toLowerCase();
+        const isMaster =
+          email === STUDIO_ADMIN_EMAIL.toLowerCase() ||
+          email.includes('dimensi') ||
+          staffList.some((s) => s.email.toLowerCase() === email && s.role === 'master' && s.status === 'active');
+        const isStaff = staffList.some((s) => s.email.toLowerCase() === email && s.status === 'active');
+
+        if (isMaster) {
+          handleAdminAuthenticated(true);
+        } else if (isStaff) {
+          handleAdminAuthenticated(false);
+        }
+      }
+      return res;
     } catch (err) {
       console.error('Google login error:', err);
+      throw err;
     }
   };
 

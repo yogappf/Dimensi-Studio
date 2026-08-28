@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Shield, Lock, LogIn, KeyRound, AlertCircle, ArrowLeft, CheckCircle2, Crown } from 'lucide-react';
+import { Shield, Lock, LogIn, KeyRound, AlertCircle, ArrowLeft, CheckCircle2, Crown, Sparkles } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { StudioConfig } from '../types';
 
 interface AdminGateProps {
   onAdminAuthenticated: (isMaster?: boolean) => void;
-  onGoogleSignIn: () => void;
+  onGoogleSignIn: () => Promise<any> | void;
   onBackToCustomer: () => void;
   currentUser: User | null;
   isAdminEmail: boolean;
@@ -33,22 +33,22 @@ export const AdminGate: React.FC<AdminGateProps> = ({
     e.preventDefault();
     const input = passcode.trim();
     if (!input) {
-      setErrorMsg('Masukkan kata sandi / PIN Admin Studio.');
+      setErrorMsg('Masukkan PIN Admin Studio.');
       return;
     }
 
     if (input === MASTER_PASSCODE || input.toUpperCase() === 'MASTER_DIMENSI_2026') {
       setErrorMsg('');
-      onAdminAuthenticated(true); // Master Admin
+      onAdminAuthenticated(true); // Master / Super Admin
     } else if (
       input.toUpperCase() === STAFF_PASSCODE.toUpperCase() ||
       input === 'DIMENSI2026' ||
       input === '123456'
     ) {
       setErrorMsg('');
-      onAdminAuthenticated(false); // Staff Admin
+      onAdminAuthenticated(false); // Staff Admin (Only Data Konsumen)
     } else {
-      setErrorMsg('Kata sandi / PIN Admin salah. Silakan periksa kembali atau login dengan Akun Google Admin.');
+      setErrorMsg('PIN yang Anda masukkan salah. Silakan periksa kembali atau login dengan Akun Google Admin.');
     }
   };
 
@@ -56,9 +56,44 @@ export const AdminGate: React.FC<AdminGateProps> = ({
     setLoading(true);
     setErrorMsg('');
     try {
-      await onGoogleSignIn();
+      // If user is already logged in as master/admin, immediately authenticate
+      if (currentUser) {
+        const email = currentUser.email?.toLowerCase() || '';
+        if (isMasterEmail || email === 'dimensi.idphoto@gmail.com') {
+          onAdminAuthenticated(true);
+          return;
+        } else if (isAdminEmail) {
+          onAdminAuthenticated(false);
+          return;
+        }
+      }
+
+      const res: any = await onGoogleSignIn();
+      const user = res?.user || currentUser;
+      if (user) {
+        const email = (user.email || '').toLowerCase();
+        if (email === 'dimensi.idphoto@gmail.com' || isMasterEmail) {
+          onAdminAuthenticated(true);
+        } else if (isAdminEmail) {
+          onAdminAuthenticated(false);
+        } else {
+          // If standard user signs in, prompt or authenticate if email contains studio name
+          if (email.includes('dimensi')) {
+            onAdminAuthenticated(true);
+          } else {
+            setErrorMsg(`Akun Google (${user.email}) berhasil terhubung. Jika ini staf/admin, masukkan PIN di bawah untuk verifikasi hak akses.`);
+          }
+        }
+      }
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Gagal login dengan Google.');
+      console.error('Google sign in error:', err);
+      if (err?.code === 'auth/popup-blocked') {
+        setErrorMsg('Jendela popup login diblokir oleh browser. Izinkan popup untuk situs ini atau gunakan PIN Admin.');
+      } else if (err?.code === 'auth/popup-closed-by-user') {
+        setErrorMsg('Jendela login Google ditutup. Silakan coba kembali atau gunakan PIN.');
+      } else {
+        setErrorMsg(err?.message || 'Gagal login dengan Akun Google. Silakan gunakan PIN Admin.');
+      }
     } finally {
       setLoading(false);
     }
@@ -70,7 +105,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         {/* Decorative corner accent */}
         <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
           <div className="absolute transform rotate-45 bg-[#D4AF37] text-[9px] font-bold text-black py-0.5 right-[-35px] top-[18px] w-[120px] text-center font-mono">
-            {isMasterEmail ? 'MASTER' : 'ADMIN'}
+            {isMasterEmail ? 'SUPER ADMIN' : 'ADMIN PORTAL'}
           </div>
         </div>
 
@@ -93,37 +128,41 @@ export const AdminGate: React.FC<AdminGateProps> = ({
             <span>Portal Admin Studio</span>
           </h2>
           <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
-            Halaman ini khusus untuk manajemen studio, fotografer, & rekap data konsumen.
+            Akses portal khusus manajemen staf & Super Admin Dimensi Fotografi.
           </p>
         </div>
 
-        {/* Current User Info if signed in but not recognized */}
-        {currentUser && !isAdminEmail && (
-          <div className="mb-6 p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
-            <p className="font-semibold mb-1">Akun Terhubung: {currentUser.email}</p>
-            <p className="text-[11px] text-amber-200/80">
-              Akun ini terdaftar sebagai Konsumen. Masukkan PIN Admin Studio di bawah untuk mengakses panel manajemen.
-            </p>
-          </div>
-        )}
-
-        {currentUser && isAdminEmail && (
-          <div className="mb-6 p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <div>
-                <span className="font-bold">{isMasterEmail ? '👑 Master Admin Terverifikasi' : 'Akun Admin Resmi Terdeteksi'}</span>
-                <p className="text-[10px] text-emerald-400 font-mono truncate max-w-[200px]">{currentUser.email}</p>
+        {/* Current User Info if signed in with recognized Admin/Master account */}
+        {currentUser && (isAdminEmail || isMasterEmail || currentUser.email?.toLowerCase() === 'dimensi.idphoto@gmail.com') ? (
+          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <div className="truncate">
+                <span className="font-bold block text-white text-xs">
+                  {isMasterEmail || currentUser.email?.toLowerCase() === 'dimensi.idphoto@gmail.com'
+                    ? '👑 Super Admin Terverifikasi'
+                    : '🛡️ Staf Admin Terverifikasi'}
+                </span>
+                <p className="text-[11px] text-emerald-400 font-mono truncate">{currentUser.email}</p>
               </div>
             </div>
             <button
-              onClick={() => onAdminAuthenticated(isMasterEmail)}
-              className="px-3 py-1.5 bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md"
+              onClick={() => onAdminAuthenticated(isMasterEmail || currentUser.email?.toLowerCase() === 'dimensi.idphoto@gmail.com')}
+              className="px-4 py-2 bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1.5"
+              id="admin-instant-enter-btn"
             >
-              Masuk
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Masuk Panel</span>
             </button>
           </div>
-        )}
+        ) : currentUser ? (
+          <div className="mb-6 p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+            <p className="font-semibold mb-1">Akun Google Terhubung: {currentUser.email}</p>
+            <p className="text-[11px] text-amber-200/80">
+              Masukkan PIN Admin Studio di bawah untuk memverifikasi hak akses staf/super admin.
+            </p>
+          </div>
+        ) : null}
 
         {/* Error Notification */}
         {errorMsg && (
@@ -138,17 +177,17 @@ export const AdminGate: React.FC<AdminGateProps> = ({
           <button
             onClick={handleGoogleAdminClick}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#1A1A1A] hover:bg-[#242424] text-white border border-white/20 hover:border-[#D4AF37] transition-all text-xs font-bold tracking-wider uppercase cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#1A1A1A] hover:bg-[#242424] text-white border border-white/20 hover:border-[#D4AF37] transition-all text-xs font-bold tracking-wider uppercase cursor-pointer disabled:opacity-50"
             id="admin-google-login-btn"
           >
             <LogIn className="w-4 h-4 text-[#D4AF37]" />
-            <span>{loading ? 'Memproses...' : 'Login dengan Google Admin'}</span>
+            <span>{loading ? 'Menghubungkan Akun Google...' : 'Login dengan Google Admin'}</span>
           </button>
 
           <div className="relative flex items-center justify-center my-6">
             <div className="border-t border-white/10 w-full"></div>
             <span className="bg-[#121212] px-3 text-[10px] uppercase font-mono tracking-widest text-gray-500 absolute">
-              Atau Gunakan PIN Studio
+              Atau Gunakan PIN
             </span>
           </div>
 
@@ -156,22 +195,20 @@ export const AdminGate: React.FC<AdminGateProps> = ({
           <form onSubmit={handlePasscodeSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
-                PIN / Passcode Admin Studio
+                PIN Admin
               </label>
               <div className="relative">
                 <input
                   type="password"
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Masukkan PIN Admin (cth: DIMENSI2026)"
+                  placeholder="Masukkan PIN"
                   className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none font-mono"
                   id="admin-passcode-input"
+                  autoComplete="off"
                 />
                 <KeyRound className="w-4 h-4 text-gray-500 absolute right-3.5 top-3 pointer-events-none" />
               </div>
-              <p className="text-[10px] text-gray-500 mt-1.5 font-mono">
-                Hint staf: <span className="text-[#D4AF37]">{STAFF_PASSCODE}</span> | Master: <span className="text-amber-400/70">{MASTER_PASSCODE}</span>
-              </p>
             </div>
 
             <button
@@ -188,7 +225,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         {/* Footer info */}
         <div className="mt-8 pt-4 border-t border-white/10 text-center">
           <p className="text-[11px] text-gray-500">
-            Bukan staf studio? Silakan kembali ke katalog untuk memesan sesi foto.
+            Khusus fotografer, staf operasional, dan pemilik studio Dimensi.
           </p>
         </div>
       </div>

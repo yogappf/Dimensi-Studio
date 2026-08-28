@@ -375,89 +375,102 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         </div>
       </div>
 
-      {/* Sub-tab Navigation (Konsumen vs Paket vs Add-On vs Portofolio) */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-4">
-        <button
-          onClick={() => setActiveSubTab('orders')}
-          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-            activeSubTab === 'orders'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-              : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-          }`}
-          id="tab-orders-view"
-        >
-          <Users className="w-4 h-4" />
-          <span>Data Konsumen ({orders.length})</span>
-        </button>
+      {/* Sub-tab Navigation (Konsumen vs Paket vs Add-On vs Portofolio vs Google Drive vs Master Admin) */}
+      {isMasterAdmin ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-4">
+          <button
+            onClick={() => setActiveSubTab('orders')}
+            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'orders'
+                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
+                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
+            }`}
+            id="tab-orders-view"
+          >
+            <Users className="w-4 h-4" />
+            <span>Data Konsumen ({orders.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('packages')}
-          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-            activeSubTab === 'packages'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-              : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-          }`}
-          id="tab-packages-view"
-        >
-          <Package className="w-4 h-4" />
-          <span>📦 Paket Foto ({packages.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('packages')}
+            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'packages'
+                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
+                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
+            }`}
+            id="tab-packages-view"
+          >
+            <Package className="w-4 h-4" />
+            <span>📦 Master Paket ({packages.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('addons')}
-          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-            activeSubTab === 'addons'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-              : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-          }`}
-          id="tab-addons-view"
-        >
-          <Layers className="w-4 h-4" />
-          <span>➕ Layanan Add-On ({addons.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('addons')}
+            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'addons'
+                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
+                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
+            }`}
+            id="tab-addons-view"
+          >
+            <Layers className="w-4 h-4" />
+            <span>➕ Layanan Add-On ({addons.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('portfolios')}
-          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-            activeSubTab === 'portfolios'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-              : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-          }`}
-          id="tab-portfolios-view"
-        >
-          <ImageIcon className="w-4 h-4" />
-          <span>🖼️ Portofolio Galeri ({portfolios.length})</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('portfolios')}
+            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'portfolios'
+                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
+                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
+            }`}
+            id="tab-portfolios-view"
+          >
+            <ImageIcon className="w-4 h-4" />
+            <span>🖼️ Portofolio Galeri ({portfolios.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('drive')}
-          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-            activeSubTab === 'drive'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
-              : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
-          }`}
-          id="tab-drive-view"
-        >
-          <HardDrive className="w-4 h-4 text-[#D4AF37]" />
-          <span>📁 Google Drive Cloud Foto</span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('drive')}
+            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+              activeSubTab === 'drive'
+                ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg'
+                : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white hover:border-white/30'
+            }`}
+            id="tab-drive-view"
+          >
+            <HardDrive className="w-4 h-4 text-[#D4AF37]" />
+            <span>📁 Google Drive Cloud Foto</span>
+          </button>
 
-        {/* Master Admin Tab */}
-        <button
-          onClick={() => setActiveSubTab('master')}
-          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ml-auto ${
-            activeSubTab === 'master'
-              ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-xl ring-1 ring-[#D4AF37]/50'
-              : 'bg-[#1c1708] text-[#D4AF37] border-[#D4AF37]/40 hover:bg-[#D4AF37]/20 hover:text-white'
-          }`}
-          id="tab-master-admin-view"
-        >
-          <Crown className="w-4 h-4 text-amber-900" />
-          <span>👑 Master Admin</span>
-        </button>
-      </div>
+          {/* Master Admin Tab */}
+          <button
+            onClick={() => setActiveSubTab('master')}
+            className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ml-auto ${
+              activeSubTab === 'master'
+                ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-xl ring-1 ring-[#D4AF37]/50'
+                : 'bg-[#1c1708] text-[#D4AF37] border-[#D4AF37]/40 hover:bg-[#D4AF37]/20 hover:text-white'
+            }`}
+            id="tab-master-admin-view"
+          >
+            <Crown className="w-4 h-4 text-amber-900" />
+            <span>👑 Master Admin & Profil</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+          <div className="flex items-center gap-2.5 px-3.5 py-2 bg-[#141414] border border-[#D4AF37]/40 text-xs font-mono text-gray-200">
+            <Users className="w-4 h-4 text-[#D4AF37]" />
+            <span className="font-semibold text-white">Mode Akses Staf Studio</span>
+            <span className="text-gray-400">| Rekap Data Konsumen ({orders.length} Pesanan)</span>
+          </div>
+          <span className="text-[11px] font-mono text-gray-400">
+            💡 Menu Master Paket, Profil Studio & Staf dikhususkan untuk Super Admin.
+          </span>
+        </div>
+      )}
 
-      {activeSubTab === 'master' && (
+      {isMasterAdmin && activeSubTab === 'master' && (
         <MasterAdminManager
           currentUser={currentUser}
           isMasterAdmin={isMasterAdmin}
@@ -477,7 +490,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {activeSubTab === 'drive' && (
+      {isMasterAdmin && activeSubTab === 'drive' && (
         <DriveManager
           orders={orders}
           onUpdateOrder={onUpdateOrder || (() => {})}
@@ -486,7 +499,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {activeSubTab === 'packages' && (
+      {isMasterAdmin && activeSubTab === 'packages' && (
         <PackageManager
           packages={packages}
           onAddPackage={onAddPackage}
@@ -497,7 +510,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {activeSubTab === 'addons' && (
+      {isMasterAdmin && activeSubTab === 'addons' && (
         <AddonManager
           addons={addons}
           onAddAddon={onAddAddon}
@@ -507,7 +520,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {activeSubTab === 'portfolios' && (
+      {isMasterAdmin && activeSubTab === 'portfolios' && (
         <PortfolioManager
           portfolios={portfolios}
           onAddPortfolio={onAddPortfolio}
@@ -517,7 +530,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
         />
       )}
 
-      {activeSubTab === 'orders' && (
+      {(!isMasterAdmin || activeSubTab === 'orders') && (
         <>
           {/* Export Success Notification Toast */}
       {exportSuccessMsg && (
