@@ -866,12 +866,12 @@ export default function App() {
           ) : (
             <AdminGate
               onAdminAuthenticated={handleAdminAuthenticated}
-              onGoogleSignIn={handleGoogleSignIn}
               onBackToCustomer={() => setActiveTab('showcase')}
               currentUser={currentUser}
               isAdminEmail={isGoogleAdminEmail || isStaffAdminUser}
               isMasterEmail={isGoogleAdminEmail || isMasterStaffUser}
               studioConfig={studioConfig}
+              staffList={staffList}
             />
           )
         )}

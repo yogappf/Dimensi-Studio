@@ -37,6 +37,11 @@ import {
   Sparkles,
   ExternalLink,
   RefreshCw,
+  UserCheck,
+  UserCog,
+  Eye,
+  EyeOff,
+  Key,
 } from 'lucide-react';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
 import {
@@ -91,7 +96,16 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   onRestoreAllData,
   isFirebaseConnected,
 }) => {
-  const [activeTab, setActiveTab] = useState<'staff' | 'security' | 'profile' | 'backup' | 'audit'>('staff');
+  const [activeTab, setActiveTab] = useState<'master_user' | 'staff' | 'security' | 'profile' | 'backup' | 'audit'>('master_user');
+
+  // Master User Form State
+  const [masterUsername, setMasterUsername] = useState(studioConfig.masterUsername || 'dimensi');
+  const [masterName, setMasterName] = useState(studioConfig.masterName || 'Master Admin Dimensi');
+  const [masterEmail, setMasterEmail] = useState(studioConfig.masterEmail || 'dimensi.idphoto@gmail.com');
+  const [masterPhone, setMasterPhone] = useState(studioConfig.masterPhone || '0821-2345-6789');
+  const [masterPasscodeVal, setMasterPasscodeVal] = useState(studioConfig.masterPasscode || 'MASTER_DIMENSI_2026');
+  const [showMasterPasscode, setShowMasterPasscode] = useState(false);
+  const [saveMasterSuccess, setSaveMasterSuccess] = useState(false);
 
   // Form states: Staff Add/Edit
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -115,6 +129,64 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const [restoreJsonText, setRestoreJsonText] = useState('');
   const [restoreStatusMsg, setRestoreStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Handle Master User Save
+  const handleSaveMasterUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const u = masterUsername.trim().toLowerCase();
+    const p = masterPasscodeVal.trim();
+
+    if (!u) {
+      alert('Username Master Admin tidak boleh kosong.');
+      return;
+    }
+    if (!p) {
+      alert('PIN Master Admin tidak boleh kosong.');
+      return;
+    }
+
+    const updated: StudioConfig = {
+      ...studioConfig,
+      ...configForm,
+      masterUsername: u,
+      masterName: masterName.trim(),
+      masterEmail: masterEmail.trim().toLowerCase(),
+      masterPhone: masterPhone.trim(),
+      masterPasscode: p,
+    };
+
+    setConfigForm(updated);
+    setMasterPasscode(p);
+    onUpdateStudioConfig(updated);
+
+    try {
+      await saveStudioConfigToFirestore(updated);
+
+      // Also sync Master staff record if present in staffList
+      const masterStaff = staffList.find((s) => s.role === 'master');
+      if (masterStaff) {
+        const staffUpdates: Partial<AdminStaff> = {
+          name: masterName.trim() || masterStaff.name,
+          email: masterEmail.trim().toLowerCase() || masterStaff.email,
+          phone: masterPhone.trim() || masterStaff.phone,
+        };
+        onUpdateStaff(masterStaff.id, staffUpdates);
+        await updateStaffInFirestore(masterStaff.id, staffUpdates);
+      }
+
+      await logAuditEvent(
+        currentUser?.email || masterEmail || 'Master Admin',
+        'Update Master User',
+        `Memperbarui data Master User: Username (${u}), Nama (${masterName}), PIN Master.`,
+        'security'
+      );
+
+      setSaveMasterSuccess(true);
+      setTimeout(() => setSaveMasterSuccess(false), 3500);
+    } catch (err) {
+      console.error('Error saving master user:', err);
+    }
+  };
 
   // Handle Studio Config Save
   const handleSaveConfig = async (e: React.FormEvent) => {
@@ -147,7 +219,9 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       ...configForm,
       staffPasscode: staffPasscode.trim(),
       masterPasscode: masterPasscode.trim(),
+      masterPasscodeVal: masterPasscode.trim(),
     };
+    setMasterPasscodeVal(masterPasscode.trim());
     setConfigForm(updated);
     onUpdateStudioConfig(updated);
     try {
@@ -422,12 +496,26 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       {/* Navigation Sub-Tabs for Master Admin */}
       <div className="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3">
         <button
+          onClick={() => setActiveTab('master_user')}
+          className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'master_user'
+              ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-md'
+              : 'bg-[#1c1708] text-[#D4AF37] border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 hover:text-white'
+          }`}
+          id="tab-master-user-btn"
+        >
+          <Crown className="w-3.5 h-3.5" />
+          <span>Pengaturan Master User</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('staff')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'staff'
               ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
+          id="tab-staff-management-btn"
         >
           <Users className="w-3.5 h-3.5" />
           <span>Kelola Staf & Akses ({staffList.length})</span>
@@ -440,6 +528,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
+          id="tab-security-btn"
         >
           <KeyRound className="w-3.5 h-3.5" />
           <span>Keamanan & PIN Studio</span>
@@ -452,6 +541,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
+          id="tab-profile-btn"
         >
           <Building className="w-3.5 h-3.5" />
           <span>Profil Bisnis & Rekening Bank</span>
@@ -464,6 +554,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
+          id="tab-backup-btn"
         >
           <Database className="w-3.5 h-3.5" />
           <span>Backup & Restore Cloud</span>
@@ -476,11 +567,218 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
+          id="tab-audit-btn"
         >
           <History className="w-3.5 h-3.5" />
           <span>Log Aktivitas ({auditLogs.length})</span>
         </button>
       </div>
+
+      {/* TAB 0: PENGATURAN MASTER USER */}
+      {activeTab === 'master_user' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Master User Edit Form */}
+          <div className="lg:col-span-2 bg-[#141414] border border-[#D4AF37]/30 p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-4">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-mono text-[#D4AF37] uppercase tracking-wider">
+                  <Crown className="w-4 h-4 text-[#D4AF37]" />
+                  <span>Akun Utama Super Administrator</span>
+                </div>
+                <h3 className="text-lg font-serif font-bold text-white mt-1">
+                  Pengaturan & Update Kredensial Master User
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Ubah username, nama pemilik, email resmi, dan PIN akses Super Admin Dimensi Fotografi.
+                </p>
+              </div>
+            </div>
+
+            {saveMasterSuccess && (
+              <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                <span>Kredensial Master User berhasil diperbarui dan disinkronkan ke Google Cloud Firestore!</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveMasterUser} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* 1. Username Master */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Username Master Admin</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={masterUsername}
+                    onChange={(e) => setMasterUsername(e.target.value)}
+                    placeholder="Contoh: dimensi / superadmin"
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-amber-500/40 text-amber-100 text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                    id="input-master-username"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Digunakan saat login di kolom Username Portal Admin.
+                  </p>
+                </div>
+
+                {/* 2. Nama Pemilik / Master */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300">
+                    Nama Pemilik / Super Admin
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={masterName}
+                    onChange={(e) => setMasterName(e.target.value)}
+                    placeholder="Contoh: Master Admin Dimensi"
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none"
+                    id="input-master-name"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Nama yang tercatat pada log audit dan struk studio.
+                  </p>
+                </div>
+
+                {/* 3. Email Resmi Master */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Email Resmi Super Admin</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={masterEmail}
+                    onChange={(e) => setMasterEmail(e.target.value)}
+                    placeholder="dimensi.idphoto@gmail.com"
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                    id="input-master-email"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Alamat email utama penanggung jawab studio.
+                  </p>
+                </div>
+
+                {/* 4. Nomor WhatsApp / Kontak Master */}
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>No. WhatsApp / HP Master</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={masterPhone}
+                    onChange={(e) => setMasterPhone(e.target.value)}
+                    placeholder="0821-2345-6789"
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                    id="input-master-phone"
+                  />
+                  <p className="text-[10px] text-gray-500">
+                    Kontak darurat pemilik studio.
+                  </p>
+                </div>
+              </div>
+
+              {/* 5. PIN Master Admin Passcode */}
+              <div className="pt-3 border-t border-white/10 space-y-1.5">
+                <label className="block text-xs font-mono uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                  <Key className="w-3.5 h-3.5" />
+                  <span>PIN Rahasia Master Admin (Passcode Akses Penuh)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showMasterPasscode ? 'text' : 'password'}
+                    required
+                    value={masterPasscodeVal}
+                    onChange={(e) => setMasterPasscodeVal(e.target.value)}
+                    placeholder="Contoh: MASTER_DIMENSI_2026"
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-amber-500/40 text-amber-200 text-xs font-mono tracking-wider focus:border-amber-400 focus:outline-none"
+                    id="input-master-passcode"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMasterPasscode(!showMasterPasscode)}
+                    className="absolute right-3.5 top-2.5 text-gray-400 hover:text-white cursor-pointer p-0.5"
+                  >
+                    {showMasterPasscode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[11px] text-amber-400/80">
+                  PIN ini memberikan otorisasi penuh untuk mengedit seluruh paket foto, portofolio galeri, Google Drive cloud, profil studio, dan mengelola staf.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-white/10 flex items-center justify-between">
+                <span className="text-[11px] text-gray-400 font-mono">
+                  Sinkronisasi langsung ke database cloud Firestore
+                </span>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+                  id="btn-save-master-user"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>Simpan Data Master User</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Right Summary Info Card */}
+          <div className="bg-[#141414] border border-white/10 p-6 space-y-5 flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="w-12 h-12 bg-[#D4AF37]/20 border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37]">
+                <Crown className="w-6 h-6" />
+              </div>
+
+              <div>
+                <span className="px-2 py-0.5 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 text-[10px] font-bold uppercase font-mono tracking-wider">
+                  ROLE: SUPER ADMINISTRATOR
+                </span>
+                <h4 className="text-base font-serif font-bold text-white mt-2">
+                  Status Akun Master
+                </h4>
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+                  Akun Master User memiliki wewenang mutlak atas operasional digital studio. Pastikan username dan PIN dijaga kerahasiaannya.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-white/10 text-xs font-mono">
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Username Login:</span>
+                  <span className="text-[#D4AF37] font-bold">{masterUsername || 'dimensi'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Nama Akun:</span>
+                  <span className="text-white">{masterName || 'Master Admin'}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Email Resmi:</span>
+                  <span className="text-gray-300 truncate max-w-[150px]">{masterEmail}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-white/5">
+                  <span className="text-gray-400">Status Otoritas:</span>
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Full Access
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-[#0A0A0A] border border-white/10 text-[11px] text-gray-400 space-y-1">
+              <span className="font-bold text-white flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-[#D4AF37]" /> Proteksi Hak Akses
+              </span>
+              <p className="text-gray-400">
+                Staf operasional dengan PIN Staf tidak dapat mengakses menu Master User atau merubah pengaturan krusial studio.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* TAB 1: KELOLA STAF & HAK AKSES */}
       {activeTab === 'staff' && (

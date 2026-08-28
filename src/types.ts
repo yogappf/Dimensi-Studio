@@ -104,6 +104,11 @@ export interface StudioConfig {
   qrisUrl?: string;
   staffPasscode: string;
   masterPasscode: string;
+  masterUsername?: string;
+  masterName?: string;
+  masterEmail?: string;
+  masterPhone?: string;
+  staffUsername?: string;
 }
 
 export interface AuditLogItem {

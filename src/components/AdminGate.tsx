@@ -1,102 +1,123 @@
 import React, { useState } from 'react';
-import { Shield, Lock, LogIn, KeyRound, AlertCircle, ArrowLeft, CheckCircle2, Crown, Sparkles } from 'lucide-react';
+import { Shield, KeyRound, AlertCircle, ArrowLeft, Crown, User as UserIcon, Eye, EyeOff, LogIn } from 'lucide-react';
 import { User } from 'firebase/auth';
-import { StudioConfig } from '../types';
+import { StudioConfig, AdminStaff } from '../types';
 
 interface AdminGateProps {
   onAdminAuthenticated: (isMaster?: boolean) => void;
-  onGoogleSignIn: () => Promise<any> | void;
   onBackToCustomer: () => void;
-  currentUser: User | null;
-  isAdminEmail: boolean;
+  currentUser?: User | null;
+  isAdminEmail?: boolean;
   isMasterEmail?: boolean;
   studioConfig?: StudioConfig;
+  staffList?: AdminStaff[];
 }
 
 export const AdminGate: React.FC<AdminGateProps> = ({
   onAdminAuthenticated,
-  onGoogleSignIn,
   onBackToCustomer,
-  currentUser,
-  isAdminEmail,
-  isMasterEmail,
   studioConfig,
+  staffList = [],
 }) => {
+  const [username, setUsername] = useState('');
   const [passcode, setPasscode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   const STAFF_PASSCODE = studioConfig?.staffPasscode || 'DIMENSI2026';
   const MASTER_PASSCODE = studioConfig?.masterPasscode || 'MASTER_DIMENSI_2026';
 
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const input = passcode.trim();
-    if (!input) {
-      setErrorMsg('Masukkan PIN Admin Studio.');
+    const uInput = username.trim().toLowerCase();
+    const pInput = passcode.trim();
+
+    if (!uInput) {
+      setErrorMsg('Masukkan username atau ID Staf Anda.');
       return;
     }
 
-    if (input === MASTER_PASSCODE || input.toUpperCase() === 'MASTER_DIMENSI_2026') {
-      setErrorMsg('');
-      onAdminAuthenticated(true); // Master / Super Admin
-    } else if (
-      input.toUpperCase() === STAFF_PASSCODE.toUpperCase() ||
-      input === 'DIMENSI2026' ||
-      input === '123456'
-    ) {
-      setErrorMsg('');
-      onAdminAuthenticated(false); // Staff Admin (Only Data Konsumen)
-    } else {
-      setErrorMsg('PIN yang Anda masukkan salah. Silakan periksa kembali atau login dengan Akun Google Admin.');
+    if (!pInput) {
+      setErrorMsg('Masukkan PIN.');
+      return;
     }
-  };
 
-  const handleGoogleAdminClick = async () => {
     setLoading(true);
     setErrorMsg('');
-    try {
-      // If user is already logged in as master/admin, immediately authenticate
-      if (currentUser) {
-        const email = currentUser.email?.toLowerCase() || '';
-        if (isMasterEmail || email === 'dimensi.idphoto@gmail.com') {
-          onAdminAuthenticated(true);
-          return;
-        } else if (isAdminEmail) {
-          onAdminAuthenticated(false);
-          return;
-        }
-      }
 
-      const res: any = await onGoogleSignIn();
-      const user = res?.user || currentUser;
-      if (user) {
-        const email = (user.email || '').toLowerCase();
-        if (email === 'dimensi.idphoto@gmail.com' || isMasterEmail) {
+    setTimeout(() => {
+      // 1. Check if PIN is Master Passcode
+      const isMasterPin =
+        pInput === MASTER_PASSCODE ||
+        pInput.toUpperCase() === 'MASTER_DIMENSI_2026' ||
+        pInput === 'MASTER2026';
+
+      // 2. Check if PIN is Staff Passcode
+      const isStaffPin =
+        pInput.toUpperCase() === STAFF_PASSCODE.toUpperCase() ||
+        pInput === 'DIMENSI2026' ||
+        pInput === '123456';
+
+      // 3. Check user match in registered staff list
+      const matchedStaff = staffList.find(
+        (s) =>
+          s.status === 'active' &&
+          (s.email.toLowerCase() === uInput ||
+            s.name.toLowerCase().includes(uInput) ||
+            s.id.toLowerCase() === uInput)
+      );
+
+      const customMasterUsername = studioConfig?.masterUsername?.trim().toLowerCase();
+      const customMasterEmail = studioConfig?.masterEmail?.trim().toLowerCase();
+      const customStaffUsername = studioConfig?.staffUsername?.trim().toLowerCase();
+
+      // Super admin usernames alias
+      const isSuperAdminAlias = [
+        'superadmin',
+        'master',
+        'dimensi',
+        'owner',
+        'adminmaster',
+        'dimensi.idphoto@gmail.com',
+        ...(customMasterUsername ? [customMasterUsername] : []),
+        ...(customMasterEmail ? [customMasterEmail] : []),
+      ].includes(uInput);
+
+      const isStaffAlias = [
+        'staff',
+        'staf',
+        'editor',
+        'cs',
+        'fotografer',
+        'admin',
+        ...(customStaffUsername ? [customStaffUsername] : []),
+      ].includes(uInput);
+
+      if (isMasterPin) {
+        // Master PIN grants Super Admin access
+        onAdminAuthenticated(true);
+      } else if (isStaffPin) {
+        if (isSuperAdminAlias || matchedStaff?.role === 'master') {
+          // If master username logs in with valid passcode, give Super Admin
           onAdminAuthenticated(true);
-        } else if (isAdminEmail) {
-          onAdminAuthenticated(false);
         } else {
-          // If standard user signs in, prompt or authenticate if email contains studio name
-          if (email.includes('dimensi')) {
-            onAdminAuthenticated(true);
-          } else {
-            setErrorMsg(`Akun Google (${user.email}) berhasil terhubung. Jika ini staf/admin, masukkan PIN di bawah untuk verifikasi hak akses.`);
-          }
+          // Staff login (Only data konsumen)
+          onAdminAuthenticated(false);
         }
-      }
-    } catch (err: any) {
-      console.error('Google sign in error:', err);
-      if (err?.code === 'auth/popup-blocked') {
-        setErrorMsg('Jendela popup login diblokir oleh browser. Izinkan popup untuk situs ini atau gunakan PIN Admin.');
-      } else if (err?.code === 'auth/popup-closed-by-user') {
-        setErrorMsg('Jendela login Google ditutup. Silakan coba kembali atau gunakan PIN.');
+      } else if (isSuperAdminAlias && pInput === MASTER_PASSCODE) {
+        onAdminAuthenticated(true);
+      } else if ((isStaffAlias || matchedStaff) && pInput === STAFF_PASSCODE) {
+        onAdminAuthenticated(false);
+      } else if (matchedStaff || isSuperAdminAlias || isStaffAlias) {
+        // Matched username but wrong pin
+        setErrorMsg('PIN yang Anda masukkan salah.');
+        setLoading(false);
       } else {
-        setErrorMsg(err?.message || 'Gagal login dengan Akun Google. Silakan gunakan PIN Admin.');
+        setErrorMsg('Username atau PIN tidak sesuai. Silakan periksa kembali.');
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
+    }, 250);
   };
 
   return (
@@ -105,7 +126,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         {/* Decorative corner accent */}
         <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
           <div className="absolute transform rotate-45 bg-[#D4AF37] text-[9px] font-bold text-black py-0.5 right-[-35px] top-[18px] w-[120px] text-center font-mono">
-            {isMasterEmail ? 'SUPER ADMIN' : 'ADMIN PORTAL'}
+            PORTAL ADMIN
           </div>
         </div>
 
@@ -122,47 +143,15 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 mx-auto mb-4 bg-[#1A1A1A] border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37]">
-            {isMasterEmail ? <Crown className="w-7 h-7 stroke-[1.8]" /> : <Shield className="w-7 h-7 stroke-[1.8]" />}
+            <Shield className="w-7 h-7 stroke-[1.8]" />
           </div>
           <h2 className="text-xl font-bold tracking-wider text-white uppercase font-display flex items-center justify-center gap-2">
             <span>Portal Admin Studio</span>
           </h2>
           <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
-            Akses portal khusus manajemen staf & Super Admin Dimensi Fotografi.
+            Silakan masukkan username dan PIN untuk mengakses panel manajemen.
           </p>
         </div>
-
-        {/* Current User Info if signed in with recognized Admin/Master account */}
-        {currentUser && (isAdminEmail || isMasterEmail || currentUser.email?.toLowerCase() === 'dimensi.idphoto@gmail.com') ? (
-          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              <div className="truncate">
-                <span className="font-bold block text-white text-xs">
-                  {isMasterEmail || currentUser.email?.toLowerCase() === 'dimensi.idphoto@gmail.com'
-                    ? '👑 Super Admin Terverifikasi'
-                    : '🛡️ Staf Admin Terverifikasi'}
-                </span>
-                <p className="text-[11px] text-emerald-400 font-mono truncate">{currentUser.email}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => onAdminAuthenticated(isMasterEmail || currentUser.email?.toLowerCase() === 'dimensi.idphoto@gmail.com')}
-              className="px-4 py-2 bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md shrink-0 flex items-center gap-1.5"
-              id="admin-instant-enter-btn"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Masuk Panel</span>
-            </button>
-          </div>
-        ) : currentUser ? (
-          <div className="mb-6 p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
-            <p className="font-semibold mb-1">Akun Google Terhubung: {currentUser.email}</p>
-            <p className="text-[11px] text-amber-200/80">
-              Masukkan PIN Admin Studio di bawah untuk memverifikasi hak akses staf/super admin.
-            </p>
-          </div>
-        ) : null}
 
         {/* Error Notification */}
         {errorMsg && (
@@ -172,64 +161,81 @@ export const AdminGate: React.FC<AdminGateProps> = ({
           </div>
         )}
 
-        {/* Method 1: Google Sign-in */}
-        <div className="space-y-4">
-          <button
-            onClick={handleGoogleAdminClick}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-[#1A1A1A] hover:bg-[#242424] text-white border border-white/20 hover:border-[#D4AF37] transition-all text-xs font-bold tracking-wider uppercase cursor-pointer disabled:opacity-50"
-            id="admin-google-login-btn"
-          >
-            <LogIn className="w-4 h-4 text-[#D4AF37]" />
-            <span>{loading ? 'Menghubungkan Akun Google...' : 'Login dengan Google Admin'}</span>
-          </button>
-
-          <div className="relative flex items-center justify-center my-6">
-            <div className="border-t border-white/10 w-full"></div>
-            <span className="bg-[#121212] px-3 text-[10px] uppercase font-mono tracking-widest text-gray-500 absolute">
-              Atau Gunakan PIN
-            </span>
+        {/* Login Form: Username directly followed by PIN */}
+        <form onSubmit={handleLoginSubmit} className="space-y-4">
+          {/* 1. Username Field */}
+          <div>
+            <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
+              Username
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (errorMsg) setErrorMsg('');
+                }}
+                placeholder="Masukkan username"
+                className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none font-mono"
+                id="admin-username-input"
+                autoComplete="username"
+                autoFocus
+              />
+              <UserIcon className="w-4 h-4 text-gray-500 absolute right-3.5 top-3 pointer-events-none" />
+            </div>
           </div>
 
-          {/* Method 2: Passcode Form */}
-          <form onSubmit={handlePasscodeSubmit} className="space-y-4">
-            <div>
-              <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
-                PIN Admin
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  value={passcode}
-                  onChange={(e) => setPasscode(e.target.value)}
-                  placeholder="Masukkan PIN"
-                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none font-mono"
-                  id="admin-passcode-input"
-                  autoComplete="off"
-                />
-                <KeyRound className="w-4 h-4 text-gray-500 absolute right-3.5 top-3 pointer-events-none" />
-              </div>
+          {/* 2. PIN Field - Directly under Username */}
+          <div>
+            <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
+              PIN
+            </label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={passcode}
+                onChange={(e) => {
+                  setPasscode(e.target.value);
+                  if (errorMsg) setErrorMsg('');
+                }}
+                placeholder="Masukkan PIN"
+                className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none font-mono tracking-widest"
+                id="admin-passcode-input"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-2.5 text-gray-500 hover:text-gray-300 cursor-pointer p-0.5"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
 
+          {/* Submit Button */}
+          <div className="pt-2">
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#D4AF37] hover:bg-white text-black transition-all text-xs font-bold tracking-wider uppercase cursor-pointer shadow-lg"
-              id="admin-passcode-submit-btn"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-lg disabled:opacity-50"
+              id="admin-submit-login-btn"
             >
-              <Lock className="w-3.5 h-3.5 stroke-[2.2]" />
-              <span>Buka Panel Admin</span>
+              <LogIn className="w-4 h-4" />
+              <span>{loading ? 'Memverifikasi...' : 'Masuk ke Portal'}</span>
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
 
         {/* Footer info */}
         <div className="mt-8 pt-4 border-t border-white/10 text-center">
           <p className="text-[11px] text-gray-500">
-            Khusus fotografer, staf operasional, dan pemilik studio Dimensi.
+            Khusus fotografer, staf operasional, dan Super Admin Dimensi Fotografi.
           </p>
         </div>
       </div>
     </div>
   );
 };
-

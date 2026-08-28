@@ -46,6 +46,11 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   qrisUrl: '',
   staffPasscode: 'DIMENSI2026',
   masterPasscode: 'MASTER_DIMENSI_2026',
+  masterUsername: 'dimensi',
+  masterName: 'Master Admin Dimensi',
+  masterEmail: 'dimensi.idphoto@gmail.com',
+  masterPhone: '0821-2345-6789',
+  staffUsername: 'staff',
 };
 
 export const INITIAL_ADMIN_STAFF: AdminStaff[] = [
