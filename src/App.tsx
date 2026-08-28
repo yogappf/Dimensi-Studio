@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { BookingOrder, CategoryType, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem } from './types';
-import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS } from './data/mockData';
+import {
+  BookingOrder,
+  CategoryType,
+  OrderStatus,
+  PhotoPackage,
+  AddOnItem,
+  PortfolioItem,
+  AdminStaff,
+  StudioConfig,
+  AuditLogItem,
+} from './types';
+import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, STUDIO_INFO } from './data/mockData';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { PackageCatalog } from './components/PackageCatalog';
@@ -20,6 +30,9 @@ import {
   subscribeToPackages,
   subscribeToAddons,
   subscribeToPortfolios,
+  subscribeToStudioConfig,
+  subscribeToStaff,
+  subscribeToAuditLogs,
   subscribeToAuth,
   saveBookingToFirestore,
   updateBookingInFirestore,
@@ -33,15 +46,24 @@ import {
   savePortfolioToFirestore,
   updatePortfolioInFirestore,
   deletePortfolioFromFirestore,
+  saveStudioConfigToFirestore,
+  saveStaffToFirestore,
+  updateStaffInFirestore,
+  deleteStaffFromFirestore,
+  logAuditEvent,
   signInWithGoogle,
   logOut,
+  DEFAULT_STUDIO_CONFIG,
+  INITIAL_ADMIN_STAFF,
 } from './firebase/services';
 
 const STORAGE_KEY = 'dimensi_photo_orders_v1';
 const PACKAGES_STORAGE_KEY = 'dimensi_photo_packages_v1';
 const ADDONS_STORAGE_KEY = 'dimensi_photo_addons_v1';
 const PORTFOLIOS_STORAGE_KEY = 'dimensi_photo_portfolios_v1';
+const CONFIG_STORAGE_KEY = 'dimensi_studio_config_v1';
 const ADMIN_SESSION_KEY = 'dimensi_admin_session_v1';
+const MASTER_SESSION_KEY = 'dimensi_master_session_v1';
 const STUDIO_ADMIN_EMAIL = 'dimensi.idphoto@gmail.com';
 
 export default function App() {
@@ -107,10 +129,33 @@ export default function App() {
     return PORTFOLIO_ITEMS;
   });
 
+  const [studioConfig, setStudioConfig] = useState<StudioConfig>(() => {
+    try {
+      const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+      if (saved) {
+        return { ...DEFAULT_STUDIO_CONFIG, ...JSON.parse(saved) };
+      }
+    } catch {
+      // ignore
+    }
+    return DEFAULT_STUDIO_CONFIG;
+  });
+
+  const [staffList, setStaffList] = useState<AdminStaff[]>(INITIAL_ADMIN_STAFF);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdminSession, setIsAdminSession] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem(ADMIN_SESSION_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isMasterAdminSession, setIsMasterAdminSession] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem(MASTER_SESSION_KEY) === 'true';
     } catch {
       return false;
     }
@@ -122,9 +167,21 @@ export default function App() {
   const [bookingAddOnIds, setBookingAddOnIds] = useState<string[]>([]);
   const [latestCreatedOrder, setLatestCreatedOrder] = useState<BookingOrder | null>(null);
 
-  // Check if current authenticated user has admin role
+  // Check if current authenticated user has admin or master role
   const isGoogleAdminEmail = currentUser?.email?.toLowerCase() === STUDIO_ADMIN_EMAIL.toLowerCase();
-  const isAdminAuthenticated = isGoogleAdminEmail || isAdminSession;
+  const isStaffAdminUser = Boolean(
+    currentUser?.email &&
+      staffList.some((s) => s.email.toLowerCase() === currentUser.email?.toLowerCase() && s.status === 'active')
+  );
+  const isMasterStaffUser = Boolean(
+    currentUser?.email &&
+      staffList.some(
+        (s) => s.email.toLowerCase() === currentUser.email?.toLowerCase() && s.role === 'master' && s.status === 'active'
+      )
+  );
+
+  const isAdminAuthenticated = isGoogleAdminEmail || isStaffAdminUser || isAdminSession;
+  const isMasterAdmin = isGoogleAdminEmail || isMasterStaffUser || isMasterAdminSession;
 
   // Validate Firestore Connection on initial boot
   useEffect(() => {
@@ -139,7 +196,9 @@ export default function App() {
       setCurrentUser(user);
       if (user?.email?.toLowerCase() === STUDIO_ADMIN_EMAIL.toLowerCase()) {
         setIsAdminSession(true);
+        setIsMasterAdminSession(true);
         sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
+        sessionStorage.setItem(MASTER_SESSION_KEY, 'true');
       }
     });
     return () => unsubscribe();
@@ -210,6 +269,41 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Listen to Realtime Studio Config
+  useEffect(() => {
+    const unsubscribe = subscribeToStudioConfig((config) => {
+      if (config) {
+        setStudioConfig(config);
+        try {
+          localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+        } catch {
+          // ignore
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Listen to Realtime Staff
+  useEffect(() => {
+    const unsubscribe = subscribeToStaff((staff) => {
+      if (staff && staff.length > 0) {
+        setStaffList(staff);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Listen to Realtime Audit Logs
+  useEffect(() => {
+    const unsubscribe = subscribeToAuditLogs((logs) => {
+      if (logs) {
+        setAuditLogs(logs);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Sync backup orders, packages, addons & portfolios to localStorage
   useEffect(() => {
     try {
@@ -250,6 +344,7 @@ export default function App() {
 
     try {
       await saveBookingToFirestore(newOrder);
+      await logAuditEvent(newOrder.clientName, 'Pemesanan Baru', `Booking paket ${newOrder.packageName} dibuat.`, 'order');
     } catch (err) {
       console.error('Error saving order to Firestore:', err);
     }
@@ -293,8 +388,16 @@ export default function App() {
   };
 
   // Admin session authentication
-  const handleAdminAuthenticated = () => {
+  const handleAdminAuthenticated = (isMaster?: boolean) => {
     setIsAdminSession(true);
+    if (isMaster || isGoogleAdminEmail) {
+      setIsMasterAdminSession(true);
+      try {
+        sessionStorage.setItem(MASTER_SESSION_KEY, 'true');
+      } catch {
+        // ignore
+      }
+    }
     try {
       sessionStorage.setItem(ADMIN_SESSION_KEY, 'true');
     } catch {
@@ -305,8 +408,10 @@ export default function App() {
   // Exit Admin session back to customer mode
   const handleExitAdmin = () => {
     setIsAdminSession(false);
+    setIsMasterAdminSession(false);
     try {
       sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      sessionStorage.removeItem(MASTER_SESSION_KEY);
     } catch {
       // ignore
     }
@@ -321,6 +426,12 @@ export default function App() {
 
     try {
       await updateBookingInFirestore(orderId, { status: newStatus });
+      await logAuditEvent(
+        currentUser?.email || 'Admin',
+        'Update Status Pesanan',
+        `Pesanan ${orderId} diubah menjadi: ${newStatus}`,
+        'order'
+      );
     } catch (err) {
       console.error('Error updating order status in Firestore:', err);
     }
@@ -344,6 +455,7 @@ export default function App() {
     setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
     try {
       await deleteBookingFromFirestore(orderId);
+      await logAuditEvent(currentUser?.email || 'Admin', 'Hapus Pesanan', `Pesanan ${orderId} telah dihapus.`, 'order');
     } catch (err) {
       console.error('Error deleting order in Firestore:', err);
     }
@@ -354,6 +466,12 @@ export default function App() {
     setOrders((prev) => [newOrder, ...prev]);
     try {
       await saveBookingToFirestore(newOrder);
+      await logAuditEvent(
+        currentUser?.email || 'Admin',
+        'Tambah Pesanan Manual',
+        `Pesanan ${newOrder.clientName} (${newOrder.packageName}) ditambahkan manual.`,
+        'order'
+      );
     } catch (err) {
       console.error('Error adding manual order to Firestore:', err);
     }
@@ -371,6 +489,7 @@ export default function App() {
           // ignore
         }
       }
+      await logAuditEvent(currentUser?.email || 'Master Admin', 'Reset Data Pesanan', 'Seluruh data pesanan direset ke default.', 'system');
     }
   };
 
@@ -379,6 +498,7 @@ export default function App() {
     setPackages((prev) => [newPkg, ...prev]);
     try {
       await savePackageToFirestore(newPkg);
+      await logAuditEvent(currentUser?.email || 'Admin', 'Tambah Paket Foto', `Paket "${newPkg.name}" ditambahkan.`, 'package');
     } catch (err) {
       console.error('Error adding package to Firestore:', err);
     }
@@ -390,6 +510,7 @@ export default function App() {
     );
     try {
       await updatePackageInFirestore(pkgId, updatedPkg);
+      await logAuditEvent(currentUser?.email || 'Admin', 'Update Paket Foto', `Paket ID ${pkgId} diperbarui.`, 'package');
     } catch (err) {
       console.error('Error updating package in Firestore:', err);
     }
@@ -399,6 +520,7 @@ export default function App() {
     setPackages((prev) => prev.filter((p) => p.id !== pkgId));
     try {
       await deletePackageFromFirestore(pkgId);
+      await logAuditEvent(currentUser?.email || 'Admin', 'Hapus Paket Foto', `Paket ID ${pkgId} dihapus.`, 'package');
     } catch (err) {
       console.error('Error deleting package in Firestore:', err);
     }
@@ -506,6 +628,91 @@ export default function App() {
     }
   };
 
+  // Studio Config Handlers
+  const handleUpdateStudioConfig = async (config: StudioConfig) => {
+    setStudioConfig(config);
+    try {
+      await saveStudioConfigToFirestore(config);
+      await logAuditEvent(currentUser?.email || 'Master Admin', 'Update Pengaturan Studio', 'Profil, nomor kontak, atau keamanan studio diperbarui.', 'security');
+    } catch (err) {
+      console.error('Error saving studio config:', err);
+    }
+  };
+
+  // Staff Handlers
+  const handleAddStaff = async (staff: AdminStaff) => {
+    setStaffList((prev) => [staff, ...prev]);
+    try {
+      await saveStaffToFirestore(staff);
+      await logAuditEvent(currentUser?.email || 'Master Admin', 'Tambah Staf Admin', `Staf baru ${staff.name} (${staff.role}) didaftarkan.`, 'staff');
+    } catch (err) {
+      console.error('Error adding staff:', err);
+    }
+  };
+
+  const handleUpdateStaff = async (id: string, updates: Partial<AdminStaff>) => {
+    setStaffList((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    try {
+      await updateStaffInFirestore(id, updates);
+      await logAuditEvent(currentUser?.email || 'Master Admin', 'Update Data Staf', `Data staf ID ${id} diperbarui.`, 'staff');
+    } catch (err) {
+      console.error('Error updating staff:', err);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    setStaffList((prev) => prev.filter((s) => s.id !== id));
+    try {
+      await deleteStaffFromFirestore(id);
+      await logAuditEvent(currentUser?.email || 'Master Admin', 'Hapus Staf Admin', `Staf ID ${id} telah dinonaktifkan/dihapus.`, 'staff');
+    } catch (err) {
+      console.error('Error deleting staff:', err);
+    }
+  };
+
+  // Backup & Restore Handlers
+  const handleRestoreAllData = async (data: any) => {
+    if (data.orders && Array.isArray(data.orders)) {
+      setOrders(data.orders);
+      for (const ord of data.orders) {
+        try {
+          await saveBookingToFirestore(ord);
+        } catch {}
+      }
+    }
+    if (data.packages && Array.isArray(data.packages)) {
+      setPackages(data.packages);
+      for (const p of data.packages) {
+        try {
+          await savePackageToFirestore(p);
+        } catch {}
+      }
+    }
+    if (data.addons && Array.isArray(data.addons)) {
+      setAddons(data.addons);
+      for (const a of data.addons) {
+        try {
+          await saveAddonToFirestore(a);
+        } catch {}
+      }
+    }
+    if (data.portfolios && Array.isArray(data.portfolios)) {
+      setPortfolios(data.portfolios);
+      for (const pf of data.portfolios) {
+        try {
+          await savePortfolioToFirestore(pf);
+        } catch {}
+      }
+    }
+    if (data.studioConfig) {
+      setStudioConfig(data.studioConfig);
+      try {
+        await saveStudioConfigToFirestore(data.studioConfig);
+      } catch {}
+    }
+    await logAuditEvent(currentUser?.email || 'Master Admin', 'Restore Database', 'Database sistem dipulihkan dari file backup.', 'system');
+  };
+
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
@@ -518,7 +725,9 @@ export default function App() {
     try {
       await logOut();
       setIsAdminSession(false);
+      setIsMasterAdminSession(false);
       sessionStorage.removeItem(ADMIN_SESSION_KEY);
+      sessionStorage.removeItem(MASTER_SESSION_KEY);
     } catch (err) {
       console.error('Logout error:', err);
     }
@@ -621,6 +830,15 @@ export default function App() {
               onLogOut={handleLogOut}
               isFirebaseConnected={isFirebaseConnected}
               onExitAdmin={handleExitAdmin}
+              isMasterAdmin={isMasterAdmin}
+              studioConfig={studioConfig}
+              onUpdateStudioConfig={handleUpdateStudioConfig}
+              staffList={staffList}
+              onAddStaff={handleAddStaff}
+              onUpdateStaff={handleUpdateStaff}
+              onDeleteStaff={handleDeleteStaff}
+              auditLogs={auditLogs}
+              onRestoreAllData={handleRestoreAllData}
             />
           ) : (
             <AdminGate
@@ -628,7 +846,9 @@ export default function App() {
               onGoogleSignIn={handleGoogleSignIn}
               onBackToCustomer={() => setActiveTab('showcase')}
               currentUser={currentUser}
-              isAdminEmail={isGoogleAdminEmail}
+              isAdminEmail={isGoogleAdminEmail || isStaffAdminUser}
+              isMasterEmail={isGoogleAdminEmail || isMasterStaffUser}
+              studioConfig={studioConfig}
             />
           )
         )}
@@ -652,3 +872,4 @@ export default function App() {
     </div>
   );
 }
+

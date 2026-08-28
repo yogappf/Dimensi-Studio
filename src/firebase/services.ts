@@ -19,13 +19,64 @@ import {
 } from 'firebase/auth';
 import { db, auth, googleProvider } from './config';
 import { handleFirestoreError, OperationType } from './errors';
-import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem } from '../types';
-import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS } from '../data/mockData';
+import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem, AdminStaff, StudioConfig, AuditLogItem } from '../types';
+import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, STUDIO_INFO } from '../data/mockData';
 
 const BOOKINGS_COLLECTION = 'bookings';
 const PACKAGES_COLLECTION = 'packages';
 const ADDONS_COLLECTION = 'addons';
 const PORTFOLIOS_COLLECTION = 'portfolios';
+const SETTINGS_COLLECTION = 'settings';
+const ADMIN_STAFF_COLLECTION = 'admin_staff';
+const AUDIT_LOGS_COLLECTION = 'audit_logs';
+
+export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
+  studioName: STUDIO_INFO.name,
+  tagline: STUDIO_INFO.tagline,
+  description: STUDIO_INFO.description,
+  phone: STUDIO_INFO.phone,
+  whatsapp: STUDIO_INFO.whatsapp,
+  email: STUDIO_INFO.email,
+  instagram: STUDIO_INFO.instagram,
+  address: STUDIO_INFO.address,
+  operatingHours: STUDIO_INFO.operatingHours,
+  bankBCA: 'BCA 8720-1928-33 a/n Dimensi Fotografi Studio',
+  bankMandiri: 'Mandiri 137-00-1928374-1 a/n PT Dimensi Visual Karya',
+  bankBRI: 'BRI 0341-01-002938-50-8 a/n Dimensi Fotografi',
+  qrisUrl: '',
+  staffPasscode: 'DIMENSI2026',
+  masterPasscode: 'MASTER_DIMENSI_2026',
+};
+
+export const INITIAL_ADMIN_STAFF: AdminStaff[] = [
+  {
+    id: 'staff-master-1',
+    name: 'Master Admin Dimensi (Utama)',
+    email: 'dimensi.idphoto@gmail.com',
+    role: 'master',
+    phone: '0821-2345-6789',
+    addedAt: '2026-01-01T00:00:00.000Z',
+    status: 'active',
+  },
+  {
+    id: 'staff-editor-1',
+    name: 'Senior Lead Photographer',
+    email: 'editor.dimensiphoto@gmail.com',
+    role: 'editor',
+    phone: '0821-9988-7766',
+    addedAt: '2026-02-15T00:00:00.000Z',
+    status: 'active',
+  },
+  {
+    id: 'staff-finance-1',
+    name: 'Customer Support & Finance',
+    email: 'finance.dimensiphoto@gmail.com',
+    role: 'finance',
+    phone: '0821-3344-5566',
+    addedAt: '2026-03-01T00:00:00.000Z',
+    status: 'active',
+  },
+];
 
 // In-memory access token cache for Google Workspace & Drive APIs (never stored in localStorage)
 let cachedAccessToken: string | null = null;
@@ -566,5 +617,208 @@ export async function seedInitialPortfolios(): Promise<void> {
   } finally {
     isSeedingPortfolios = false;
   }
+}
+
+// ==========================================
+// MASTER ADMIN: STUDIO CONFIGURATION SERVICES
+// ==========================================
+
+export async function saveStudioConfigToFirestore(config: StudioConfig): Promise<void> {
+  const path = `${SETTINGS_COLLECTION}/studio_config`;
+  try {
+    const docRef = doc(db, SETTINGS_COLLECTION, 'studio_config');
+    await setDoc(docRef, config, { merge: true });
+  } catch (error) {
+    console.warn('Could not save studio config to Firestore:', error);
+  }
+}
+
+export function subscribeToStudioConfig(
+  onData: (config: StudioConfig) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const docRef = doc(db, SETTINGS_COLLECTION, 'studio_config');
+  return onSnapshot(
+    docRef,
+    (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as Partial<StudioConfig>;
+        onData({
+          ...DEFAULT_STUDIO_CONFIG,
+          ...data,
+        });
+      } else {
+        // Initialize with default
+        saveStudioConfigToFirestore(DEFAULT_STUDIO_CONFIG);
+        onData(DEFAULT_STUDIO_CONFIG);
+      }
+    },
+    (error) => {
+      console.warn('Studio config listener fallback to default:', error);
+      if (onError) onError(error);
+      onData(DEFAULT_STUDIO_CONFIG);
+    }
+  );
+}
+
+// ==========================================
+// MASTER ADMIN: STAFF MANAGEMENT SERVICES
+// ==========================================
+
+export async function saveStaffToFirestore(staff: AdminStaff): Promise<void> {
+  const path = `${ADMIN_STAFF_COLLECTION}/${staff.id}`;
+  try {
+    const docRef = doc(db, ADMIN_STAFF_COLLECTION, staff.id);
+    await setDoc(docRef, staff, { merge: true });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function updateStaffInFirestore(staffId: string, updates: Partial<AdminStaff>): Promise<void> {
+  const path = `${ADMIN_STAFF_COLLECTION}/${staffId}`;
+  try {
+    const docRef = doc(db, ADMIN_STAFF_COLLECTION, staffId);
+    await updateDoc(docRef, updates);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function deleteStaffFromFirestore(staffId: string): Promise<void> {
+  const path = `${ADMIN_STAFF_COLLECTION}/${staffId}`;
+  try {
+    const docRef = doc(db, ADMIN_STAFF_COLLECTION, staffId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export function subscribeToStaff(
+  onData: (staffList: AdminStaff[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = collection(db, ADMIN_STAFF_COLLECTION);
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const list: AdminStaff[] = [];
+      snapshot.forEach((snap) => {
+        const d = snap.data();
+        list.push({
+          id: d.id || snap.id,
+          name: d.name || 'Staf Admin',
+          email: d.email || '',
+          role: d.role || 'staff',
+          phone: d.phone || '',
+          addedAt: d.addedAt || new Date().toISOString(),
+          status: d.status || 'active',
+          lastActive: d.lastActive,
+        });
+      });
+
+      if (snapshot.empty && list.length === 0) {
+        seedInitialStaff();
+      } else {
+        onData(list);
+      }
+    },
+    (error) => {
+      console.warn('Staff listener fallback to initial list:', error);
+      if (onError) onError(error);
+      onData(INITIAL_ADMIN_STAFF);
+    }
+  );
+}
+
+let isSeedingStaff = false;
+export async function seedInitialStaff(): Promise<void> {
+  if (isSeedingStaff) return;
+  isSeedingStaff = true;
+  try {
+    const snap = await getDocs(collection(db, ADMIN_STAFF_COLLECTION));
+    if (snap.empty) {
+      for (const st of INITIAL_ADMIN_STAFF) {
+        await saveStaffToFirestore(st);
+      }
+    }
+  } catch (err) {
+    console.warn('Error seeding initial staff:', err);
+  } finally {
+    isSeedingStaff = false;
+  }
+}
+
+// ==========================================
+// MASTER ADMIN: AUDIT LOG SERVICES
+// ==========================================
+
+export async function logAuditEvent(
+  actor: string,
+  action: string,
+  details: string,
+  category: AuditLogItem['category'] = 'system'
+): Promise<void> {
+  const logId = `LOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const logItem: AuditLogItem = {
+    id: logId,
+    timestamp: new Date().toISOString(),
+    actor,
+    action,
+    details,
+    category,
+  };
+  try {
+    const docRef = doc(db, AUDIT_LOGS_COLLECTION, logId);
+    await setDoc(docRef, logItem);
+  } catch (err) {
+    // Audit logs non-blocking fallback
+    try {
+      const savedLogs = JSON.parse(localStorage.getItem('dimensi_audit_logs_v1') || '[]');
+      savedLogs.unshift(logItem);
+      localStorage.setItem('dimensi_audit_logs_v1', JSON.stringify(savedLogs.slice(0, 100)));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+export function subscribeToAuditLogs(
+  onData: (logs: AuditLogItem[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = collection(db, AUDIT_LOGS_COLLECTION);
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const logs: AuditLogItem[] = [];
+      snapshot.forEach((snap) => {
+        const d = snap.data();
+        logs.push({
+          id: d.id || snap.id,
+          timestamp: d.timestamp || new Date().toISOString(),
+          actor: d.actor || 'System',
+          action: d.action || '',
+          details: d.details || '',
+          category: d.category || 'system',
+        });
+      });
+
+      // Sort newest first
+      logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      onData(logs.slice(0, 80));
+    },
+    (error) => {
+      console.warn('Audit logs listener fallback:', error);
+      if (onError) onError(error);
+      try {
+        const savedLogs = JSON.parse(localStorage.getItem('dimensi_audit_logs_v1') || '[]');
+        onData(savedLogs);
+      } catch {
+        onData([]);
+      }
+    }
+  );
 }
 

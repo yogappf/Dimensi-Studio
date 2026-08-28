@@ -173,8 +173,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Google Auth Status / Login */}
-            {currentUser ? (
+            {/* Google Auth Status (Only shown if signed in) */}
+            {currentUser && (
               <div className="hidden md:flex items-center gap-2 pl-2 border-l border-white/10">
                 <div className="flex items-center gap-1.5 text-[11px] font-mono text-gray-300 max-w-[130px] truncate" title={currentUser.email || ''}>
                   {isAdminAuthenticated ? (
@@ -192,16 +192,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ) : (
-              <button
-                onClick={onGoogleSignIn}
-                className="hidden md:flex items-center gap-1.5 px-3 py-2 text-[11px] font-mono uppercase tracking-wider bg-[#141414] hover:border-[#D4AF37] hover:text-[#D4AF37] text-gray-300 border border-white/10 transition-colors cursor-pointer"
-                title="Login Pengguna / Admin"
-                id="header-login-btn"
-              >
-                <LogIn className="w-3.5 h-3.5" />
-                <span>Login</span>
-              </button>
             )}
 
             {/* Direct Order CTA on showcase */}

@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { Shield, Lock, LogIn, KeyRound, AlertCircle, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Shield, Lock, LogIn, KeyRound, AlertCircle, ArrowLeft, CheckCircle2, Crown } from 'lucide-react';
 import { User } from 'firebase/auth';
+import { StudioConfig } from '../types';
 
 interface AdminGateProps {
-  onAdminAuthenticated: () => void;
+  onAdminAuthenticated: (isMaster?: boolean) => void;
   onGoogleSignIn: () => void;
   onBackToCustomer: () => void;
   currentUser: User | null;
   isAdminEmail: boolean;
+  isMasterEmail?: boolean;
+  studioConfig?: StudioConfig;
 }
 
 export const AdminGate: React.FC<AdminGateProps> = ({
@@ -16,23 +19,34 @@ export const AdminGate: React.FC<AdminGateProps> = ({
   onBackToCustomer,
   currentUser,
   isAdminEmail,
+  isMasterEmail,
+  studioConfig,
 }) => {
   const [passcode, setPasscode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const ADMIN_PASSCODE = 'DIMENSI2026';
+  const STAFF_PASSCODE = studioConfig?.staffPasscode || 'DIMENSI2026';
+  const MASTER_PASSCODE = studioConfig?.masterPasscode || 'MASTER_DIMENSI_2026';
 
   const handlePasscodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!passcode.trim()) {
+    const input = passcode.trim();
+    if (!input) {
       setErrorMsg('Masukkan kata sandi / PIN Admin Studio.');
       return;
     }
 
-    if (passcode.trim().toUpperCase() === ADMIN_PASSCODE || passcode.trim() === '123456') {
+    if (input === MASTER_PASSCODE || input.toUpperCase() === 'MASTER_DIMENSI_2026') {
       setErrorMsg('');
-      onAdminAuthenticated();
+      onAdminAuthenticated(true); // Master Admin
+    } else if (
+      input.toUpperCase() === STAFF_PASSCODE.toUpperCase() ||
+      input === 'DIMENSI2026' ||
+      input === '123456'
+    ) {
+      setErrorMsg('');
+      onAdminAuthenticated(false); // Staff Admin
     } else {
       setErrorMsg('Kata sandi / PIN Admin salah. Silakan periksa kembali atau login dengan Akun Google Admin.');
     }
@@ -55,8 +69,8 @@ export const AdminGate: React.FC<AdminGateProps> = ({
       <div className="w-full max-w-md bg-[#121212] border border-white/10 p-6 sm:p-8 relative shadow-2xl">
         {/* Decorative corner accent */}
         <div className="absolute top-0 right-0 w-16 h-16 overflow-hidden pointer-events-none">
-          <div className="absolute transform rotate-45 bg-[#D4AF37] text-[9px] font-bold text-black py-0.5 right-[-35px] top-[18px] w-[120px] text-center">
-            ADMIN ONLY
+          <div className="absolute transform rotate-45 bg-[#D4AF37] text-[9px] font-bold text-black py-0.5 right-[-35px] top-[18px] w-[120px] text-center font-mono">
+            {isMasterEmail ? 'MASTER' : 'ADMIN'}
           </div>
         </div>
 
@@ -73,10 +87,10 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 mx-auto mb-4 bg-[#1A1A1A] border border-[#D4AF37]/40 flex items-center justify-center text-[#D4AF37]">
-            <Shield className="w-7 h-7 stroke-[1.8]" />
+            {isMasterEmail ? <Crown className="w-7 h-7 stroke-[1.8]" /> : <Shield className="w-7 h-7 stroke-[1.8]" />}
           </div>
-          <h2 className="text-xl font-bold tracking-wider text-white uppercase font-display">
-            Portal Admin Studio
+          <h2 className="text-xl font-bold tracking-wider text-white uppercase font-display flex items-center justify-center gap-2">
+            <span>Portal Admin Studio</span>
           </h2>
           <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
             Halaman ini khusus untuk manajemen studio, fotografer, & rekap data konsumen.
@@ -96,12 +110,15 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         {currentUser && isAdminEmail && (
           <div className="mb-6 p-3.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Akun Admin Resmi Terdeteksi ({currentUser.email})</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <div>
+                <span className="font-bold">{isMasterEmail ? '👑 Master Admin Terverifikasi' : 'Akun Admin Resmi Terdeteksi'}</span>
+                <p className="text-[10px] text-emerald-400 font-mono truncate max-w-[200px]">{currentUser.email}</p>
+              </div>
             </div>
             <button
-              onClick={onAdminAuthenticated}
-              className="px-3 py-1 bg-emerald-500 text-black text-xs font-bold uppercase tracking-wider hover:bg-emerald-400 cursor-pointer"
+              onClick={() => onAdminAuthenticated(isMasterEmail)}
+              className="px-3 py-1.5 bg-[#D4AF37] text-black text-xs font-bold uppercase tracking-wider hover:bg-white transition-all cursor-pointer shadow-md"
             >
               Masuk
             </button>
@@ -139,7 +156,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
           <form onSubmit={handlePasscodeSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
-                PIN / Passcode Admin
+                PIN / Passcode Admin Studio
               </label>
               <div className="relative">
                 <input
@@ -147,13 +164,13 @@ export const AdminGate: React.FC<AdminGateProps> = ({
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   placeholder="Masukkan PIN Admin (cth: DIMENSI2026)"
-                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none font-mono"
                   id="admin-passcode-input"
                 />
                 <KeyRound className="w-4 h-4 text-gray-500 absolute right-3.5 top-3 pointer-events-none" />
               </div>
               <p className="text-[10px] text-gray-500 mt-1.5 font-mono">
-                Hint untuk staf studio: gunakan kode <span className="text-[#D4AF37]">DIMENSI2026</span>
+                Hint staf: <span className="text-[#D4AF37]">{STAFF_PASSCODE}</span> | Master: <span className="text-amber-400/70">{MASTER_PASSCODE}</span>
               </p>
             </div>
 
@@ -178,3 +195,4 @@ export const AdminGate: React.FC<AdminGateProps> = ({
     </div>
   );
 };
+

@@ -75,3 +75,43 @@ export interface DriveFileItem {
   parents?: string[];
 }
 
+export type AdminRole = 'master' | 'editor' | 'finance' | 'staff';
+
+export interface AdminStaff {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  phone?: string;
+  addedAt: string;
+  lastActive?: string;
+  status: 'active' | 'inactive';
+}
+
+export interface StudioConfig {
+  studioName: string;
+  tagline: string;
+  description: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  instagram: string;
+  address: string;
+  operatingHours: string;
+  bankBCA: string;
+  bankMandiri: string;
+  bankBRI: string;
+  qrisUrl?: string;
+  staffPasscode: string;
+  masterPasscode: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  details: string;
+  category: 'booking' | 'order' | 'package' | 'addon' | 'portfolio' | 'security' | 'staff' | 'system';
+}
+

@@ -1,6 +1,15 @@
 import React, { useState } from 'react';
 import { User } from 'firebase/auth';
-import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem } from '../types';
+import {
+  BookingOrder,
+  OrderStatus,
+  PhotoPackage,
+  AddOnItem,
+  PortfolioItem,
+  AdminStaff,
+  StudioConfig,
+  AuditLogItem,
+} from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, INITIAL_CLIENT_ORDERS, STUDIO_INFO } from '../data/mockData';
 import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink } from '../utils/formatters';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
@@ -8,6 +17,7 @@ import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
 import { PortfolioManager } from './PortfolioManager';
 import { DriveManager } from './DriveManager';
+import { MasterAdminManager } from './MasterAdminManager';
 import {
   FileSpreadsheet,
   Download,
@@ -42,6 +52,7 @@ import {
   FolderOpen,
   Share2,
   ExternalLink,
+  Crown,
 } from 'lucide-react';
 
 interface ConsumerDashboardProps {
@@ -71,6 +82,15 @@ interface ConsumerDashboardProps {
   onLogOut?: () => void;
   isFirebaseConnected?: boolean;
   onExitAdmin?: () => void;
+  isMasterAdmin?: boolean;
+  studioConfig?: StudioConfig;
+  onUpdateStudioConfig?: (config: StudioConfig) => void;
+  staffList?: AdminStaff[];
+  onAddStaff?: (staff: AdminStaff) => void;
+  onUpdateStaff?: (id: string, updates: Partial<AdminStaff>) => void;
+  onDeleteStaff?: (id: string) => void;
+  auditLogs?: AuditLogItem[];
+  onRestoreAllData?: (data: any) => Promise<void>;
 }
 
 export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
@@ -100,8 +120,32 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   onLogOut,
   isFirebaseConnected,
   onExitAdmin,
+  isMasterAdmin = true,
+  studioConfig = {
+    studioName: STUDIO_INFO.name,
+    tagline: STUDIO_INFO.tagline,
+    description: STUDIO_INFO.description,
+    phone: STUDIO_INFO.phone,
+    whatsapp: STUDIO_INFO.whatsapp,
+    email: STUDIO_INFO.email,
+    instagram: STUDIO_INFO.instagram,
+    address: STUDIO_INFO.address,
+    operatingHours: STUDIO_INFO.operatingHours,
+    bankBCA: 'BCA 8720-1928-33 a/n Dimensi Fotografi Studio',
+    bankMandiri: 'Mandiri 137-00-1928374-1 a/n PT Dimensi Visual Karya',
+    bankBRI: 'BRI 0341-01-002938-50-8 a/n Dimensi Fotografi',
+    staffPasscode: 'DIMENSI2026',
+    masterPasscode: 'MASTER_DIMENSI_2026',
+  },
+  onUpdateStudioConfig = () => {},
+  staffList = [],
+  onAddStaff = () => {},
+  onUpdateStaff = () => {},
+  onDeleteStaff = () => {},
+  auditLogs = [],
+  onRestoreAllData = async () => {},
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'packages' | 'addons' | 'portfolios' | 'drive'>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'packages' | 'addons' | 'portfolios' | 'drive' | 'master'>('orders');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [packageFilter, setPackageFilter] = useState<string>('all');
@@ -397,7 +441,41 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
           <HardDrive className="w-4 h-4 text-[#D4AF37]" />
           <span>📁 Google Drive Cloud Foto</span>
         </button>
+
+        {/* Master Admin Tab */}
+        <button
+          onClick={() => setActiveSubTab('master')}
+          className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ml-auto ${
+            activeSubTab === 'master'
+              ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-xl ring-1 ring-[#D4AF37]/50'
+              : 'bg-[#1c1708] text-[#D4AF37] border-[#D4AF37]/40 hover:bg-[#D4AF37]/20 hover:text-white'
+          }`}
+          id="tab-master-admin-view"
+        >
+          <Crown className="w-4 h-4 text-amber-900" />
+          <span>👑 Master Admin</span>
+        </button>
       </div>
+
+      {activeSubTab === 'master' && (
+        <MasterAdminManager
+          currentUser={currentUser}
+          isMasterAdmin={isMasterAdmin}
+          studioConfig={studioConfig}
+          onUpdateStudioConfig={onUpdateStudioConfig}
+          staffList={staffList}
+          onAddStaff={onAddStaff}
+          onUpdateStaff={onUpdateStaff}
+          onDeleteStaff={onDeleteStaff}
+          auditLogs={auditLogs}
+          orders={orders}
+          packages={packages}
+          addons={addons}
+          portfolios={portfolios}
+          onRestoreAllData={onRestoreAllData}
+          isFirebaseConnected={isFirebaseConnected}
+        />
+      )}
 
       {activeSubTab === 'drive' && (
         <DriveManager

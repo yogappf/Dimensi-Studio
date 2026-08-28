@@ -102,6 +102,24 @@ service cloud.firestore {
       allow create, update, delete: if isStudioAdmin() || true;
     }
 
+    // Settings Collection (Studio Config & Business Profile)
+    match /settings/{settingId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
+    }
+
+    // Admin Staff Collection (Staff Directory & Roles)
+    match /admin_staff/{staffId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
+    }
+
+    // Audit Logs Collection
+    match /audit_logs/{logId} {
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
+    }
+
     // Connection test document
     match /test/{testId} {
       allow read: if true;
