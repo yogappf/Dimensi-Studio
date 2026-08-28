@@ -330,8 +330,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             <span>{isFirebaseConnected ? 'Firebase Cloud Aktif' : 'Menghubungkan Cloud...'}</span>
           </div>
 
-          {/* Google Auth Button */}
-          {currentUser ? (
+          {/* Google Auth Info (Only shown if signed in) */}
+          {currentUser && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-[#141414] border border-[#D4AF37]/40 text-xs">
               <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
               <div className="flex flex-col">
@@ -346,15 +346,6 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
-          ) : (
-            <button
-              onClick={onGoogleSignIn}
-              className="px-3.5 py-2.5 bg-[#141414] hover:border-[#D4AF37] text-gray-300 hover:text-[#D4AF37] border border-white/15 font-mono text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
-              id="dashboard-login-btn"
-            >
-              <LogIn className="w-3.5 h-3.5" />
-              <span>Login Google</span>
-            </button>
           )}
 
           {/* Main Excel Export Button */}
