@@ -14,14 +14,16 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
   const [activeModalItem, setActiveModalItem] = useState<PortfolioItem | null>(null);
   const [imageOrientations, setImageOrientations] = useState<Record<string, 'portrait' | 'landscape' | 'square'>>({});
 
+  const uniqueSlugs = Array.from(new Set(portfolios.map(item => item.category)));
   const filters: { id: CategoryType; label: string }[] = [
     { id: 'all', label: 'Semua Karya' },
-    { id: 'wedding', label: 'Wedding' },
-    { id: 'prewedding', label: 'Pre-Wedding' },
-    { id: 'wisuda', label: 'Wisuda' },
-    { id: 'keluarga', label: 'Keluarga' },
-    { id: 'produk', label: 'Produk' },
-    { id: 'event', label: 'Event' },
+    ...uniqueSlugs.map(slug => {
+      const found = portfolios.find(item => item.category === slug);
+      return {
+        id: slug,
+        label: found?.categoryName || slug.toUpperCase(),
+      };
+    }),
   ];
 
   const filteredItems = activeFilter === 'all'

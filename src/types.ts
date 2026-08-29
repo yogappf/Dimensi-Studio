@@ -1,4 +1,4 @@
-export type CategoryType = 'all' | 'wedding' | 'prewedding' | 'wisuda' | 'keluarga' | 'produk' | 'event';
+export type CategoryType = string;
 
 export type UserRole = 'customer' | 'admin';
 

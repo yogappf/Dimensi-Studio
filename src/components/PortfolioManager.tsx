@@ -113,12 +113,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     });
   };
 
-  const handleCategoryChange = (cat: CategoryType) => {
-    const matched = CATEGORY_OPTIONS.find((c) => c.id === cat);
+  const handleCategoryNameChange = (name: string) => {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'koleksi';
     setFormData({
       ...formData,
-      category: cat,
-      categoryName: matched ? matched.name : 'Koleksi',
+      category: slug,
+      categoryName: name,
     });
   };
 
@@ -237,19 +237,21 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
           >
             Semua ({portfolios.length})
           </button>
-          {CATEGORY_OPTIONS.map((cat) => {
-            const count = portfolios.filter((p) => p.category === cat.id).length;
+          {Array.from(new Set(portfolios.map((p) => p.category))).map((catSlug) => {
+            const sampleItem = portfolios.find((p) => p.category === catSlug);
+            const label = sampleItem?.categoryName || catSlug;
+            const count = portfolios.filter((p) => p.category === catSlug).length;
             return (
               <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                key={catSlug}
+                onClick={() => setActiveCategory(catSlug)}
                 className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider transition-all cursor-pointer ${
-                  activeCategory === cat.id
+                  activeCategory === catSlug
                     ? 'bg-[#D4AF37] text-black font-bold'
                     : 'bg-[#1A1A1A] text-gray-400 hover:text-white border border-white/10'
                 }`}
               >
-                {cat.label} ({count})
+                {label} ({count})
               </button>
             );
           })}
@@ -422,18 +424,25 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
                     Kategori Sesi *
                   </label>
-                  <select
-                    value={formData.category || 'wedding'}
-                    onChange={(e) => handleCategoryChange(e.target.value as CategoryType)}
-                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none"
+                  <input
+                    type="text"
+                    required
+                    list="category-suggestions"
+                    value={formData.categoryName || ''}
+                    onChange={(e) => handleCategoryNameChange(e.target.value)}
+                    placeholder="Ketik kategori baru atau pilih..."
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
                     id="portfolio-form-category"
-                  >
+                  />
+                  <datalist id="category-suggestions">
                     {CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.label} ({cat.name})
-                      </option>
+                      <option key={cat.id} value={cat.name} />
                     ))}
-                  </select>
+                    {Array.from(new Set(portfolios.map(p => p.categoryName))).map((cName, idx) => (
+                      <option key={idx} value={cName} />
+                    ))}
+                  </datalist>
+                  <span className="text-[10px] text-gray-500 mt-1 block">Anda dapat mengetik kategori baru secara fleksibel.</span>
                 </div>
 
                 <div>
