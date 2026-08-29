@@ -33,16 +33,6 @@ const CATEGORY_OPTIONS: { id: CategoryType; label: string; name: string }[] = [
   { id: 'event', label: 'Event', name: 'Event & Gathering' },
 ];
 
-const PRESET_PHOTO_SAMPLES = [
-  { label: 'Wedding Romance', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80' },
-  { label: 'Akad Intimate', url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1200&q=80' },
-  { label: 'Pre-Wedding Pine', url: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1200&q=80' },
-  { label: 'Graduation Studio', url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1200&q=80' },
-  { label: 'Family Portrait', url: 'https://images.unsplash.com/photo-1581953153629-9e87bb363a03?auto=format&fit=crop&w=1200&q=80' },
-  { label: 'Product Tabletop', url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80' },
-  { label: 'Corporate Event', url: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80' },
-];
-
 export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   portfolios,
   onAddPortfolio,
@@ -64,7 +54,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     category: 'wedding',
     categoryName: 'Pernikahan',
     location: '',
-    imageUrl: PRESET_PHOTO_SAMPLES[0].url,
+    imageUrl: '',
     description: '',
   });
 
@@ -104,7 +94,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       category: 'wedding',
       categoryName: 'Pernikahan',
       location: 'Dimensi Studio Jakarta',
-      imageUrl: PRESET_PHOTO_SAMPLES[0].url,
+      imageUrl: '',
       description: '',
     });
     setIsAddModalOpen(true);
@@ -476,23 +466,6 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     />
                   </label>
                   <p className="text-[10px] text-gray-500 font-mono mt-1">Mendukung file JPG, PNG, WebP (Maks. 5MB). Otomatis tersimpan ke database aplikasi.</p>
-                </div>
-
-                {/* Preset sample shortcuts */}
-                <div className="mt-2">
-                  <p className="text-[10px] text-gray-500 font-mono mb-1.5">Pilihan cepat contoh foto studio:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_PHOTO_SAMPLES.map((sample, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, imageUrl: sample.url })}
-                        className="px-2 py-1 bg-[#1A1A1A] hover:bg-[#D4AF37] hover:text-black text-gray-400 text-[10px] font-mono border border-white/10 transition-colors"
-                      >
-                        {sample.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Image Live Preview */}

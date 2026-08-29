@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PhotoPackage, CategoryType } from '../types';
+import { PhotoPackage, CategoryType, PortfolioItem } from '../types';
 import { PHOTO_PACKAGES } from '../data/mockData';
 import { formatRupiah } from '../utils/formatters';
 import {
@@ -22,6 +22,7 @@ import {
   Search,
   Filter,
   Star,
+  Upload,
 } from 'lucide-react';
 
 interface PackageManagerProps {
@@ -31,6 +32,7 @@ interface PackageManagerProps {
   onDeletePackage: (pkgId: string) => void;
   onResetPackages: () => void;
   isFirebaseConnected?: boolean;
+  portfolios?: PortfolioItem[];
 }
 
 const CATEGORY_OPTIONS: { id: CategoryType; label: string }[] = [
@@ -42,16 +44,6 @@ const CATEGORY_OPTIONS: { id: CategoryType; label: string }[] = [
   { id: 'event', label: '🎉 Event & Gathering' },
 ];
 
-const PRESET_IMAGES = [
-  { label: 'Wedding Royal', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Akad Nikah', url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Pre-Wedding', url: 'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Wisuda', url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Keluarga & Bayi', url: 'https://images.unsplash.com/photo-1581953153629-9e87bb363a03?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Produk Studio', url: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=1000&q=80' },
-  { label: 'Studio Minimalis', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1000&q=80' },
-];
-
 export const PackageManager: React.FC<PackageManagerProps> = ({
   packages,
   onAddPackage,
@@ -59,12 +51,15 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
   onDeletePackage,
   onResetPackages,
   isFirebaseConnected,
+  portfolios = [],
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [editingPackage, setEditingPackage] = useState<PhotoPackage | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [successNotice, setSuccessNotice] = useState('');
+  const [isPortfolioPickerOpen, setIsPortfolioPickerOpen] = useState(false);
+  const [imageToast, setImageToast] = useState('');
 
   // Form Fields State
   const [name, setName] = useState('');
@@ -76,9 +71,35 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
   const [popular, setPopular] = useState(false);
   const [featuresText, setFeaturesText] = useState('1 Fotografer Senior\nSemua Softcopy HD di Google Drive\nGrading Warna Eksklusif');
   const [deliverablesText, setDeliverablesText] = useState('1 Cetak 30x40cm Frame Kayu\nFlashdisk Custom Box\nLink Cloud Private 1 Tahun');
-  const [imageUrl, setImageUrl] = useState(PRESET_IMAGES[0].url);
+  const [imageUrl, setImageUrl] = useState('');
   const [recommendedFor, setRecommendedFor] = useState('Semua Klien & Pasangan');
   const [formError, setFormError] = useState('');
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file maksimal 5MB agar performa database tetap optimal.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string;
+      if (result) {
+        setImageUrl(result);
+        setImageToast('Foto berhasil diunggah dari komputer lokal!');
+        setTimeout(() => setImageToast(''), 3000);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Open Form for Adding New Package
   const handleOpenAddForm = () => {
@@ -92,7 +113,7 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
     setPopular(false);
     setFeaturesText('1 Fotografer Utama & 1 Crew\nUnlimited Poses & Shoots\nGrading Warna Dimensi Signature\nAll Master Softcopy High-Res');
     setDeliverablesText('1 Cetak 30x45cm Frame Minimalis\n1 Album Foto Hardcover\nGoogle Drive Folder');
-    setImageUrl(PRESET_IMAGES[0].url);
+    setImageUrl('');
     setRecommendedFor('Pasangan & Acara Keluarga');
     setFormError('');
     setIsFormOpen(true);
@@ -159,7 +180,7 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
         popular,
         features: featuresList,
         deliverables: deliverablesList,
-        imageUrl: imageUrl.trim() || PRESET_IMAGES[0].url,
+        imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
         recommendedFor: recommendedFor.trim(),
       };
 
@@ -179,7 +200,7 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
         popular,
         features: featuresList,
         deliverables: deliverablesList,
-        imageUrl: imageUrl.trim() || PRESET_IMAGES[0].url,
+        imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
         recommendedFor: recommendedFor.trim() || 'Semua Klien',
       };
 
@@ -320,7 +341,7 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
                 referrerPolicy="no-referrer"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = PRESET_IMAGES[0].url;
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80';
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-black/30 to-transparent"></div>
@@ -633,39 +654,69 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
                 </div>
               </div>
 
-              {/* Cover Image & Preset Selector */}
+              {/* Cover Image & Selection Options */}
               <div className="space-y-2 pt-1">
                 <label className="text-[11px] uppercase tracking-wider text-gray-300 font-semibold flex items-center justify-between">
                   <span className="flex items-center gap-1">
                     <ImageIcon className="w-3 h-3 text-[#D4AF37]" />
-                    <span>URL Foto Banner / Cover</span>
+                    <span>Gambar Paket & Cover Banner</span>
                   </span>
-                  <span className="text-[10px] text-gray-400 font-normal">Pilih preset atau masukkan link URL</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Pilih dari Galeri, Upload Lokal, atau Preset</span>
                 </label>
-                <input
-                  type="url"
-                  placeholder="https://images.unsplash.com/..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/15 text-white placeholder-gray-600 focus:outline-none focus:border-[#D4AF37] font-mono text-[11px]"
-                />
 
-                {/* Preset Thumbnails */}
-                <div className="flex items-center gap-2 overflow-x-auto py-1">
-                  {PRESET_IMAGES.map((preset, idx) => (
-                    <button
-                      type="button"
-                      key={idx}
-                      onClick={() => setImageUrl(preset.url)}
-                      className={`px-2 py-1 text-[10px] border shrink-0 transition-colors ${
-                        imageUrl === preset.url
-                          ? 'border-[#D4AF37] bg-[#D4AF37]/10 text-[#D4AF37] font-bold'
-                          : 'border-white/10 bg-[#0A0A0A] text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
+                {imageToast && (
+                  <div className="p-2 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                    <span>{imageToast}</span>
+                  </div>
+                )}
+
+                {/* Image Preview & URL input */}
+                <div className="flex gap-3 items-center">
+                  <div className="w-16 h-16 shrink-0 bg-[#0A0A0A] border border-white/25 overflow-hidden">
+                    {imageUrl ? (
+                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-600">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-[#0A0A0A] border border-white/15 text-white placeholder-gray-600 focus:outline-none focus:border-[#D4AF37] font-mono text-[11px]"
+                    />
+                    <p className="text-[10px] text-gray-500">URL langsung, pilih dari galeri portofolio, atau upload file dari komputer.</p>
+                  </div>
+                </div>
+
+                {/* Upload & Gallery Picker Actions */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {/* Local Upload */}
+                  <label className="w-full cursor-pointer px-3 py-2 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors">
+                    <Upload className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Upload dari Komputer Lokal</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Portfolio Gallery Picker */}
+                  <button
+                    type="button"
+                    onClick={() => setIsPortfolioPickerOpen(true)}
+                    className="w-full py-2 px-3 bg-[#1A1A1A] hover:bg-[#222222] border border-[#D4AF37]/30 text-[#D4AF37] hover:text-amber-300 text-xs font-mono flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>Pilih dari Galeri Portofolio ({portfolios.length})</span>
+                  </button>
                 </div>
               </div>
 
@@ -688,6 +739,70 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* PORTFOLIO PICKER MODAL */}
+      {isPortfolioPickerOpen && (
+        <div className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="w-full max-w-3xl bg-[#141414] border border-[#D4AF37] p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h4 className="text-white font-bold text-sm flex items-center gap-2">
+                <ImageIcon className="w-4 h-4 text-[#D4AF37]" />
+                <span>Pilih Foto dari Galeri Portofolio Studio</span>
+              </h4>
+              <button
+                type="button"
+                onClick={() => setIsPortfolioPickerOpen(false)}
+                className="text-gray-400 hover:text-white p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {portfolios.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 space-y-2">
+                <Layers className="w-10 h-10 mx-auto text-gray-600" />
+                <p className="text-xs">Belum ada foto di galeri portofolio aplikasi.</p>
+                <p className="text-[10px] text-gray-500">Tambahkan karya terlebih dahulu di menu Portofolio.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {portfolios.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setImageUrl(item.imageUrl);
+                      setIsPortfolioPickerOpen(false);
+                      setImageToast(`Berhasil memilih dari portofolio: ${item.title}`);
+                      setTimeout(() => setImageToast(''), 3000);
+                    }}
+                    className={`group relative aspect-square bg-[#0A0A0A] border overflow-hidden cursor-pointer transition-all ${
+                      imageUrl === item.imageUrl
+                        ? 'border-[#D4AF37] ring-2 ring-[#D4AF37]'
+                        : 'border-white/10 hover:border-white/40'
+                    }`}
+                  >
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
+                      <p className="text-[11px] font-bold text-white truncate">{item.title}</p>
+                      <span className="text-[9px] text-[#D4AF37] uppercase">{item.category}</span>
+                    </div>
+                    {imageUrl === item.imageUrl && (
+                      <div className="absolute top-2 right-2 bg-[#D4AF37] text-black p-1">
+                        <Check className="w-3 h-3" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

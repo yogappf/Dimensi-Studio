@@ -663,6 +663,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
           onDeletePackage={onDeletePackage}
           onResetPackages={onResetPackages}
           isFirebaseConnected={isFirebaseConnected}
+          portfolios={portfolios}
         />
       )}
 
