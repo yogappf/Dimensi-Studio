@@ -109,6 +109,7 @@ export interface StudioConfig {
   masterEmail?: string;
   masterPhone?: string;
   staffUsername?: string;
+  heroImageUrl?: string;
 }
 
 export interface AuditLogItem {

@@ -51,6 +51,7 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   masterEmail: 'dimensi.idphoto@gmail.com',
   masterPhone: '0821-2345-6789',
   staffUsername: 'staff',
+  heroImageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
 };
 
 export const INITIAL_ADMIN_STAFF: AdminStaff[] = [
