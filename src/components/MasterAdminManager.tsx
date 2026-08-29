@@ -145,8 +145,16 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     reader.onload = (uploadEvent) => {
       const result = uploadEvent.target?.result as string;
       if (result) {
-        setConfigForm({ ...configForm, heroImageUrl: result });
-        setHeroToast('Gambar Top Rated Studio berhasil dimuat dari komputer lokal!');
+        const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
+          ? configForm.heroImageUrls
+          : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
+        const updatedList = [...currentList, result];
+        setConfigForm({
+          ...configForm,
+          heroImageUrl: updatedList[0],
+          heroImageUrls: updatedList,
+        });
+        setHeroToast('Foto banner baru berhasil ditambahkan ke slideshow!');
         setTimeout(() => setHeroToast(''), 3000);
       }
     };
@@ -992,15 +1000,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           )}
 
           <form onSubmit={handleSaveConfig} className="space-y-6">
-            {/* Hero Showcase Image Section */}
-            <div className="p-4 bg-[#0A0A0A] border border-[#D4AF37]/30 space-y-3">
-              <label className="text-xs font-mono uppercase tracking-wider text-[#D4AF37] font-bold flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-[#D4AF37]" />
-                  <span>Gambar Banner "Top Rated Studio" (Hero Showcase)</span>
-                </span>
-                <span className="text-[10px] text-gray-400 font-normal">Pilih dari Galeri atau Upload Komputer</span>
-              </label>
+            {/* Hero Showcase Image & Dashboard Content Section */}
+            <div className="p-4 bg-[#0A0A0A] border border-[#D4AF37]/30 space-y-4">
+              <h4 className="text-xs font-mono uppercase tracking-wider text-[#D4AF37] font-bold flex items-center gap-2 pb-2 border-b border-white/10">
+                <ImageIcon className="w-4 h-4 text-[#D4AF37]" />
+                <span>Pengaturan Home / Dashboard (Hero Section)</span>
+              </h4>
 
               {heroToast && (
                 <div className="p-2 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center gap-2">
@@ -1009,26 +1014,20 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                 </div>
               )}
 
-              <div className="flex gap-3 items-center">
-                <div className="w-20 h-24 shrink-0 bg-black border border-white/20 overflow-hidden">
-                  {configForm.heroImageUrl ? (
-                    <img src={configForm.heroImageUrl} alt="Hero Showcase" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-600">
-                      <ImageIcon className="w-6 h-6" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 space-y-2">
-                  <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/..."
-                    value={configForm.heroImageUrl || ''}
-                    onChange={(e) => setConfigForm({ ...configForm, heroImageUrl: e.target.value })}
-                    className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white placeholder-gray-600 focus:outline-none focus:border-[#D4AF37] font-mono text-[11px]"
-                  />
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <label className="w-full cursor-pointer px-2.5 py-1.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                <div className="md:col-span-1 space-y-2">
+                  <label className="text-[11px] font-mono uppercase text-gray-300 block">Foto Banner / Showcase Samping</label>
+                  <div className="w-full aspect-[4/5] max-w-[200px] bg-black border border-white/20 overflow-hidden relative">
+                    {configForm.heroImageUrl ? (
+                      <img src={configForm.heroImageUrl} alt="Hero Showcase" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-600">
+                        <ImageIcon className="w-6 h-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2 max-w-[200px]">
+                    <label className="w-full cursor-pointer px-2 py-1.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors">
                       <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
                       <span>Upload Lokal</span>
                       <input
@@ -1041,14 +1040,171 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsHeroPortfolioPickerOpen(true)}
-                      className="w-full py-1.5 px-2.5 bg-[#1A1A1A] hover:bg-[#222222] border border-[#D4AF37]/30 text-[#D4AF37] hover:text-amber-300 text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      className="w-full py-1.5 px-2 bg-[#1A1A1A] hover:bg-[#222222] border border-[#D4AF37]/30 text-[#D4AF37] hover:text-amber-300 text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Layers className="w-3.5 h-3.5" />
-                      <span>Pilih dari Portofolio</span>
+                      <span>Dari Portofolio</span>
                     </button>
+
+                    {/* Banner Slideshow List Thumbnails */}
+                    <div className="pt-2 border-t border-white/10 space-y-1">
+                      <span className="text-[10px] font-mono text-gray-400 uppercase block">Slideshow ({configForm.heroImageUrls?.length || (configForm.heroImageUrl ? 1 : 0)})</span>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-black/40 border border-white/10">
+                        {(configForm.heroImageUrls && configForm.heroImageUrls.length > 0 ? configForm.heroImageUrls : (configForm.heroImageUrl ? [configForm.heroImageUrl] : [])).map((img, idx) => (
+                          <div key={idx} className="relative w-10 h-12 bg-black border border-white/20 group">
+                            <img src={img} alt={`Banner ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const list = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
+                                  ? configForm.heroImageUrls
+                                  : [configForm.heroImageUrl || ''];
+                                const filtered = list.filter((_, i) => i !== idx);
+                                setConfigForm({
+                                  ...configForm,
+                                  heroImageUrls: filtered,
+                                  heroImageUrl: filtered[0] || '',
+                                });
+                              }}
+                              className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Hapus"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-1">URL Gambar Banner</label>
+                    <input
+                      type="url"
+                      placeholder="https://images.unsplash.com/..."
+                      value={configForm.heroImageUrl || ''}
+                      onChange={(e) => setConfigForm({ ...configForm, heroImageUrl: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white placeholder-gray-600 focus:outline-none focus:border-[#D4AF37] font-mono text-[11px]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Slogan Atas (Eyebrow)</label>
+                      <input
+                        type="text"
+                        value={configForm.heroEyebrow || ''}
+                        onChange={(e) => setConfigForm({ ...configForm, heroEyebrow: e.target.value })}
+                        placeholder="Dimensi Photography..."
+                        className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white text-xs focus:border-[#D4AF37]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Judul Utama (Headline)</label>
+                      <input
+                        type="text"
+                        value={configForm.heroTitleMain || ''}
+                        onChange={(e) => setConfigForm({ ...configForm, heroTitleMain: e.target.value })}
+                        placeholder="Abadikan Momen"
+                        className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white text-xs focus:border-[#D4AF37]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Kata Highlight (Warna Emas)</label>
+                      <input
+                        type="text"
+                        value={configForm.heroTitleHighlight || ''}
+                        onChange={(e) => setConfigForm({ ...configForm, heroTitleHighlight: e.target.value })}
+                        placeholder="Terbaik"
+                        className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white text-xs focus:border-[#D4AF37]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Label Badge Atas Gambar</label>
+                      <input
+                        type="text"
+                        value={configForm.heroBadgeText || ''}
+                        onChange={(e) => setConfigForm({ ...configForm, heroBadgeText: e.target.value })}
+                        placeholder="Top Rated Studio"
+                        className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white text-xs focus:border-[#D4AF37]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Deskripsi / Sub-headline Beranda</label>
+                    <textarea
+                      rows={2}
+                      value={configForm.heroDescription || ''}
+                      onChange={(e) => setConfigForm({ ...configForm, heroDescription: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-[#141414] border border-white/15 text-white text-xs focus:border-[#D4AF37]"
+                    />
                   </div>
                 </div>
               </div>
+
+
+
+              {/* Stats Bar Settings */}
+              <div className="grid grid-cols-3 gap-3 pt-2 border-t border-white/10">
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Stat 1 (Angka & Label)</label>
+                  <input
+                    type="text"
+                    value={configForm.heroStat1Value || ''}
+                    onChange={(e) => setConfigForm({ ...configForm, heroStat1Value: e.target.value })}
+                    placeholder="4.9 / 5.0"
+                    className="w-full px-2.5 py-1 bg-[#141414] border border-white/15 text-white text-xs mb-1"
+                  />
+                  <input
+                    type="text"
+                    value={configForm.heroStat1Label || ''}
+                    onChange={(e) => setConfigForm({ ...configForm, heroStat1Label: e.target.value })}
+                    placeholder="1.500+ Klien Puas"
+                    className="w-full px-2.5 py-1 bg-[#141414] border border-white/15 text-white text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Stat 2 (Angka & Label)</label>
+                  <input
+                    type="text"
+                    value={configForm.heroStat2Value || ''}
+                    onChange={(e) => setConfigForm({ ...configForm, heroStat2Value: e.target.value })}
+                    placeholder="8+ Tahun"
+                    className="w-full px-2.5 py-1 bg-[#141414] border border-white/15 text-white text-xs mb-1"
+                  />
+                  <input
+                    type="text"
+                    value={configForm.heroStat2Label || ''}
+                    onChange={(e) => setConfigForm({ ...configForm, heroStat2Label: e.target.value })}
+                    placeholder="Pengalaman Visual"
+                    className="w-full px-2.5 py-1 bg-[#141414] border border-white/15 text-white text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-mono uppercase text-gray-400 mb-1">Stat 3 (Angka & Label)</label>
+                  <input
+                    type="text"
+                    value={configForm.heroStat3Value || ''}
+                    onChange={(e) => setConfigForm({ ...configForm, heroStat3Value: e.target.value })}
+                    placeholder="100%"
+                    className="w-full px-2.5 py-1 bg-[#141414] border border-white/15 text-white text-xs mb-1"
+                  />
+                  <input
+                    type="text"
+                    value={configForm.heroStat3Label || ''}
+                    onChange={(e) => setConfigForm({ ...configForm, heroStat3Label: e.target.value })}
+                    placeholder="Garansi High-Res"
+                    className="w-full px-2.5 py-1 bg-[#141414] border border-white/15 text-white text-xs"
+                  />
+                </div>
+              </div>
+
             </div>
 
             {/* Studio Info Section */}
@@ -1448,9 +1604,17 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                   <div
                     key={item.id}
                     onClick={() => {
-                      setConfigForm({ ...configForm, heroImageUrl: item.imageUrl });
+                      const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
+                        ? configForm.heroImageUrls
+                        : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
+                      const updatedList = [...currentList, item.imageUrl];
+                      setConfigForm({
+                        ...configForm,
+                        heroImageUrl: updatedList[0],
+                        heroImageUrls: updatedList,
+                      });
                       setIsHeroPortfolioPickerOpen(false);
-                      setHeroToast(`Berhasil memilih banner dari portofolio: ${item.title}`);
+                      setHeroToast(`Berhasil menambahkan banner dari portofolio: ${item.title}`);
                       setTimeout(() => setHeroToast(''), 3000);
                     }}
                     className={`group relative aspect-square bg-[#0A0A0A] border overflow-hidden cursor-pointer transition-all ${

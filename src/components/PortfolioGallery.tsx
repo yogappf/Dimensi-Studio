@@ -12,6 +12,7 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState<CategoryType>('all');
   const [activeModalItem, setActiveModalItem] = useState<PortfolioItem | null>(null);
+  const [imageOrientations, setImageOrientations] = useState<Record<string, 'portrait' | 'landscape' | 'square'>>({});
 
   const filters: { id: CategoryType; label: string }[] = [
     { id: 'all', label: 'Semua Karya' },
@@ -64,18 +65,28 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
 
         {/* Gallery Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setActiveModalItem(item)}
-              className="group relative overflow-hidden bg-[#141414] border border-white/10 cursor-pointer aspect-[4/3] hover:border-[#D4AF37] transition-all duration-300"
-            >
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100"
-              />
+          {filteredItems.map((item) => {
+            const orientation = imageOrientations[item.id] || 'landscape';
+            const aspectClass = orientation === 'portrait' ? 'aspect-[3/4]' : orientation === 'square' ? 'aspect-square' : 'aspect-[4/3]';
+            return (
+              <div
+                key={item.id}
+                onClick={() => setActiveModalItem(item)}
+                className={`group relative overflow-hidden bg-[#141414] border border-white/10 cursor-pointer ${aspectClass} hover:border-[#D4AF37] transition-all duration-300`}
+              >
+                <img
+                  src={item.imageUrl}
+                  alt={item.title}
+                  referrerPolicy="no-referrer"
+                  onLoad={(e) => {
+                    const img = e.currentTarget;
+                    const orient = img.naturalHeight > img.naturalWidth ? 'portrait' : img.naturalWidth > img.naturalHeight ? 'landscape' : 'square';
+                    if (imageOrientations[item.id] !== orient) {
+                      setImageOrientations((prev) => ({ ...prev, [item.id]: orient }));
+                    }
+                  }}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90 group-hover:opacity-100"
+                />
               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
               
               {/* Category Tag */}
@@ -105,7 +116,8 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
                 </p>
               </div>
             </div>
-          ))}
+          );
+        })}
         </div>
 
       </div>

@@ -52,6 +52,27 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   masterPhone: '0821-2345-6789',
   staffUsername: 'staff',
   heroImageUrl: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
+  heroImageUrls: [
+    'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1537633552985-df8429e8048b?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=900&q=80'
+  ],
+  heroEyebrow: 'Dimensi Photography & Art Studio',
+  heroTitleMain: 'Abadikan Momen',
+  heroTitleHighlight: 'Terbaik',
+  heroDescription: 'Kami menghadirkan seni dalam setiap jepretan. Dari pernikahan sakral, portrait wisuda, keluarga, hingga produk komersial, Dimensi Studio memberikan hasil visual presisi yang bercerita.',
+  heroButtonText: 'Pesan Sekarang',
+  heroSecondaryButtonText: 'Lihat Layanan',
+  heroCardTitle: 'The Royal Eternity',
+  heroCardSubtitle: 'Signature Series',
+  heroCardDescription: 'Dokumentasi wedding sinematik 4K dengan color grading eksklusif.',
+  heroBadgeText: 'Top Rated Studio',
+  heroStat1Value: '4.9 / 5.0',
+  heroStat1Label: '1.500+ Klien Puas',
+  heroStat2Value: '8+ Tahun',
+  heroStat2Label: 'Pengalaman Visual',
+  heroStat3Value: '100%',
+  heroStat3Label: 'Garansi High-Res',
 };
 
 export const INITIAL_ADMIN_STAFF: AdminStaff[] = [

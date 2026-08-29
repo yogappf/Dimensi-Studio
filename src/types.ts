@@ -110,6 +110,23 @@ export interface StudioConfig {
   masterPhone?: string;
   staffUsername?: string;
   heroImageUrl?: string;
+  heroImageUrls?: string[];
+  heroEyebrow?: string;
+  heroTitleMain?: string;
+  heroTitleHighlight?: string;
+  heroDescription?: string;
+  heroButtonText?: string;
+  heroSecondaryButtonText?: string;
+  heroCardTitle?: string;
+  heroCardSubtitle?: string;
+  heroCardDescription?: string;
+  heroBadgeText?: string;
+  heroStat1Value?: string;
+  heroStat1Label?: string;
+  heroStat2Value?: string;
+  heroStat2Label?: string;
+  heroStat3Value?: string;
+  heroStat3Label?: string;
 }
 
 export interface AuditLogItem {

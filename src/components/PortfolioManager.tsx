@@ -47,6 +47,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [imageOrientations, setImageOrientations] = useState<Record<string, 'portrait' | 'landscape' | 'square'>>({});
 
   // Form State
   const [formData, setFormData] = useState<Partial<PortfolioItem>>({
@@ -274,25 +275,35 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
       {/* Grid of Portfolio Items */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredPortfolios.map((item) => (
-          <div
-            key={item.id}
-            className="bg-[#141414] border border-white/10 hover:border-[#D4AF37]/50 transition-all flex flex-col justify-between group overflow-hidden"
-            id={`portfolio-admin-card-${item.id}`}
-          >
-            <div>
-              {/* Image Preview Container */}
-              <div className="relative aspect-[4/3] bg-black/60 overflow-hidden">
-                <img
-                  src={item.imageUrl}
-                  alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  referrerPolicy="no-referrer"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).src =
-                      'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80';
-                  }}
-                />
+        {filteredPortfolios.map((item) => {
+          const orientation = imageOrientations[item.id] || 'landscape';
+          const aspectClass = orientation === 'portrait' ? 'aspect-[3/4]' : orientation === 'square' ? 'aspect-square' : 'aspect-[4/3]';
+          return (
+            <div
+              key={item.id}
+              className="bg-[#141414] border border-white/10 hover:border-[#D4AF37]/50 transition-all flex flex-col justify-between group overflow-hidden"
+              id={`portfolio-admin-card-${item.id}`}
+            >
+              <div>
+                {/* Image Preview Container */}
+                <div className={`relative ${aspectClass} bg-black/60 overflow-hidden transition-all duration-300`}>
+                  <img
+                    src={item.imageUrl}
+                    alt={item.title}
+                    onLoad={(e) => {
+                      const img = e.currentTarget;
+                      const orient = img.naturalHeight > img.naturalWidth ? 'portrait' : img.naturalWidth > img.naturalHeight ? 'landscape' : 'square';
+                      if (imageOrientations[item.id] !== orient) {
+                        setImageOrientations((prev) => ({ ...prev, [item.id]: orient }));
+                      }
+                    }}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src =
+                        'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80';
+                    }}
+                  />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
 
                 {/* Badge Category */}
@@ -354,7 +365,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {filteredPortfolios.length === 0 && (
