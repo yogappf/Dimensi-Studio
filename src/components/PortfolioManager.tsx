@@ -13,6 +13,7 @@ import {
   Sparkles,
   ExternalLink,
   Eye,
+  Upload,
 } from 'lucide-react';
 
 interface PortfolioManagerProps {
@@ -70,6 +71,31 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file maksimal 5MB agar performa database tetap optimal.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string;
+      if (result) {
+        setFormData({ ...formData, imageUrl: result });
+        showToast('Gambar lokal berhasil dimuat dan siap disimpan ke database.');
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleOpenAdd = () => {
@@ -436,6 +462,21 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
                   id="portfolio-form-image"
                 />
+
+                {/* Local Computer File Upload */}
+                <div className="mt-2.5">
+                  <label className="w-full cursor-pointer px-3 py-2 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors">
+                    <Upload className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Upload Foto dari Komputer Lokal</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-[10px] text-gray-500 font-mono mt-1">Mendukung file JPG, PNG, WebP (Maks. 5MB). Otomatis tersimpan ke database aplikasi.</p>
+                </div>
 
                 {/* Preset sample shortcuts */}
                 <div className="mt-2">

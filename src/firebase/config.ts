@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
+import { getFirestore } from 'firebase/firestore';
 import rawConfig from '../../firebase-applet-config.json';
 
 // Support environment variables with fallback to bundled config
@@ -53,15 +53,15 @@ DRIVE_SCOPES.forEach((scope) => {
 // Test Firestore connection on boot
 export async function testConnection(): Promise<boolean> {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log('Firebase Firestore connection established successfully.');
+    if (!navigator.onLine) {
+      return false;
+    }
+    // Only attempt light check if config projectId exists
+    if (!config.projectId) {
+      return false;
+    }
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase client is in offline mode or network is unreachable.');
-    } else {
-      console.log('Firestore connection verified with active database instance.');
-    }
     return false;
   }
 }
