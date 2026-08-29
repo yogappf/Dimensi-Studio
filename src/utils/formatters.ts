@@ -101,6 +101,29 @@ Saya ingin mengonfirmasi pendaftaran / order jasa foto dengan rincian berikut:
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
+export function generateClientConfirmationWhatsAppLink(order: BookingOrder): string {
+  const cleanPhone = normalizeWhatsAppNumber(order.phone);
+  const dpAmount = Math.round(order.totalPrice * 0.5);
+  const message = `Halo Kak ${order.clientName}! 📸✨
+
+Kami dari *Dimensi Fotografi Studio* ingin mengonfirmasi pendaftaran / pesanan sesi foto Anda:
+
+*ID Booking*: ${order.id}
+*Pilihan Paket*: ${order.packageName} (${formatRupiah(order.packagePrice)})
+*Tambahan (Add-ons)*: ${order.addOnsText || 'Tidak ada'}
+*Total Biaya*: ${formatRupiah(order.totalPrice)}
+*Estimasi DP (50%)*: ${formatRupiah(dpAmount)}
+*Ketentuan Bayar*: ${order.paymentPreference}
+
+*Jadwal Sesi*: ${formatDateIndonesian(order.sessionDate)}
+*Waktu Sesi*: ${order.sessionTime}
+*Lokasi*: ${order.locationAddress} (${(order.locationType || 'studio').toUpperCase()})
+
+Silakan lakukan transfer DP ke rekening resmi studio dan balas pesan ini ya Kak. Terima kasih! 🙏`;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
 export function generateClientDeliveryWhatsAppLink(order: BookingOrder): string {
   const cleanPhone = normalizeWhatsAppNumber(order.phone);
   const message = `Halo Kak ${order.clientName}! 📸✨

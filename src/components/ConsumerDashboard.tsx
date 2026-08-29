@@ -11,7 +11,7 @@ import {
   AuditLogItem,
 } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, INITIAL_CLIENT_ORDERS, STUDIO_INFO } from '../data/mockData';
-import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink } from '../utils/formatters';
+import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink } from '../utils/formatters';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -853,7 +853,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </tr>
               ) : (
                 filteredOrders.map((order) => {
-                  const waLink = generateWhatsAppLink(order, STUDIO_INFO.whatsapp);
+                  const waLink = generateClientConfirmationWhatsAppLink(order);
                   return (
                     <tr key={order.id} className="hover:bg-white/[0.03] transition-colors">
                       
@@ -1149,7 +1149,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
             <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-3">
               <a
-                href={generateWhatsAppLink(detailOrder, STUDIO_INFO.whatsapp)}
+                href={generateClientConfirmationWhatsAppLink(detailOrder)}
                 target="_blank"
                 rel="noreferrer"
                 className="flex-1 py-2.5 bg-[#25D366] hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
