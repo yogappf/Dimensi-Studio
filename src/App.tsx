@@ -273,6 +273,19 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = subscribeToStudioConfig((config) => {
       if (config) {
+        try {
+          const localSaved = localStorage.getItem(CONFIG_STORAGE_KEY);
+          if (localSaved) {
+            const localConfig = JSON.parse(localSaved);
+            if (localConfig.heroImageUrls && localConfig.heroImageUrls.length > (config.heroImageUrls?.length || 0)) {
+              config.heroImageUrls = localConfig.heroImageUrls;
+              config.heroImageUrl = localConfig.heroImageUrl || config.heroImageUrl;
+            }
+          }
+        } catch {
+          // ignore
+        }
+
         setStudioConfig(config);
         try {
           localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
@@ -639,6 +652,7 @@ export default function App() {
   const handleUpdateStudioConfig = async (config: StudioConfig) => {
     setStudioConfig(config);
     try {
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
       await saveStudioConfigToFirestore(config);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Update Pengaturan Studio', 'Profil, nomor kontak, atau keamanan studio diperbarui.', 'security');
     } catch (err) {

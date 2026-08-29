@@ -137,13 +137,13 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Ukuran file maksimal 10MB.');
+    if (file.size > 15 * 1024 * 1024) {
+      alert('Ukuran file maksimal 15MB.');
       return;
     }
 
     try {
-      const compressed = await compressImage(file, 1200, 1200, 0.75);
+      const compressed = await compressImage(file, 900, 900, 0.70);
       const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
         ? configForm.heroImageUrls
         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
@@ -155,8 +155,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       };
       setConfigForm(updatedConfig);
       onUpdateStudioConfig(updatedConfig);
-      await saveStudioConfigToFirestore(updatedConfig);
-      setHeroToast('Foto banner berhasil dikompres & disimpan ke database!');
+      try {
+        await saveStudioConfigToFirestore(updatedConfig);
+      } catch (firestoreErr) {
+        console.warn('Firestore save warning (saved locally):', firestoreErr);
+      }
+      setHeroToast('Foto banner berhasil ditambahkan dan disimpan!');
       setTimeout(() => setHeroToast(''), 3000);
     } catch (err) {
       console.error('Error compressing or saving banner image:', err);
