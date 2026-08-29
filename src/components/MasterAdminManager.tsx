@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User } from 'firebase/auth';
+import { compressImage } from '../utils/imageCompressor';
 import {
   AdminStaff,
   AdminRole,
@@ -127,7 +128,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const [isHeroPortfolioPickerOpen, setIsHeroPortfolioPickerOpen] = useState(false);
   const [heroToast, setHeroToast] = useState('');
 
-  const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -136,29 +137,31 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB agar performa database tetap optimal.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Ukuran file maksimal 10MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      if (result) {
-        const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
-          ? configForm.heroImageUrls
-          : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
-        const updatedList = [...currentList, result];
-        setConfigForm({
-          ...configForm,
-          heroImageUrl: updatedList[0],
-          heroImageUrls: updatedList,
-        });
-        setHeroToast('Foto banner baru berhasil ditambahkan ke slideshow!');
-        setTimeout(() => setHeroToast(''), 3000);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 1200, 1200, 0.75);
+      const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
+        ? configForm.heroImageUrls
+        : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
+      const updatedList = [...currentList, compressed];
+      const updatedConfig = {
+        ...configForm,
+        heroImageUrl: updatedList[0],
+        heroImageUrls: updatedList,
+      };
+      setConfigForm(updatedConfig);
+      onUpdateStudioConfig(updatedConfig);
+      await saveStudioConfigToFirestore(updatedConfig);
+      setHeroToast('Foto banner berhasil dikompres & disimpan ke database!');
+      setTimeout(() => setHeroToast(''), 3000);
+    } catch (err) {
+      console.error('Error compressing or saving banner image:', err);
+      alert('Gagal memproses gambar banner. Silakan coba lagi.');
+    }
   };
 
   // Security Passcode Form State

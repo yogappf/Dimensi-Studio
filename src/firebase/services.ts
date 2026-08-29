@@ -656,7 +656,7 @@ export async function saveStudioConfigToFirestore(config: StudioConfig): Promise
     const docRef = doc(db, SETTINGS_COLLECTION, 'studio_config');
     await setDoc(docRef, config, { merge: true });
   } catch (error) {
-    console.warn('Could not save studio config to Firestore:', error);
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PortfolioItem, CategoryType } from '../types';
+import { compressImage } from '../utils/imageCompressor';
 import {
   Plus,
   Edit2,
@@ -64,7 +65,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -73,20 +74,19 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB agar performa database tetap optimal.');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Ukuran file maksimal 10MB.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      if (result) {
-        setFormData({ ...formData, imageUrl: result });
-        showToast('Gambar lokal berhasil dimuat dan siap disimpan ke database.');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 1200, 1200, 0.75);
+      setFormData({ ...formData, imageUrl: compressed });
+      showToast('Gambar berhasil dikompres dan siap disimpan.');
+    } catch (err) {
+      console.error('Error compressing image:', err);
+      alert('Gagal memproses gambar. Silakan coba lagi.');
+    }
   };
 
   const handleOpenAdd = () => {
