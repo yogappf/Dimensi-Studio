@@ -57,6 +57,7 @@ export interface PortfolioItem {
   categoryName: string;
   location: string;
   imageUrl: string;
+  imageUrls?: string[];
   description: string;
 }
 

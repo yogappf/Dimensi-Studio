@@ -57,6 +57,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     categoryName: 'Pernikahan',
     location: '',
     imageUrl: '',
+    imageUrls: [],
     description: '',
   });
 
@@ -66,23 +67,35 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
-      return;
+    let allValid = true;
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].size > 10 * 1024 * 1024) {
+        allValid = false;
+      }
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Ukuran file maksimal 10MB.');
+    if (!allValid) {
+      alert('Terdapat ukuran file yang melebihi 10MB.');
       return;
     }
 
     try {
-      const compressed = await compressImage(file, 1200, 1200, 0.75);
-      setFormData({ ...formData, imageUrl: compressed });
-      showToast('Gambar berhasil dikompres dan siap disimpan.');
+      const newUrls: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        const compressed = await compressImage(files[i], 1200, 1200, 0.75);
+        newUrls.push(compressed);
+      }
+      
+      const updatedUrls = [...(formData.imageUrls || []), ...newUrls];
+      setFormData({ 
+        ...formData, 
+        imageUrls: updatedUrls,
+        imageUrl: formData.imageUrl || updatedUrls[0] || '' 
+      });
+      showToast(`${files.length} gambar berhasil dikompres dan siap disimpan.`);
     } catch (err) {
       console.error('Error compressing image:', err);
       alert('Gagal memproses gambar. Silakan coba lagi.');
@@ -96,6 +109,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       categoryName: 'Pernikahan',
       location: 'Dimensi Studio Jakarta',
       imageUrl: '',
+      imageUrls: [],
       description: '',
     });
     setIsAddModalOpen(true);
@@ -109,6 +123,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       categoryName: item.categoryName,
       location: item.location,
       imageUrl: item.imageUrl,
+      imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
       description: item.description,
     });
   };
@@ -140,6 +155,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         categoryName: formData.categoryName || 'Koleksi',
         location: formData.location?.trim() || 'Dimensi Studio',
         imageUrl: formData.imageUrl.trim(),
+        imageUrls: formData.imageUrls,
         description: formData.description?.trim() || '',
       });
       showToast(`Karya "${formData.title}" berhasil diperbarui.`);
@@ -153,6 +169,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         categoryName: formData.categoryName || 'Koleksi',
         location: formData.location?.trim() || 'Dimensi Studio',
         imageUrl: formData.imageUrl.trim(),
+        imageUrls: formData.imageUrls,
         description: formData.description?.trim() || '',
       };
       onAddPortfolio(newItem);
@@ -478,19 +495,52 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                 <div className="mt-2.5">
                   <label className="w-full cursor-pointer px-3 py-2 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors">
                     <Upload className="w-4 h-4 text-[#D4AF37]" />
-                    <span>Upload Foto dari Komputer Lokal</span>
+                    <span>Upload Foto dari Komputer Lokal (Bisa Multiple)</span>
                     <input
                       type="file"
                       accept="image/*"
+                      multiple
                       onChange={handleFileUpload}
                       className="hidden"
                     />
                   </label>
-                  <p className="text-[10px] text-gray-500 font-mono mt-1">Mendukung file JPG, PNG, WebP (Maks. 5MB). Otomatis tersimpan ke database aplikasi.</p>
+                  <p className="text-[10px] text-gray-500 font-mono mt-1">Mendukung file JPG, PNG, WebP (Maks. 10MB per file). Pilih beberapa file sekaligus.</p>
                 </div>
 
-                {/* Image Live Preview */}
-                {formData.imageUrl && (
+                {/* Image Live Previews */}
+                {(formData.imageUrls && formData.imageUrls.length > 0) ? (
+                  <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {formData.imageUrls.map((url, idx) => (
+                      <div key={idx} className="relative aspect-video rounded border border-white/15 overflow-hidden bg-black group">
+                        <img
+                          src={url}
+                          alt={`Preview ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        {idx === 0 && (
+                          <span className="absolute top-1 left-1 px-1.5 py-0.5 bg-black/80 text-[10px] font-mono text-[#D4AF37]">
+                            Cover
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newUrls = formData.imageUrls?.filter((_, i) => i !== idx) || [];
+                            setFormData({
+                              ...formData,
+                              imageUrls: newUrls,
+                              imageUrl: newUrls[0] || ''
+                            });
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-black/80 text-rose-400 hover:text-rose-300 hover:bg-black opacity-0 group-hover:opacity-100 transition-opacity rounded-sm"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : formData.imageUrl ? (
                   <div className="mt-3 aspect-video w-full max-w-sm rounded border border-white/15 overflow-hidden relative bg-black">
                     <img
                       src={formData.imageUrl}
@@ -502,7 +552,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       Live Preview
                     </span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div>

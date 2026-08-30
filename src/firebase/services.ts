@@ -546,6 +546,7 @@ export async function savePortfolioToFirestore(item: PortfolioItem): Promise<voi
       categoryName: item.categoryName || '',
       location: item.location || '',
       imageUrl: item.imageUrl || '',
+      imageUrls: item.imageUrls || [],
       description: item.description || '',
       updatedAt: new Date().toISOString(),
     };
@@ -607,6 +608,7 @@ export function subscribeToPortfolios(
           categoryName: data.categoryName || 'Koleksi',
           location: data.location || '',
           imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
+          imageUrls: data.imageUrls || [],
           description: data.description || '',
         });
       });

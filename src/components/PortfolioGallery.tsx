@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PORTFOLIO_ITEMS } from '../data/mockData';
 import { CategoryType, PortfolioItem } from '../types';
-import { Camera, MapPin, Sparkles, X, Eye } from 'lucide-react';
+import { Camera, MapPin, Sparkles, X, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PortfolioGalleryProps {
   portfolios?: PortfolioItem[];
@@ -12,7 +12,12 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState<CategoryType>('all');
   const [activeModalItem, setActiveModalItem] = useState<PortfolioItem | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageOrientations, setImageOrientations] = useState<Record<string, 'portrait' | 'landscape' | 'square'>>({});
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [activeModalItem]);
 
   const uniqueSlugs = Array.from(new Set(portfolios.map(item => item.category)));
   const filters: { id: CategoryType; label: string }[] = [
@@ -29,6 +34,18 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
   const filteredItems = activeFilter === 'all'
     ? portfolios
     : portfolios.filter((item) => item.category === activeFilter);
+
+  const handleNextImage = () => {
+    if (!activeModalItem) return;
+    const urls = activeModalItem.imageUrls || [activeModalItem.imageUrl];
+    setCurrentImageIndex((prev) => (prev + 1) % urls.length);
+  };
+
+  const handlePrevImage = () => {
+    if (!activeModalItem) return;
+    const urls = activeModalItem.imageUrls || [activeModalItem.imageUrl];
+    setCurrentImageIndex((prev) => (prev - 1 + urls.length) % urls.length);
+  };
 
   return (
     <section id="portofolio" className="py-16 bg-[#0A0A0A] text-[#E0E0E0] border-b border-white/10">
@@ -136,13 +153,43 @@ export const PortfolioGallery: React.FC<PortfolioGalleryProps> = ({
             </button>
 
             <div className="grid grid-cols-1 lg:grid-cols-12">
-              <div className="lg:col-span-8 bg-black flex items-center justify-center max-h-[70vh]">
+              <div className="lg:col-span-8 bg-black flex items-center justify-center max-h-[70vh] relative group">
                 <img
-                  src={activeModalItem.imageUrl}
+                  src={(activeModalItem.imageUrls && activeModalItem.imageUrls.length > 0) ? activeModalItem.imageUrls[currentImageIndex] : activeModalItem.imageUrl}
                   alt={activeModalItem.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-contain max-h-[70vh]"
                 />
+                
+                {/* Slideshow Controls */}
+                {(activeModalItem.imageUrls && activeModalItem.imageUrls.length > 1) && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+                      className="absolute left-4 p-2 bg-black/60 text-white hover:bg-[#D4AF37] hover:text-black transition-colors opacity-0 group-hover:opacity-100 rounded-full"
+                    >
+                      <ChevronLeft className="w-6 h-6" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+                      className="absolute right-4 p-2 bg-black/60 text-white hover:bg-[#D4AF37] hover:text-black transition-colors opacity-0 group-hover:opacity-100 rounded-full"
+                    >
+                      <ChevronRight className="w-6 h-6" />
+                    </button>
+                    
+                    {/* Indicators */}
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-full">
+                      {activeModalItem.imageUrls.map((_, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            idx === currentImageIndex ? 'bg-[#D4AF37] w-3' : 'bg-white/50'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="lg:col-span-4 p-6 sm:p-7 flex flex-col justify-between space-y-4 bg-[#141414]">
