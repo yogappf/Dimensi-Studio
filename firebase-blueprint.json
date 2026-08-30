@@ -232,6 +232,206 @@
         "features",
         "deliverables"
       ]
+    },
+    "addOn": {
+      "title": "Add-On Item",
+      "description": "Optional photography add-on or customization service",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Unique add-on identifier"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Name of add-on"
+        },
+        "price": {
+          "type": "number",
+          "description": "Price in IDR"
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Category group of add-on"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Short explanation of add-on"
+        }
+      },
+      "required": ["id", "name", "price", "category"]
+    },
+    "portfolioItem": {
+      "title": "Portfolio Gallery Item",
+      "description": "Showcase photo item in studio portfolio",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Portfolio item ID"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Portfolio title"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category slug"
+        },
+        "imageUrl": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "High resolution image URL"
+        },
+        "location": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Shoot location"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Photo session date"
+        },
+        "tags": {
+          "type": "array",
+          "description": "List of keyword tags"
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether featured on hero/highlight"
+        }
+      },
+      "required": ["id", "title", "category", "imageUrl"]
+    },
+    "studioConfig": {
+      "title": "Studio Business Configuration",
+      "description": "Studio profile, identity, contacts, bank info, and security passcodes",
+      "type": "object",
+      "properties": {
+        "studioName": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Business brand name"
+        },
+        "tagline": {
+          "type": "string",
+          "maxLength": 250,
+          "description": "Studio tagline"
+        },
+        "heroTitle": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Main landing headline"
+        },
+        "whatsappNumber": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Primary WhatsApp contact number"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Studio official email"
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300,
+          "description": "Studio physical address"
+        },
+        "staffPasscode": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Staff access PIN code"
+        },
+        "masterPasscode": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Master Super Admin PIN code"
+        }
+      },
+      "required": ["studioName", "whatsappNumber", "email"]
+    },
+    "adminStaff": {
+      "title": "Admin Staff Member",
+      "description": "Studio staff directory record with role permissions",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Staff ID"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Full staff name"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["master", "admin", "photographer", "editor", "finance"],
+          "description": "Staff role"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Staff email"
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Staff phone number"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether staff account is active"
+        }
+      },
+      "required": ["id", "name", "role", "active"]
+    },
+    "auditLog": {
+      "title": "Security & Action Audit Log",
+      "description": "Logged administrative action for audit and tracking",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Log entry ID"
+        },
+        "user": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "Actor user identifier or email"
+        },
+        "action": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Action title"
+        },
+        "details": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Description of action"
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "ISO timestamp of event"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["booking", "security", "package", "staff", "system", "portfolio"],
+          "description": "Audit category"
+        }
+      },
+      "required": ["id", "user", "action", "timestamp", "category"]
     }
   },
   "firestore": {
@@ -242,6 +442,26 @@
     "/packages/{packageId}": {
       "schema": "photoPackage",
       "description": "Collection of studio service packages"
+    },
+    "/addons/{addonId}": {
+      "schema": "addOn",
+      "description": "Collection of optional addon services"
+    },
+    "/portfolios/{portfolioId}": {
+      "schema": "portfolioItem",
+      "description": "Collection of portfolio gallery items"
+    },
+    "/settings/{settingId}": {
+      "schema": "studioConfig",
+      "description": "Collection of studio profile and configurations"
+    },
+    "/admin_staff/{staffId}": {
+      "schema": "adminStaff",
+      "description": "Collection of admin staff directory"
+    },
+    "/audit_logs/{logId}": {
+      "schema": "auditLog",
+      "description": "Collection of security and system audit logs"
     },
     "/admins/{adminId}": {
       "schema": "admin",
