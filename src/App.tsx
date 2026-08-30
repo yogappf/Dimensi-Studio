@@ -810,6 +810,7 @@ export default function App() {
         onLogOut={handleLogOut}
         isFirebaseConnected={isFirebaseConnected}
         studioConfig={studioConfig}
+        onExitAdmin={handleExitAdmin}
       />
 
       {/* Main View Switching */}
