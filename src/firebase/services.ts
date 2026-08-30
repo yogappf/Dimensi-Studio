@@ -108,6 +108,14 @@ export const INITIAL_ADMIN_STAFF: AdminStaff[] = [
 // In-memory access token cache for Google Workspace & Drive APIs (never stored in localStorage)
 let cachedAccessToken: string | null = null;
 
+const BOOKINGS_STORAGE_KEY = 'dimensi_photo_orders_v1';
+const PACKAGES_STORAGE_KEY = 'dimensi_photo_packages_v1';
+const ADDONS_STORAGE_KEY = 'dimensi_photo_addons_v1';
+const PORTFOLIOS_STORAGE_KEY = 'dimensi_photo_portfolios_v1';
+const CONFIG_STORAGE_KEY = 'dimensi_studio_config_v1';
+const STAFF_STORAGE_KEY = 'dimensi_admin_staff_v1';
+const AUDIT_STORAGE_KEY = 'dimensi_audit_logs_v1';
+
 export function getCachedAccessToken(): string | null {
   return cachedAccessToken;
 }
@@ -156,6 +164,21 @@ export function subscribeToAuth(callback: (user: User | null) => void): Unsubscr
 export async function saveBookingToFirestore(order: BookingOrder): Promise<void> {
   const path = `${BOOKINGS_COLLECTION}/${order.id}`;
   try {
+    // Update local cache immediately
+    try {
+      const saved = localStorage.getItem(BOOKINGS_STORAGE_KEY);
+      const orders: BookingOrder[] = saved ? JSON.parse(saved) : [];
+      const idx = orders.findIndex((o) => o.id === order.id);
+      if (idx >= 0) {
+        orders[idx] = { ...orders[idx], ...order };
+      } else {
+        orders.unshift(order);
+      }
+      localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(orders));
+    } catch {
+      // ignore
+    }
+
     const cleanPayload: Record<string, any> = {
       id: order.id,
       clientName: order.clientName,
@@ -182,7 +205,6 @@ export async function saveBookingToFirestore(order: BookingOrder): Promise<void>
       updatedAt: new Date().toISOString(),
     };
 
-
     if (auth.currentUser?.uid) {
       cleanPayload.createdBy = auth.currentUser.uid;
     }
@@ -190,7 +212,7 @@ export async function saveBookingToFirestore(order: BookingOrder): Promise<void>
     const docRef = doc(db, BOOKINGS_COLLECTION, order.id);
     await setDoc(docRef, cleanPayload, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn(`Firestore write warning for ${path}:`, error);
   }
 }
 
@@ -201,6 +223,20 @@ export async function updateBookingInFirestore(
 ): Promise<void> {
   const path = `${BOOKINGS_COLLECTION}/${orderId}`;
   try {
+    try {
+      const saved = localStorage.getItem(BOOKINGS_STORAGE_KEY);
+      if (saved) {
+        const orders: BookingOrder[] = JSON.parse(saved);
+        const idx = orders.findIndex((o) => o.id === orderId);
+        if (idx >= 0) {
+          orders[idx] = { ...orders[idx], ...updates, updatedAt: new Date().toISOString() };
+          localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(orders));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, BOOKINGS_COLLECTION, orderId);
     const sanitizedUpdates: Record<string, any> = {
       ...updates,
@@ -213,7 +249,7 @@ export async function updateBookingInFirestore(
     }
     await updateDoc(docRef, sanitizedUpdates);
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    console.warn(`Firestore update warning for ${path}:`, error);
   }
 }
 
@@ -221,10 +257,21 @@ export async function updateBookingInFirestore(
 export async function deleteBookingFromFirestore(orderId: string): Promise<void> {
   const path = `${BOOKINGS_COLLECTION}/${orderId}`;
   try {
+    try {
+      const saved = localStorage.getItem(BOOKINGS_STORAGE_KEY);
+      if (saved) {
+        const orders: BookingOrder[] = JSON.parse(saved);
+        const filtered = orders.filter((o) => o.id !== orderId);
+        localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, BOOKINGS_COLLECTION, orderId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn(`Firestore delete warning for ${path}:`, error);
   }
 }
 
@@ -265,7 +312,6 @@ export function subscribeToBookings(
   onData: (orders: BookingOrder[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const path = BOOKINGS_COLLECTION;
   const q = query(collection(db, BOOKINGS_COLLECTION), orderBy('createdAt', 'desc'));
 
   return onSnapshot(
@@ -301,12 +347,27 @@ export function subscribeToBookings(
         });
       });
 
+      try {
+        localStorage.setItem(BOOKINGS_STORAGE_KEY, JSON.stringify(orders));
+      } catch {
+        // ignore
+      }
+
       onData(orders);
     },
     (error) => {
-      console.warn('Realtime listener notice (fallback active):', error);
-      if (onError) onError(error);
-      handleFirestoreError(error, OperationType.LIST, path);
+      console.warn('Realtime bookings listener fallback active:', error);
+      if (onError) onError(error as Error);
+      let fallbackOrders = INITIAL_CLIENT_ORDERS;
+      try {
+        const saved = localStorage.getItem(BOOKINGS_STORAGE_KEY);
+        if (saved) {
+          fallbackOrders = JSON.parse(saved);
+        }
+      } catch {
+        // ignore
+      }
+      onData(fallbackOrders);
     }
   );
 }
@@ -340,6 +401,20 @@ export async function seedInitialBookings(): Promise<void> {
 export async function savePackageToFirestore(pkg: PhotoPackage): Promise<void> {
   const path = `${PACKAGES_COLLECTION}/${pkg.id}`;
   try {
+    try {
+      const saved = localStorage.getItem(PACKAGES_STORAGE_KEY);
+      const list: PhotoPackage[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((p) => p.id === pkg.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...pkg };
+      } else {
+        list.push(pkg);
+      }
+      localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore
+    }
+
     const cleanPayload: Record<string, any> = {
       id: pkg.id,
       name: pkg.name,
@@ -359,7 +434,7 @@ export async function savePackageToFirestore(pkg: PhotoPackage): Promise<void> {
     const docRef = doc(db, PACKAGES_COLLECTION, pkg.id);
     await setDoc(docRef, cleanPayload, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn(`Firestore write warning for ${path}:`, error);
   }
 }
 
@@ -370,6 +445,20 @@ export async function updatePackageInFirestore(
 ): Promise<void> {
   const path = `${PACKAGES_COLLECTION}/${pkgId}`;
   try {
+    try {
+      const saved = localStorage.getItem(PACKAGES_STORAGE_KEY);
+      if (saved) {
+        const list: PhotoPackage[] = JSON.parse(saved);
+        const idx = list.findIndex((p) => p.id === pkgId);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...updates };
+          localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(list));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, PACKAGES_COLLECTION, pkgId);
     const sanitizedUpdates: Record<string, any> = {
       ...updates,
@@ -377,7 +466,7 @@ export async function updatePackageInFirestore(
     };
     await updateDoc(docRef, sanitizedUpdates);
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    console.warn(`Firestore update warning for ${path}:`, error);
   }
 }
 
@@ -385,10 +474,21 @@ export async function updatePackageInFirestore(
 export async function deletePackageFromFirestore(pkgId: string): Promise<void> {
   const path = `${PACKAGES_COLLECTION}/${pkgId}`;
   try {
+    try {
+      const saved = localStorage.getItem(PACKAGES_STORAGE_KEY);
+      if (saved) {
+        const list: PhotoPackage[] = JSON.parse(saved);
+        const filtered = list.filter((p) => p.id !== pkgId);
+        localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, PACKAGES_COLLECTION, pkgId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn(`Firestore delete warning for ${path}:`, error);
   }
 }
 
@@ -397,7 +497,6 @@ export function subscribeToPackages(
   onData: (packages: PhotoPackage[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const path = PACKAGES_COLLECTION;
   const q = collection(db, PACKAGES_COLLECTION);
 
   return onSnapshot(
@@ -425,13 +524,27 @@ export function subscribeToPackages(
       if (snapshot.empty && packagesList.length === 0) {
         seedInitialPackages();
       } else {
+        try {
+          localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(packagesList));
+        } catch {
+          // ignore
+        }
         onData(packagesList);
       }
     },
     (error) => {
-      console.warn('Realtime packages listener fallback:', error);
-      if (onError) onError(error);
-      handleFirestoreError(error, OperationType.LIST, path);
+      console.warn('Realtime packages listener fallback active:', error);
+      if (onError) onError(error as Error);
+      let fallbackPackages = PHOTO_PACKAGES;
+      try {
+        const saved = localStorage.getItem(PACKAGES_STORAGE_KEY);
+        if (saved) {
+          fallbackPackages = JSON.parse(saved);
+        }
+      } catch {
+        // ignore
+      }
+      onData(fallbackPackages);
     }
   );
 }
@@ -465,6 +578,20 @@ export async function seedInitialPackages(): Promise<void> {
 export async function saveAddonToFirestore(addon: AddOnItem): Promise<void> {
   const path = `${ADDONS_COLLECTION}/${addon.id}`;
   try {
+    try {
+      const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
+      const list: AddOnItem[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((a) => a.id === addon.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...addon };
+      } else {
+        list.push(addon);
+      }
+      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore
+    }
+
     const cleanPayload: Record<string, any> = {
       id: addon.id,
       name: addon.name,
@@ -476,7 +603,7 @@ export async function saveAddonToFirestore(addon: AddOnItem): Promise<void> {
     const docRef = doc(db, ADDONS_COLLECTION, addon.id);
     await setDoc(docRef, cleanPayload, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn(`Firestore write warning for ${path}:`, error);
   }
 }
 
@@ -487,6 +614,20 @@ export async function updateAddonInFirestore(
 ): Promise<void> {
   const path = `${ADDONS_COLLECTION}/${addonId}`;
   try {
+    try {
+      const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
+      if (saved) {
+        const list: AddOnItem[] = JSON.parse(saved);
+        const idx = list.findIndex((a) => a.id === addonId);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...updates };
+          localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(list));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, ADDONS_COLLECTION, addonId);
     const sanitizedUpdates: Record<string, any> = {
       ...updates,
@@ -494,7 +635,7 @@ export async function updateAddonInFirestore(
     };
     await updateDoc(docRef, sanitizedUpdates);
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    console.warn(`Firestore update warning for ${path}:`, error);
   }
 }
 
@@ -502,10 +643,21 @@ export async function updateAddonInFirestore(
 export async function deleteAddonFromFirestore(addonId: string): Promise<void> {
   const path = `${ADDONS_COLLECTION}/${addonId}`;
   try {
+    try {
+      const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
+      if (saved) {
+        const list: AddOnItem[] = JSON.parse(saved);
+        const filtered = list.filter((a) => a.id !== addonId);
+        localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, ADDONS_COLLECTION, addonId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn(`Firestore delete warning for ${path}:`, error);
   }
 }
 
@@ -514,7 +666,6 @@ export function subscribeToAddons(
   onData: (addons: AddOnItem[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const path = ADDONS_COLLECTION;
   const q = collection(db, ADDONS_COLLECTION);
 
   return onSnapshot(
@@ -534,13 +685,27 @@ export function subscribeToAddons(
       if (snapshot.empty && addonsList.length === 0) {
         seedInitialAddons();
       } else {
+        try {
+          localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(addonsList));
+        } catch {
+          // ignore
+        }
         onData(addonsList);
       }
     },
     (error) => {
-      console.warn('Realtime addons listener fallback:', error);
-      if (onError) onError(error);
-      handleFirestoreError(error, OperationType.LIST, path);
+      console.warn('Realtime addons listener fallback active:', error);
+      if (onError) onError(error as Error);
+      let fallbackAddons = ADD_ON_SERVICES;
+      try {
+        const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
+        if (saved) {
+          fallbackAddons = JSON.parse(saved);
+        }
+      } catch {
+        // ignore
+      }
+      onData(fallbackAddons);
     }
   );
 }
@@ -574,6 +739,20 @@ export async function seedInitialAddons(): Promise<void> {
 export async function savePortfolioToFirestore(item: PortfolioItem): Promise<void> {
   const path = `${PORTFOLIOS_COLLECTION}/${item.id}`;
   try {
+    try {
+      const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
+      const list: PortfolioItem[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((p) => p.id === item.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...item };
+      } else {
+        list.unshift(item);
+      }
+      localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore
+    }
+
     const cleanPayload: Record<string, any> = {
       id: item.id,
       title: item.title,
@@ -589,7 +768,7 @@ export async function savePortfolioToFirestore(item: PortfolioItem): Promise<voi
     const docRef = doc(db, PORTFOLIOS_COLLECTION, item.id);
     await setDoc(docRef, cleanPayload, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn(`Firestore write warning for ${path}:`, error);
   }
 }
 
@@ -600,6 +779,20 @@ export async function updatePortfolioInFirestore(
 ): Promise<void> {
   const path = `${PORTFOLIOS_COLLECTION}/${portfolioId}`;
   try {
+    try {
+      const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
+      if (saved) {
+        const list: PortfolioItem[] = JSON.parse(saved);
+        const idx = list.findIndex((p) => p.id === portfolioId);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...updates };
+          localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, PORTFOLIOS_COLLECTION, portfolioId);
     const sanitizedUpdates: Record<string, any> = {
       ...updates,
@@ -607,7 +800,7 @@ export async function updatePortfolioInFirestore(
     };
     await updateDoc(docRef, sanitizedUpdates);
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    console.warn(`Firestore update warning for ${path}:`, error);
   }
 }
 
@@ -615,10 +808,21 @@ export async function updatePortfolioInFirestore(
 export async function deletePortfolioFromFirestore(portfolioId: string): Promise<void> {
   const path = `${PORTFOLIOS_COLLECTION}/${portfolioId}`;
   try {
+    try {
+      const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
+      if (saved) {
+        const list: PortfolioItem[] = JSON.parse(saved);
+        const filtered = list.filter((p) => p.id !== portfolioId);
+        localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, PORTFOLIOS_COLLECTION, portfolioId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn(`Firestore delete warning for ${path}:`, error);
   }
 }
 
@@ -627,7 +831,6 @@ export function subscribeToPortfolios(
   onData: (items: PortfolioItem[]) => void,
   onError?: (error: Error) => void
 ): Unsubscribe {
-  const path = PORTFOLIOS_COLLECTION;
   const q = collection(db, PORTFOLIOS_COLLECTION);
 
   return onSnapshot(
@@ -651,13 +854,27 @@ export function subscribeToPortfolios(
       if (snapshot.empty && portfolioList.length === 0) {
         seedInitialPortfolios();
       } else {
+        try {
+          localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(portfolioList));
+        } catch {
+          // ignore
+        }
         onData(portfolioList);
       }
     },
     (error) => {
-      console.warn('Realtime portfolios listener fallback:', error);
-      if (onError) onError(error);
-      handleFirestoreError(error, OperationType.LIST, path);
+      console.warn('Realtime portfolios listener fallback active:', error);
+      if (onError) onError(error as Error);
+      let fallbackPortfolios = PORTFOLIO_ITEMS;
+      try {
+        const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
+        if (saved) {
+          fallbackPortfolios = JSON.parse(saved);
+        }
+      } catch {
+        // ignore
+      }
+      onData(fallbackPortfolios);
     }
   );
 }
@@ -692,7 +909,7 @@ export async function saveStudioConfigToFirestore(config: StudioConfig): Promise
   try {
     // Immediate local backup
     try {
-      localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(config));
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
     } catch {
       // ignore
     }
@@ -701,7 +918,7 @@ export async function saveStudioConfigToFirestore(config: StudioConfig): Promise
     const cleanConfig = JSON.parse(JSON.stringify(config));
     await setDoc(docRef, cleanConfig, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn(`Firestore write warning for ${path}:`, error);
   }
 }
 
@@ -720,7 +937,7 @@ export function subscribeToStudioConfig(
           ...data,
         };
         try {
-          localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(merged));
+          localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(merged));
         } catch {
           // ignore
         }
@@ -729,7 +946,7 @@ export function subscribeToStudioConfig(
         // Retrieve any locally customized config before seeding default
         let initialConfig = DEFAULT_STUDIO_CONFIG;
         try {
-          const saved = localStorage.getItem('dimensi_studio_config_v1');
+          const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
           if (saved) {
             initialConfig = { ...DEFAULT_STUDIO_CONFIG, ...JSON.parse(saved) };
           }
@@ -741,11 +958,11 @@ export function subscribeToStudioConfig(
       }
     },
     (error) => {
-      console.warn('Studio config listener fallback:', error);
-      if (onError) onError(error);
+      console.warn('Studio config listener fallback active:', error);
+      if (onError) onError(error as Error);
       let fallbackConfig = DEFAULT_STUDIO_CONFIG;
       try {
-        const saved = localStorage.getItem('dimensi_studio_config_v1');
+        const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
         if (saved) {
           fallbackConfig = { ...DEFAULT_STUDIO_CONFIG, ...JSON.parse(saved) };
         }
@@ -764,30 +981,69 @@ export function subscribeToStudioConfig(
 export async function saveStaffToFirestore(staff: AdminStaff): Promise<void> {
   const path = `${ADMIN_STAFF_COLLECTION}/${staff.id}`;
   try {
+    try {
+      const saved = localStorage.getItem(STAFF_STORAGE_KEY);
+      const list: AdminStaff[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((s) => s.id === staff.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...staff };
+      } else {
+        list.push(staff);
+      }
+      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, ADMIN_STAFF_COLLECTION, staff.id);
     await setDoc(docRef, staff, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn(`Firestore write warning for ${path}:`, error);
   }
 }
 
 export async function updateStaffInFirestore(staffId: string, updates: Partial<AdminStaff>): Promise<void> {
   const path = `${ADMIN_STAFF_COLLECTION}/${staffId}`;
   try {
+    try {
+      const saved = localStorage.getItem(STAFF_STORAGE_KEY);
+      if (saved) {
+        const list: AdminStaff[] = JSON.parse(saved);
+        const idx = list.findIndex((s) => s.id === staffId);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...updates };
+          localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(list));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, ADMIN_STAFF_COLLECTION, staffId);
     await updateDoc(docRef, updates);
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    console.warn(`Firestore update warning for ${path}:`, error);
   }
 }
 
 export async function deleteStaffFromFirestore(staffId: string): Promise<void> {
   const path = `${ADMIN_STAFF_COLLECTION}/${staffId}`;
   try {
+    try {
+      const saved = localStorage.getItem(STAFF_STORAGE_KEY);
+      if (saved) {
+        const list: AdminStaff[] = JSON.parse(saved);
+        const filtered = list.filter((s) => s.id !== staffId);
+        localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, ADMIN_STAFF_COLLECTION, staffId);
     await deleteDoc(docRef);
   } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path);
+    console.warn(`Firestore delete warning for ${path}:`, error);
   }
 }
 
@@ -817,13 +1073,27 @@ export function subscribeToStaff(
       if (snapshot.empty && list.length === 0) {
         seedInitialStaff();
       } else {
+        try {
+          localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(list));
+        } catch {
+          // ignore
+        }
         onData(list);
       }
     },
     (error) => {
-      console.warn('Staff listener fallback to initial list:', error);
-      if (onError) onError(error);
-      onData(INITIAL_ADMIN_STAFF);
+      console.warn('Staff listener fallback active:', error);
+      if (onError) onError(error as Error);
+      let fallbackStaff = INITIAL_ADMIN_STAFF;
+      try {
+        const saved = localStorage.getItem(STAFF_STORAGE_KEY);
+        if (saved) {
+          fallbackStaff = JSON.parse(saved);
+        }
+      } catch {
+        // ignore
+      }
+      onData(fallbackStaff);
     }
   );
 }
@@ -871,9 +1141,9 @@ export async function logAuditEvent(
   } catch (err) {
     // Audit logs non-blocking fallback
     try {
-      const savedLogs = JSON.parse(localStorage.getItem('dimensi_audit_logs_v1') || '[]');
+      const savedLogs = JSON.parse(localStorage.getItem(AUDIT_STORAGE_KEY) || '[]');
       savedLogs.unshift(logItem);
-      localStorage.setItem('dimensi_audit_logs_v1', JSON.stringify(savedLogs.slice(0, 100)));
+      localStorage.setItem(AUDIT_STORAGE_KEY, JSON.stringify(savedLogs.slice(0, 100)));
     } catch {
       // ignore
     }
@@ -906,10 +1176,10 @@ export function subscribeToAuditLogs(
       onData(logs.slice(0, 80));
     },
     (error) => {
-      console.warn('Audit logs listener fallback:', error);
-      if (onError) onError(error);
+      console.warn('Audit logs listener fallback active:', error);
+      if (onError) onError(error as Error);
       try {
-        const savedLogs = JSON.parse(localStorage.getItem('dimensi_audit_logs_v1') || '[]');
+        const savedLogs = JSON.parse(localStorage.getItem(AUDIT_STORAGE_KEY) || '[]');
         onData(savedLogs);
       } catch {
         onData([]);
