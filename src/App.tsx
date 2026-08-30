@@ -296,6 +296,9 @@ export default function App() {
               config.heroImageUrls = localConfig.heroImageUrls;
               config.heroImageUrl = localConfig.heroImageUrl || config.heroImageUrl;
             }
+            if (localConfig.masterPasscode && (!config.masterPasscode || config.masterPasscode === 'MASTER_DIMENSI_2026')) {
+              config.masterPasscode = localConfig.masterPasscode;
+            }
           }
         } catch {
           // ignore

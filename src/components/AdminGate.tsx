@@ -25,8 +25,17 @@ export const AdminGate: React.FC<AdminGateProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const STAFF_PASSCODE = studioConfig?.staffPasscode || 'DIMENSI2026';
-  const MASTER_PASSCODE = studioConfig?.masterPasscode || 'MASTER_DIMENSI_2026';
+  // Retrieve current active passcodes from props or localStorage backup
+  let localConfig: Partial<StudioConfig> = {};
+  try {
+    const saved = localStorage.getItem('dimensi_studio_config_v1');
+    if (saved) localConfig = JSON.parse(saved);
+  } catch {
+    // ignore
+  }
+
+  const STAFF_PASSCODE = studioConfig?.staffPasscode || localConfig.staffPasscode || 'DIMENSI2026';
+  const MASTER_PASSCODE = studioConfig?.masterPasscode || localConfig.masterPasscode || 'MASTER_DIMENSI_2026';
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,16 +57,30 @@ export const AdminGate: React.FC<AdminGateProps> = ({
 
     setTimeout(() => {
       // 1. Check if PIN is Master Passcode
-      const isMasterPin =
-        pInput === MASTER_PASSCODE ||
-        pInput.toUpperCase() === 'MASTER_DIMENSI_2026' ||
-        pInput === 'MASTER2026';
+      const validMasterPins = [
+        MASTER_PASSCODE,
+        studioConfig?.masterPasscode,
+        localConfig.masterPasscode,
+        'MASTER_DIMENSI_2026',
+        'MASTER2026',
+      ].filter(Boolean) as string[];
+
+      const isMasterPin = validMasterPins.some(
+        (mp) => pInput === mp || pInput.toLowerCase() === mp.toLowerCase()
+      );
 
       // 2. Check if PIN is Staff Passcode
-      const isStaffPin =
-        pInput.toUpperCase() === STAFF_PASSCODE.toUpperCase() ||
-        pInput === 'DIMENSI2026' ||
-        pInput === '123456';
+      const validStaffPins = [
+        STAFF_PASSCODE,
+        studioConfig?.staffPasscode,
+        localConfig.staffPasscode,
+        'DIMENSI2026',
+        '123456',
+      ].filter(Boolean) as string[];
+
+      const isStaffPin = validStaffPins.some(
+        (sp) => pInput === sp || pInput.toLowerCase() === sp.toLowerCase()
+      );
 
       // 3. Check user match in registered staff list
       const matchedStaff = staffList.find(
@@ -68,9 +91,9 @@ export const AdminGate: React.FC<AdminGateProps> = ({
             s.id.toLowerCase() === uInput)
       );
 
-      const customMasterUsername = studioConfig?.masterUsername?.trim().toLowerCase();
-      const customMasterEmail = studioConfig?.masterEmail?.trim().toLowerCase();
-      const customStaffUsername = studioConfig?.staffUsername?.trim().toLowerCase();
+      const customMasterUsername = (studioConfig?.masterUsername || localConfig.masterUsername)?.trim().toLowerCase();
+      const customMasterEmail = (studioConfig?.masterEmail || localConfig.masterEmail)?.trim().toLowerCase();
+      const customStaffUsername = (studioConfig?.staffUsername || localConfig.staffUsername)?.trim().toLowerCase();
 
       // Super admin usernames alias
       const isSuperAdminAlias = [
@@ -79,6 +102,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         'dimensi',
         'owner',
         'adminmaster',
+        'admin',
         'dimensi.idphoto@gmail.com',
         ...(customMasterUsername ? [customMasterUsername] : []),
         ...(customMasterEmail ? [customMasterEmail] : []),
@@ -90,7 +114,6 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         'editor',
         'cs',
         'fotografer',
-        'admin',
         ...(customStaffUsername ? [customStaffUsername] : []),
       ].includes(uInput);
 
@@ -105,10 +128,6 @@ export const AdminGate: React.FC<AdminGateProps> = ({
           // Staff login (Only data konsumen)
           onAdminAuthenticated(false);
         }
-      } else if (isSuperAdminAlias && pInput === MASTER_PASSCODE) {
-        onAdminAuthenticated(true);
-      } else if ((isStaffAlias || matchedStaff) && pInput === STAFF_PASSCODE) {
-        onAdminAuthenticated(false);
       } else if (matchedStaff || isSuperAdminAlias || isStaffAlias) {
         // Matched username but wrong pin
         setErrorMsg('PIN yang Anda masukkan salah.');

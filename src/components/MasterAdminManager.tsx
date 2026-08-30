@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { compressImage } from '../utils/imageCompressor';
 import {
@@ -48,6 +48,7 @@ import {
   Layers,
   Check,
   X,
+  Loader2,
 } from 'lucide-react';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
 import {
@@ -112,6 +113,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const [masterPasscodeVal, setMasterPasscodeVal] = useState(studioConfig.masterPasscode || 'MASTER_DIMENSI_2026');
   const [showMasterPasscode, setShowMasterPasscode] = useState(false);
   const [saveMasterSuccess, setSaveMasterSuccess] = useState(false);
+  const [isSavingMaster, setIsSavingMaster] = useState(false);
 
   // Form states: Staff Add/Edit
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -125,8 +127,39 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   // Studio Profile Form State
   const [configForm, setConfigForm] = useState<StudioConfig>(studioConfig);
   const [saveConfigSuccess, setSaveConfigSuccess] = useState(false);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isHeroPortfolioPickerOpen, setIsHeroPortfolioPickerOpen] = useState(false);
   const [heroToast, setHeroToast] = useState('');
+
+  // Security Passcode Form State
+  const [staffPasscode, setStaffPasscode] = useState(studioConfig.staffPasscode || 'DIMENSI2026');
+  const [masterPasscode, setMasterPasscode] = useState(studioConfig.masterPasscode || 'MASTER_DIMENSI_2026');
+  const [savePasscodeSuccess, setSavePasscodeSuccess] = useState(false);
+  const [isSavingPasscodes, setIsSavingPasscodes] = useState(false);
+
+  // Ref to prevent user input from being overwritten by external polling/snapshot while editing
+  const isMasterUserDirty = useRef(false);
+  const isSecurityDirty = useRef(false);
+
+  // Synchronize when studioConfig prop updates from Firestore or parent
+  useEffect(() => {
+    if (studioConfig) {
+      if (!isMasterUserDirty.current) {
+        if (studioConfig.masterUsername) setMasterUsername(studioConfig.masterUsername);
+        if (studioConfig.masterName) setMasterName(studioConfig.masterName);
+        if (studioConfig.masterEmail) setMasterEmail(studioConfig.masterEmail);
+        if (studioConfig.masterPhone) setMasterPhone(studioConfig.masterPhone);
+        if (studioConfig.masterPasscode) {
+          setMasterPasscodeVal(studioConfig.masterPasscode);
+        }
+      }
+      if (!isSecurityDirty.current) {
+        if (studioConfig.staffPasscode) setStaffPasscode(studioConfig.staffPasscode);
+        if (studioConfig.masterPasscode) setMasterPasscode(studioConfig.masterPasscode);
+      }
+      setConfigForm((prev) => ({ ...prev, ...studioConfig }));
+    }
+  }, [studioConfig]);
 
   const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -149,6 +182,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
       const updatedList = [...currentList, compressed];
       const updatedConfig = {
+        ...studioConfig,
         ...configForm,
         heroImageUrl: updatedList[0],
         heroImageUrls: updatedList,
@@ -168,11 +202,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     }
   };
 
-  // Security Passcode Form State
-  const [staffPasscode, setStaffPasscode] = useState(studioConfig.staffPasscode || 'DIMENSI2026');
-  const [masterPasscode, setMasterPasscode] = useState(studioConfig.masterPasscode || 'MASTER_DIMENSI_2026');
-  const [savePasscodeSuccess, setSavePasscodeSuccess] = useState(false);
-
   // JSON Backup / Restore State
   const [restoreJsonText, setRestoreJsonText] = useState('');
   const [restoreStatusMsg, setRestoreStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -183,6 +212,9 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     e.preventDefault();
     const u = masterUsername.trim().toLowerCase();
     const p = masterPasscodeVal.trim();
+    const name = masterName.trim() || 'Master Admin Dimensi';
+    const email = masterEmail.trim().toLowerCase() || 'dimensi.idphoto@gmail.com';
+    const phone = masterPhone.trim();
 
     if (!u) {
       alert('Username Master Admin tidak boleh kosong.');
@@ -193,97 +225,158 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       return;
     }
 
+    setIsSavingMaster(true);
+
     const updated: StudioConfig = {
       ...studioConfig,
       ...configForm,
       masterUsername: u,
-      masterName: masterName.trim(),
-      masterEmail: masterEmail.trim().toLowerCase(),
-      masterPhone: masterPhone.trim(),
+      masterName: name,
+      masterEmail: email,
+      masterPhone: phone,
       masterPasscode: p,
     };
 
-    setConfigForm(updated);
+    setMasterPasscodeVal(p);
     setMasterPasscode(p);
-    onUpdateStudioConfig(updated);
+    setConfigForm(updated);
 
+    // 1. Direct local persistence backup
+    try {
+      localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+
+    // 2. React state update
+    onUpdateStudioConfig(updated);
+    isMasterUserDirty.current = false;
+
+    // 3. Firestore update
     try {
       await saveStudioConfigToFirestore(updated);
+    } catch (fErr) {
+      console.warn('Firestore sync note (saved locally):', fErr);
+    }
 
-      // Also sync Master staff record if present in staffList
+    // 4. Staff update if present
+    try {
       const masterStaff = staffList.find((s) => s.role === 'master');
       if (masterStaff) {
         const staffUpdates: Partial<AdminStaff> = {
-          name: masterName.trim() || masterStaff.name,
-          email: masterEmail.trim().toLowerCase() || masterStaff.email,
-          phone: masterPhone.trim() || masterStaff.phone,
+          name: name || masterStaff.name,
+          email: email || masterStaff.email,
+          phone: phone || masterStaff.phone,
         };
         onUpdateStaff(masterStaff.id, staffUpdates);
         await updateStaffInFirestore(masterStaff.id, staffUpdates);
       }
+    } catch (sErr) {
+      console.warn('Staff update note:', sErr);
+    }
 
+    // 5. Audit log
+    try {
       await logAuditEvent(
-        currentUser?.email || masterEmail || 'Master Admin',
+        currentUser?.email || email || 'Master Admin',
         'Update Master User',
-        `Memperbarui data Master User: Username (${u}), Nama (${masterName}), PIN Master.`,
+        `Memperbarui data Master User: Username (${u}), Nama (${name}), PIN Master baru.`,
         'security'
       );
-
-      setSaveMasterSuccess(true);
-      setTimeout(() => setSaveMasterSuccess(false), 3500);
-    } catch (err) {
-      console.error('Error saving master user:', err);
+    } catch (aErr) {
+      console.warn('Audit log note:', aErr);
     }
+
+    setIsSavingMaster(false);
+    setSaveMasterSuccess(true);
+    setTimeout(() => setSaveMasterSuccess(false), 4000);
   };
 
   // Handle Studio Config Save
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    onUpdateStudioConfig(configForm);
+    setIsSavingConfig(true);
+    const mergedConfig: StudioConfig = {
+      ...studioConfig,
+      ...configForm,
+      masterPasscode: masterPasscodeVal || studioConfig.masterPasscode || 'MASTER_DIMENSI_2026',
+      masterUsername: masterUsername || studioConfig.masterUsername || 'dimensi',
+      staffPasscode: staffPasscode || studioConfig.staffPasscode || 'DIMENSI2026',
+    };
+    setConfigForm(mergedConfig);
+    
     try {
-      await saveStudioConfigToFirestore(configForm);
+      localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(mergedConfig));
+    } catch {
+      // ignore
+    }
+
+    onUpdateStudioConfig(mergedConfig);
+    try {
+      await saveStudioConfigToFirestore(mergedConfig);
       await logAuditEvent(
         currentUser?.email || 'Master Admin',
         'Update Profil Studio',
         'Memperbarui identitas studio, kontak, dan info rekening pembayaran.',
         'system'
       );
+    } catch (err) {
+      console.warn('Config save note:', err);
+    } finally {
+      setIsSavingConfig(false);
       setSaveConfigSuccess(true);
       setTimeout(() => setSaveConfigSuccess(false), 3500);
-    } catch (err) {
-      console.error('Error saving config:', err);
     }
   };
 
   // Handle Passcode Save
   const handleSavePasscodes = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!staffPasscode.trim() || !masterPasscode.trim()) {
+    const sPass = staffPasscode.trim();
+    const mPass = masterPasscode.trim();
+
+    if (!sPass || !mPass) {
       alert('Passcode tidak boleh kosong.');
       return;
     }
 
-    const updated = {
+    setIsSavingPasscodes(true);
+
+    const updated: StudioConfig = {
+      ...studioConfig,
       ...configForm,
-      staffPasscode: staffPasscode.trim(),
-      masterPasscode: masterPasscode.trim(),
-      masterPasscodeVal: masterPasscode.trim(),
+      staffPasscode: sPass,
+      masterPasscode: mPass,
     };
-    setMasterPasscodeVal(masterPasscode.trim());
+    setStaffPasscode(sPass);
+    setMasterPasscode(mPass);
+    setMasterPasscodeVal(mPass);
     setConfigForm(updated);
+
+    try {
+      localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+
     onUpdateStudioConfig(updated);
+    isSecurityDirty.current = false;
+    isMasterUserDirty.current = false;
+
     try {
       await saveStudioConfigToFirestore(updated);
       await logAuditEvent(
         currentUser?.email || 'Master Admin',
         'Update PIN Keamanan',
-        'Memperbarui PIN Staff Admin & Master Admin Passcode.',
+        `Memperbarui PIN Staff Admin & PIN Master Admin (${mPass}).`,
         'security'
       );
+    } catch (err) {
+      console.warn('Passcode save note:', err);
+    } finally {
+      setIsSavingPasscodes(false);
       setSavePasscodeSuccess(true);
       setTimeout(() => setSavePasscodeSuccess(false), 3500);
-    } catch (err) {
-      console.error('Error saving passcodes:', err);
     }
   };
 
@@ -661,7 +754,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     type="text"
                     required
                     value={masterUsername}
-                    onChange={(e) => setMasterUsername(e.target.value)}
+                    onChange={(e) => {
+                      isMasterUserDirty.current = true;
+                      setMasterUsername(e.target.value);
+                    }}
                     placeholder="Contoh: dimensi / superadmin"
                     className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-amber-500/40 text-amber-100 text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
                     id="input-master-username"
@@ -680,7 +776,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     type="text"
                     required
                     value={masterName}
-                    onChange={(e) => setMasterName(e.target.value)}
+                    onChange={(e) => {
+                      isMasterUserDirty.current = true;
+                      setMasterName(e.target.value);
+                    }}
                     placeholder="Contoh: Master Admin Dimensi"
                     className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none"
                     id="input-master-name"
@@ -700,7 +799,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     type="email"
                     required
                     value={masterEmail}
-                    onChange={(e) => setMasterEmail(e.target.value)}
+                    onChange={(e) => {
+                      isMasterUserDirty.current = true;
+                      setMasterEmail(e.target.value);
+                    }}
                     placeholder="dimensi.idphoto@gmail.com"
                     className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
                     id="input-master-email"
@@ -719,7 +821,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                   <input
                     type="tel"
                     value={masterPhone}
-                    onChange={(e) => setMasterPhone(e.target.value)}
+                    onChange={(e) => {
+                      isMasterUserDirty.current = true;
+                      setMasterPhone(e.target.value);
+                    }}
                     placeholder="0821-2345-6789"
                     className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
                     id="input-master-phone"
@@ -741,7 +846,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     type={showMasterPasscode ? 'text' : 'password'}
                     required
                     value={masterPasscodeVal}
-                    onChange={(e) => setMasterPasscodeVal(e.target.value)}
+                    onChange={(e) => {
+                      isMasterUserDirty.current = true;
+                      setMasterPasscodeVal(e.target.value);
+                    }}
                     placeholder="Contoh: MASTER_DIMENSI_2026"
                     className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-amber-500/40 text-amber-200 text-xs font-mono tracking-wider focus:border-amber-400 focus:outline-none"
                     id="input-master-passcode"
@@ -765,11 +873,21 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                 </span>
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all cursor-pointer"
+                  disabled={isSavingMaster}
+                  className="px-6 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   id="btn-save-master-user"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Simpan Data Master User</span>
+                  {isSavingMaster ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Menyimpan Data...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Simpan Data Master User</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -946,7 +1064,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               <input
                 type="text"
                 value={staffPasscode}
-                onChange={(e) => setStaffPasscode(e.target.value)}
+                onChange={(e) => {
+                  isSecurityDirty.current = true;
+                  setStaffPasscode(e.target.value);
+                }}
                 placeholder="Contoh: DIMENSI2026"
                 className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
               />
@@ -963,7 +1084,10 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               <input
                 type="text"
                 value={masterPasscode}
-                onChange={(e) => setMasterPasscode(e.target.value)}
+                onChange={(e) => {
+                  isSecurityDirty.current = true;
+                  setMasterPasscode(e.target.value);
+                }}
                 placeholder="Contoh: MASTER_DIMENSI_2026"
                 className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-amber-500/40 text-amber-200 text-xs font-mono focus:border-amber-400 focus:outline-none"
               />
@@ -975,10 +1099,20 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
             <div className="pt-3 border-t border-white/10">
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                disabled={isSavingPasscodes}
+                className="px-5 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save className="w-4 h-4" />
-                <span>Simpan PIN Keamanan</span>
+                {isSavingPasscodes ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Menyimpan PIN...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Simpan PIN Keamanan</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -1332,10 +1466,20 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
             <div className="pt-2">
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                disabled={isSavingConfig}
+                className="px-6 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save className="w-4 h-4" />
-                <span>Simpan Perubahan Profil</span>
+                {isSavingConfig ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Menyimpan Profil...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Perubahan Profil</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

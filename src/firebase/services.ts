@@ -690,8 +690,16 @@ export async function seedInitialPortfolios(): Promise<void> {
 export async function saveStudioConfigToFirestore(config: StudioConfig): Promise<void> {
   const path = `${SETTINGS_COLLECTION}/studio_config`;
   try {
+    // Immediate local backup
+    try {
+      localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(config));
+    } catch {
+      // ignore
+    }
     const docRef = doc(db, SETTINGS_COLLECTION, 'studio_config');
-    await setDoc(docRef, config, { merge: true });
+    // Filter undefined values
+    const cleanConfig = JSON.parse(JSON.stringify(config));
+    await setDoc(docRef, cleanConfig, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -707,20 +715,44 @@ export function subscribeToStudioConfig(
     (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data() as Partial<StudioConfig>;
-        onData({
+        const merged: StudioConfig = {
           ...DEFAULT_STUDIO_CONFIG,
           ...data,
-        });
+        };
+        try {
+          localStorage.setItem('dimensi_studio_config_v1', JSON.stringify(merged));
+        } catch {
+          // ignore
+        }
+        onData(merged);
       } else {
-        // Initialize with default
-        saveStudioConfigToFirestore(DEFAULT_STUDIO_CONFIG);
-        onData(DEFAULT_STUDIO_CONFIG);
+        // Retrieve any locally customized config before seeding default
+        let initialConfig = DEFAULT_STUDIO_CONFIG;
+        try {
+          const saved = localStorage.getItem('dimensi_studio_config_v1');
+          if (saved) {
+            initialConfig = { ...DEFAULT_STUDIO_CONFIG, ...JSON.parse(saved) };
+          }
+        } catch {
+          // ignore
+        }
+        saveStudioConfigToFirestore(initialConfig);
+        onData(initialConfig);
       }
     },
     (error) => {
-      console.warn('Studio config listener fallback to default:', error);
+      console.warn('Studio config listener fallback:', error);
       if (onError) onError(error);
-      onData(DEFAULT_STUDIO_CONFIG);
+      let fallbackConfig = DEFAULT_STUDIO_CONFIG;
+      try {
+        const saved = localStorage.getItem('dimensi_studio_config_v1');
+        if (saved) {
+          fallbackConfig = { ...DEFAULT_STUDIO_CONFIG, ...JSON.parse(saved) };
+        }
+      } catch {
+        // ignore
+      }
+      onData(fallbackConfig);
     }
   );
 }

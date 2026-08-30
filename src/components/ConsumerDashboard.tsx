@@ -166,8 +166,25 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const handleVerifyMasterPin = (e: React.FormEvent) => {
     e.preventDefault();
     const pin = masterPinInput.trim();
-    const validMasterPin = studioConfig?.masterPasscode || 'MASTER_DIMENSI_2026';
-    if (pin === validMasterPin || pin.toUpperCase() === 'MASTER_DIMENSI_2026' || pin === 'MASTER2026') {
+    let localMasterPasscode = '';
+    try {
+      const saved = localStorage.getItem('dimensi_studio_config_v1');
+      if (saved) localMasterPasscode = JSON.parse(saved).masterPasscode || '';
+    } catch {
+      // ignore
+    }
+    const validMasterPins = [
+      studioConfig?.masterPasscode,
+      localMasterPasscode,
+      'MASTER_DIMENSI_2026',
+      'MASTER2026',
+    ].filter(Boolean) as string[];
+
+    const isValid = validMasterPins.some(
+      (vp) => pin === vp || pin.toLowerCase() === vp.toLowerCase()
+    );
+
+    if (isValid) {
       setIsMasterUnlocked(true);
       setIsMasterUnlockModalOpen(false);
       setActiveSubTab('master');
