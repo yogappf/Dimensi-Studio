@@ -122,15 +122,15 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
 
               <div 
                 onClick={() => {
-                  onSelectPackageFilter('produk');
+                  onSelectPackageFilter('engagement');
                   const el = document.getElementById('paket-layanan');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
                 className="bg-[#222222] border border-white/10 p-3.5 sm:p-4 flex flex-col justify-end relative h-28 cursor-pointer hover:border-[#D4AF37] transition-colors group"
               >
                 <div className="absolute top-2 right-2 text-[10px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">02</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Product</div>
-                <div className="text-xs sm:text-sm font-medium text-white">Komersial</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Engagement</div>
+                <div className="text-xs sm:text-sm font-medium text-white">Lamaran</div>
               </div>
 
               <div 

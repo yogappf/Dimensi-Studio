@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { PortfolioItem, CategoryType } from '../types';
+import React, { useState, useMemo } from 'react';
+import { PortfolioItem, CategoryType, PhotoPackage } from '../types';
 import { compressImage } from '../utils/imageCompressor';
 import {
   Plus,
@@ -19,23 +19,27 @@ import {
 
 interface PortfolioManagerProps {
   portfolios: PortfolioItem[];
+  packages?: PhotoPackage[];
   onAddPortfolio: (item: PortfolioItem) => void;
   onUpdatePortfolio: (id: string, updated: Partial<PortfolioItem>) => void;
   onDeletePortfolio: (id: string) => void;
   onResetPortfolios: () => void;
 }
 
-const CATEGORY_OPTIONS: { id: CategoryType; label: string; name: string }[] = [
-  { id: 'wedding', label: 'Wedding', name: 'Pernikahan' },
-  { id: 'prewedding', label: 'Pre-Wedding', name: 'Pre-Wedding' },
-  { id: 'wisuda', label: 'Wisuda', name: 'Wisuda & Kelulusan' },
-  { id: 'keluarga', label: 'Keluarga', name: 'Keluarga & Maternity' },
-  { id: 'produk', label: 'Produk', name: 'Produk Komersil & UMKM' },
-  { id: 'event', label: 'Event', name: 'Event & Gathering' },
+const PACKAGE_CATEGORIES: { id: CategoryType; label: string; name: string }[] = [
+  { id: 'wedding', label: '💍 Wedding & Akad', name: 'Pernikahan' },
+  { id: 'prewedding', label: '💑 Pre-Wedding', name: 'Pre-Wedding' },
+  { id: 'engagement', label: '💐 Engagement', name: 'Engagement / Lamaran' },
+  { id: 'siraman', label: '🌿 Siraman', name: 'Siraman & Pengajian' },
+  { id: 'wisuda', label: '🎓 Wisuda & Kelulusan', name: 'Wisuda & Kelulusan' },
+  { id: 'keluarga', label: '👨‍👩‍👧 Keluarga & Maternity', name: 'Keluarga & Maternity' },
+  { id: 'ulangtahun', label: '🎂 Ulang Tahun', name: 'Ulang Tahun & Sweet 17' },
+  { id: 'event', label: '🎉 Event & Gathering', name: 'Event & Gathering' },
 ];
 
 export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   portfolios,
+  packages,
   onAddPortfolio,
   onUpdatePortfolio,
   onDeletePortfolio,
@@ -49,6 +53,23 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [imageOrientations, setImageOrientations] = useState<Record<string, 'portrait' | 'landscape' | 'square'>>({});
+
+  // Dynamic category options derived from package catalog
+  const categoryOptions = useMemo(() => {
+    const list = [...PACKAGE_CATEGORIES];
+    if (packages && packages.length > 0) {
+      packages.forEach((pkg) => {
+        if (pkg.category && !list.some((c) => c.id === pkg.category)) {
+          list.push({
+            id: pkg.category,
+            label: `📁 ${pkg.category.toUpperCase()}`,
+            name: pkg.category.charAt(0).toUpperCase() + pkg.category.slice(1),
+          });
+        }
+      });
+    }
+    return list;
+  }, [packages]);
 
   // Form State
   const [formData, setFormData] = useState<Partial<PortfolioItem>>({
@@ -103,10 +124,11 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   };
 
   const handleOpenAdd = () => {
+    const defaultCat = categoryOptions[0] || PACKAGE_CATEGORIES[0];
     setFormData({
       title: '',
-      category: 'wedding',
-      categoryName: 'Pernikahan',
+      category: defaultCat.id,
+      categoryName: defaultCat.name,
       location: 'Dimensi Studio Jakarta',
       imageUrl: '',
       imageUrls: [],
@@ -128,12 +150,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     });
   };
 
-  const handleCategoryNameChange = (name: string) => {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'koleksi';
+  const handleCategorySelect = (selectedSlug: string) => {
+    const matched = categoryOptions.find((c) => c.id === selectedSlug);
     setFormData({
       ...formData,
-      category: slug,
-      categoryName: name,
+      category: selectedSlug,
+      categoryName: matched ? matched.name : selectedSlug,
     });
   };
 
@@ -439,27 +461,24 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                    Kategori Sesi *
+                    Kategori Sesi (Kategori Layanan Paket) *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
-                    list="category-suggestions"
-                    value={formData.categoryName || ''}
-                    onChange={(e) => handleCategoryNameChange(e.target.value)}
-                    placeholder="Ketik kategori baru atau pilih..."
-                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
+                    value={formData.category || 'wedding'}
+                    onChange={(e) => handleCategorySelect(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none cursor-pointer"
                     id="portfolio-form-category"
-                  />
-                  <datalist id="category-suggestions">
-                    {CATEGORY_OPTIONS.map((cat) => (
-                      <option key={cat.id} value={cat.name} />
+                  >
+                    {categoryOptions.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.label} ({cat.name})
+                      </option>
                     ))}
-                    {Array.from(new Set(portfolios.map(p => p.categoryName))).map((cName, idx) => (
-                      <option key={idx} value={cName} />
-                    ))}
-                  </datalist>
-                  <span className="text-[10px] text-gray-500 mt-1 block">Anda dapat mengetik kategori baru secara fleksibel.</span>
+                  </select>
+                  <span className="text-[10px] text-gray-500 mt-1 block">
+                    Kategori otomatis mengambil daftar dari paket layanan fotografi.
+                  </span>
                 </div>
 
                 <div>

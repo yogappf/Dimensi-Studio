@@ -11,7 +11,7 @@ import {
   AuditLogItem,
 } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, INITIAL_CLIENT_ORDERS, STUDIO_INFO } from '../data/mockData';
-import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink } from '../utils/formatters';
+import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink, generateClientCompletionWhatsAppLink } from '../utils/formatters';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -681,6 +681,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       {activeSubTab === 'portfolios' && (
         <PortfolioManager
           portfolios={portfolios}
+          packages={packages}
           onAddPortfolio={onAddPortfolio}
           onUpdatePortfolio={onUpdatePortfolio}
           onDeletePortfolio={onDeletePortfolio}
@@ -1199,15 +1200,30 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             </div>
 
             <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-3">
-              <a
-                href={generateClientConfirmationWhatsAppLink(detailOrder)}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 py-2.5 bg-[#25D366] hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <MessageCircle className="w-4 h-4 fill-black" />
-                <span>Hubungi via WhatsApp</span>
-              </a>
+              {detailOrder.status === 'Selesai' ? (
+                <a
+                  href={generateClientCompletionWhatsAppLink(detailOrder)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 py-2.5 bg-[#25D366] hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  id={`btn-wa-completion-${detailOrder.id}`}
+                  title="Kirim pesan konfirmasi pesanan selesai ke WhatsApp klien"
+                >
+                  <MessageCircle className="w-4 h-4 fill-black" />
+                  <span>Hubungi Saat Selesai</span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="flex-1 py-2.5 bg-white/5 text-gray-500 border border-white/10 font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-not-allowed opacity-60"
+                  id={`btn-wa-completion-disabled-${detailOrder.id}`}
+                  title="Tombol ini hanya aktif jika status pesanan adalah 'Selesai'"
+                >
+                  <MessageCircle className="w-4 h-4 text-gray-500" />
+                  <span>Hubungi Saat Selesai (Nonaktif)</span>
+                </button>
+              )}
               <button
                 onClick={() => {
                   if (confirm(`Apakah Anda yakin ingin menghapus data booking ${detailOrder.clientName} (${detailOrder.id})?`)) {

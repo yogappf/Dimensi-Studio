@@ -146,33 +146,82 @@ export const PHOTO_PACKAGES: PhotoPackage[] = [
     recommendedFor: 'Foto Keluarga Besar, Balita / Bayi, & Maternity Shoot'
   },
   {
-    id: 'pkg-produk-commercial',
-    name: 'Paket Foto Produk & Katalog UMKM / Brand',
-    category: 'produk',
-    tagline: 'Tingkatkan omset penjualan dengan foto produk tajam & profesional',
-    price: 1200000,
-    originalPrice: 1500000,
-    duration: 'Hingga 15 Produk / SKU',
-    popular: false,
+    id: 'pkg-engagement-special',
+    name: 'Paket Engagement & Lamaran Elegance',
+    category: 'engagement',
+    tagline: 'Dokumentasi sakral pengikatan janji suci lamaran penuh kehangatan',
+    price: 1750000,
+    originalPrice: 2200000,
+    duration: '3-4 Jam Sesi Liputan',
+    popular: true,
     features: [
-      'Studio Lighting Komersial Presisi Tinggi',
-      'Pilihan White Background Bersih / Creative Themed Lifestyle Props',
-      'Format Siap Pakai untuk Shopee, Tokopedia, Instagram & Website',
-      'Color Corrected Sesuai Warna Asli Produk'
+      '1 Fotografer Utama + 1 Asisten Lighting',
+      'Liputan Prosesi Seserahan & Tukar Cincin',
+      'Mini Sesi Couple Pasangan & Foto Keluarga',
+      'Grading Warna Eksklusif Dimensi Signature',
+      'Semua File Master High-Resolution'
     ],
     deliverables: [
-      '45 Foto Master (3 Angle per Produk)',
-      'High-Resolution & Web Compressed Versi Ringan',
-      'Hak Pakai Komersial Bebas Royalti'
+      '1 Album Mini Magazine 20x25cm (16 Hal)',
+      '1 Cetak 30x45cm + Frame Minimalis',
+      'Link Google Drive Gallery Aktif 1 Tahun'
     ],
-    imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=80',
-    recommendedFor: 'Kuliner, Fashion, Skincare, Kerajinan, & E-Commerce'
+    imageUrl: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1000&q=80',
+    recommendedFor: 'Acara Lamaran & Pertunangan (Rumah / Restoran / Venue)'
+  },
+  {
+    id: 'pkg-siraman-sacred',
+    name: 'Paket Tradisi Siraman & Pengajian Khidmat',
+    category: 'siraman',
+    tagline: 'Mengabadikan kesucian prosesi adat siraman & doa pengajian',
+    price: 1850000,
+    originalPrice: 2300000,
+    duration: '4 Jam Sesi Liputan',
+    popular: false,
+    features: [
+      '1 Fotografer Senior Berpengalaman Adat',
+      'Liputan Khidmat Pengajian, Sungkeman & Guyuran Siraman',
+      'Detail Foto Roncean Melati, Air Bunga & Dekorasi Tradisional',
+      '30 Foto Best Retouched Skin & Tone',
+      'All Raw Files High Resolution'
+    ],
+    deliverables: [
+      '1 Album Kolase Hardcover 20x30cm',
+      '1 Cetak Pembesaran 30x40cm + Frame Kayu',
+      'Link Cloud Private Download Cepat'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1000&q=80',
+    recommendedFor: 'Prosesi Adat Siraman, Pengajian, & Midodareni'
+  },
+  {
+    id: 'pkg-birthday-celebration',
+    name: 'Paket Ulang Tahun & Sweet 17 Joyful',
+    category: 'ulangtahun',
+    tagline: 'Rayakan pertambahan usia dengan dokumentasi penuh keceriaan',
+    price: 1350000,
+    originalPrice: 1700000,
+    duration: '3 Jam Sesi Acara',
+    popular: false,
+    features: [
+      '1 Fotografer Profesional + Lensa Portrait & Wide',
+      'Liputan Momen Tiup Lilin, Potong Kue, & Games',
+      'Sesi Foto Personal Birthday Person & Teman/Keluarga',
+      '50 Foto Edited Vibrant Tone',
+      'Semua Foto Master Diberikan'
+    ],
+    deliverables: [
+      '1 Cetak 30x40cm + Frame Modern',
+      'Link Google Drive High-Res Selamanya',
+      'Bonus 10 Sneak Peek Foto Siap Upload Sosmed'
+    ],
+    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1000&q=80',
+    recommendedFor: 'Ulang Tahun Anak, Sweet 17th, & Pesta Dewasa'
   },
   {
     id: 'pkg-event-gathering',
     name: 'Paket Dokumentasi Event & Corporate Gathering',
     category: 'event',
-    tagline: 'Rekam kemeriahan ulang tahun, konser, seminar, dan acara kantor',
+    tagline: 'Rekam kemeriahan konser, seminar, reuni, dan acara kantor',
     price: 2200000,
     originalPrice: 2700000,
     duration: '5 Jam Durasi Acara',
@@ -379,15 +428,33 @@ export const PORTFOLIO_ITEMS: PortfolioItem[] = [
   },
   {
     id: 'port-5',
-    title: 'Artisan Artisan Coffee & Pastry Brand',
-    category: 'produk',
-    categoryName: 'Produk Komersil',
-    location: 'Dimensi Tabletop Studio',
-    imageUrl: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80',
-    description: 'Penataan prop kreatif dan kontras warna yang menonjolkan tekstur produk.'
+    title: 'Joyful Sweet 17th & Birthday Bash',
+    category: 'ulangtahun',
+    categoryName: 'Ulang Tahun',
+    location: 'Dimensi Studio & Outdoor Garden',
+    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1200&q=80',
+    description: 'Dokumentasi perayaan ulang tahun penuh tawa, dekorasi ceria, dan candid emosional.'
   },
   {
     id: 'port-6',
+    title: 'Intimate Engagement of Dimas & Sarah',
+    category: 'engagement',
+    categoryName: 'Engagement',
+    location: 'Plataran Dharmawangsa',
+    imageUrl: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1200&q=80',
+    description: 'Momen sakral penyematan cincin tunangan dengan balutan adat modern.'
+  },
+  {
+    id: 'port-7',
+    title: 'Prosesi Adat Siraman & Pengajian Khidmat',
+    category: 'siraman',
+    categoryName: 'Siraman',
+    location: 'Kediaman Mempelai, Jakarta',
+    imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1200&q=80',
+    description: 'Kesakralan doa restu orang tua dan guyuran air tujuh sumber melati.'
+  },
+  {
+    id: 'port-8',
     title: 'Tech Summit & Gala Dinner Annual Night',
     category: 'event',
     categoryName: 'Dokumentasi Acara',
@@ -400,7 +467,7 @@ export const PORTFOLIO_ITEMS: PortfolioItem[] = [
 export const STUDIO_INFO = {
   name: 'Dimensi Fotografi Studio',
   tagline: 'Abadikan Keajaiban Momen Terbaik Anda Bersama Kami',
-  description: 'Studio fotografi profesional berbasis di Indonesia yang melayani dokumentasi pernikahan, pre-wedding sinematik, foto wisuda, keluarga, produk komersial, dan acara bergengsi dengan peralatan terdepan dan sentuhan visual berkelas.',
+  description: 'Studio fotografi profesional berbasis di Indonesia yang melayani dokumentasi pernikahan, engagement, siraman, pre-wedding sinematik, wisuda, keluarga, ulang tahun, dan acara bergengsi dengan peralatan terdepan dan sentuhan visual berkelas.',
   phone: '0821-2345-6789',
   whatsapp: '6282123456789',
   email: 'dimensi.idphoto@gmail.com',

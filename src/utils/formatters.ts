@@ -124,6 +124,27 @@ Silakan lakukan transfer DP ke rekening resmi studio dan balas pesan ini ya Kak.
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
 
+export function generateClientCompletionWhatsAppLink(order: BookingOrder): string {
+  const cleanPhone = normalizeWhatsAppNumber(order.phone);
+  let message = `Halo Kak ${order.clientName}! 📸✨
+
+Kami dari *Dimensi Fotografi Studio* menginformasikan bahwa pesanan sesi foto Anda telah *SELESAI* diproses & diedit sepenuhnya! 🎉
+
+*Rincian Pesanan*:
+- *ID Booking*: ${order.id}
+- *Paket Foto*: ${order.packageName}
+- *Jadwal Sesi*: ${formatDateIndonesian(order.sessionDate)}
+- *Status*: *Selesai*`;
+
+  if (order.driveFolderUrl) {
+    message += `\n\n🔗 *Link Hasil Foto (Google Drive)*:\n${order.driveFolderUrl}`;
+  }
+
+  message += `\n\nTerima kasih banyak telah mempercayakan momen berharga Anda kepada Dimensi Fotografi Studio. Semoga Kakak puas dengan hasil karya kami! Jika ada pertanyaan atau kebutuhan cetak foto tambahan, jangan ragu untuk menghubungi kami ya Kak. 🙏✨`;
+
+  return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+}
+
 export function generateClientDeliveryWhatsAppLink(order: BookingOrder): string {
   const cleanPhone = normalizeWhatsAppNumber(order.phone);
   const message = `Halo Kak ${order.clientName}! 📸✨

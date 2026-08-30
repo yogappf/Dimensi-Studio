@@ -38,9 +38,11 @@ interface PackageManagerProps {
 const CATEGORY_OPTIONS: { id: CategoryType; label: string }[] = [
   { id: 'wedding', label: '💍 Wedding & Akad' },
   { id: 'prewedding', label: '💑 Pre-Wedding' },
+  { id: 'engagement', label: '💐 Engagement' },
+  { id: 'siraman', label: '🌿 Siraman' },
   { id: 'wisuda', label: '🎓 Wisuda & Kelulusan' },
   { id: 'keluarga', label: '👨‍👩‍👧 Keluarga & Maternity' },
-  { id: 'produk', label: '📦 Produk & UMKM' },
+  { id: 'ulangtahun', label: '🎂 Ulang Tahun' },
   { id: 'event', label: '🎉 Event & Gathering' },
 ];
 
