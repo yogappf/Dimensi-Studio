@@ -177,6 +177,7 @@ export async function saveBookingToFirestore(order: BookingOrder): Promise<void>
       paymentPreference: order.paymentPreference || 'DP 50%',
       driveFolderId: order.driveFolderId || '',
       driveFolderUrl: order.driveFolderUrl || '',
+      completedAt: order.completedAt || (order.status === 'Selesai' ? new Date().toISOString() : null),
       createdAt: order.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -205,6 +206,11 @@ export async function updateBookingInFirestore(
       ...updates,
       updatedAt: new Date().toISOString(),
     };
+    if (updates.status === 'Selesai' && !updates.completedAt) {
+      sanitizedUpdates.completedAt = new Date().toISOString();
+    } else if (updates.status && updates.status !== 'Selesai') {
+      sanitizedUpdates.completedAt = null;
+    }
     await updateDoc(docRef, sanitizedUpdates);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
@@ -220,6 +226,38 @@ export async function deleteBookingFromFirestore(orderId: string): Promise<void>
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
+}
+
+// Auto-cleanup helper for orders completed >= 30 days (1 month)
+export async function checkAndCleanupExpiredCompletedOrders(
+  orders: BookingOrder[]
+): Promise<{ cleanedOrders: BookingOrder[]; deletedCount: number }> {
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+  const validOrders: BookingOrder[] = [];
+  let deletedCount = 0;
+
+  for (const order of orders) {
+    if (order.status === 'Selesai') {
+      const refDateStr = order.completedAt || order.updatedAt || order.sessionDate || order.createdAt;
+      const refTime = new Date(refDateStr).getTime();
+      const isExpired = !isNaN(refTime) && (now - refTime >= THIRTY_DAYS_MS);
+
+      if (isExpired) {
+        console.log(`[Auto-Cleanup] Deleting completed order ${order.id} (${order.clientName}) older than 30 days.`);
+        try {
+          await deleteBookingFromFirestore(order.id);
+          deletedCount++;
+        } catch (err) {
+          console.error(`[Auto-Cleanup] Failed to delete expired order ${order.id}:`, err);
+        }
+        continue;
+      }
+    }
+    validOrders.push(order);
+  }
+
+  return { cleanedOrders: validOrders, deletedCount };
 }
 
 // Subscribe to real-time updates of all bookings
@@ -258,15 +296,12 @@ export function subscribeToBookings(
           paymentPreference: data.paymentPreference || 'DP 50%',
           driveFolderId: data.driveFolderId || undefined,
           driveFolderUrl: data.driveFolderUrl || undefined,
+          completedAt: data.completedAt || undefined,
+          updatedAt: data.updatedAt || undefined,
         });
       });
 
-      // If Firestore collection is empty, seed initial sample data so users have an immediate rich demo
-      if (snapshot.empty && orders.length === 0) {
-        seedInitialBookings();
-      } else {
-        onData(orders);
-      }
+      onData(orders);
     },
     (error) => {
       console.warn('Realtime listener notice (fallback active):', error);

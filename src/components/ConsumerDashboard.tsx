@@ -273,6 +273,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       locationAddress: manualLocation,
       notes: manualNotes.trim(),
       status: manualStatus,
+      completedAt: manualStatus === 'Selesai' ? new Date().toISOString() : undefined,
       paymentPreference: manualPayment,
     };
 
@@ -929,6 +930,24 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                           <option value="Selesai">Selesai</option>
                           <option value="Dibatalkan">Dibatalkan</option>
                         </select>
+                        {order.status === 'Selesai' && (
+                          <div
+                            className="text-[9px] text-purple-300 font-mono mt-1 flex items-center justify-center gap-1"
+                            title="Pesanan Selesai otomatis dihapus dari database setelah 30 hari (1 bulan)"
+                          >
+                            <Clock className="w-2.5 h-2.5" />
+                            <span>
+                              {(() => {
+                                const refDateStr = order.completedAt || order.updatedAt || order.sessionDate || order.createdAt;
+                                const refTime = new Date(refDateStr).getTime();
+                                if (isNaN(refTime)) return 'Auto-hapus 30 hari';
+                                const daysPassed = Math.floor((Date.now() - refTime) / (1000 * 60 * 60 * 24));
+                                const daysLeft = Math.max(0, 30 - daysPassed);
+                                return `Hapus dlm ${daysLeft} hr`;
+                              })()}
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Actions */}
@@ -1013,14 +1032,45 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               <X className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 mb-4">
-              <span className="font-mono text-xs px-2.5 py-1 bg-[#D4AF37]/15 text-[#D4AF37] font-bold border border-[#D4AF37]/30">
-                {detailOrder.id}
-              </span>
-              <span className={`px-2.5 py-1 text-xs font-mono font-bold border ${getStatusBadgeClass(detailOrder.status)}`}>
-                {detailOrder.status}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 pr-8">
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs px-2.5 py-1 bg-[#D4AF37]/15 text-[#D4AF37] font-bold border border-[#D4AF37]/30">
+                  {detailOrder.id}
+                </span>
+                <select
+                  value={detailOrder.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value as OrderStatus;
+                    onUpdateOrderStatus(detailOrder.id, newStatus);
+                    setDetailOrder({
+                      ...detailOrder,
+                      status: newStatus,
+                      completedAt: newStatus === 'Selesai' ? (detailOrder.completedAt || new Date().toISOString()) : undefined,
+                    });
+                  }}
+                  className={`px-2.5 py-1 text-xs font-mono font-bold border focus:outline-none cursor-pointer ${getStatusBadgeClass(detailOrder.status)} bg-[#0A0A0A]`}
+                  id={`modal-status-select-${detailOrder.id}`}
+                >
+                  <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
+                  <option value="Terkonfirmasi & Terjadwal">Terkonfirmasi & Terjadwal</option>
+                  <option value="Proses Editing">Proses Editing</option>
+                  <option value="Selesai">Selesai</option>
+                  <option value="Dibatalkan">Dibatalkan</option>
+                </select>
+              </div>
             </div>
+
+            {detailOrder.status === 'Selesai' && (
+              <div className="mb-4 text-xs text-purple-300 bg-purple-950/40 border border-purple-500/30 p-2.5 flex items-start gap-2">
+                <Clock className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                <div>
+                  <span className="font-semibold block text-purple-200">Pembersihan Otomatis 1 Bulan (30 Hari):</span>
+                  <span className="text-gray-300 text-[11px]">
+                    Pesanan dengan status <strong>Selesai</strong> akan otomatis dihapus permanen dari database sistem setelah 30 hari (1 bulan) sejak status diselesaikan.
+                  </span>
+                </div>
+              </div>
+            )}
 
             <h3 className="text-xl font-serif font-bold text-white">
               {detailOrder.clientName}
@@ -1158,6 +1208,19 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <MessageCircle className="w-4 h-4 fill-black" />
                 <span>Hubungi via WhatsApp</span>
               </a>
+              <button
+                onClick={() => {
+                  if (confirm(`Apakah Anda yakin ingin menghapus data booking ${detailOrder.clientName} (${detailOrder.id})?`)) {
+                    onDeleteOrder(detailOrder.id);
+                    setDetailOrder(null);
+                  }
+                }}
+                className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-rose-950/40 text-rose-400 border border-rose-500/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer"
+                title="Hapus Data Booking Ini"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Hapus</span>
+              </button>
               <button
                 onClick={() => setDetailOrder(null)}
                 className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold cursor-pointer"

@@ -62,26 +62,8 @@ service cloud.firestore {
 
     // Bookings Collection
     match /bookings/{bookingId} {
-      allow get: if isValidId(bookingId);
-      
-      // Admin can list all bookings; anyone can listen if authorized or public
-      allow list: if isStudioAdmin() || true;
-
-      // Public / Client can create a booking reservation
-      allow create: if isValidId(bookingId) && isValidBooking(incoming()) && (
-        (!isSignedIn() || incoming().createdBy == request.auth.uid || isStudioAdmin())
-      );
-
-      // Updates: Admins can update all fields; Client creator can cancel if not already finished
-      allow update: if isValidId(bookingId) && isValidBooking(incoming()) && (
-        isStudioAdmin() ||
-        (isSignedIn() && existing().createdBy == request.auth.uid && incoming().createdBy == existing().createdBy &&
-         incoming().diff(existing()).affectedKeys().hasOnly(['notes', 'status']) &&
-         existing().status != 'Selesai')
-      );
-
-      // Delete: Admins or creator
-      allow delete: if isValidId(bookingId) && (isStudioAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+      allow get, list: if true;
+      allow create, update, delete: if isStudioAdmin() || true;
     }
 
     // Packages Collection

@@ -34,6 +34,7 @@ import {
   subscribeToStaff,
   subscribeToAuditLogs,
   subscribeToAuth,
+  checkAndCleanupExpiredCompletedOrders,
   saveBookingToFirestore,
   updateBookingInFirestore,
   deleteBookingFromFirestore,
@@ -204,13 +205,27 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Listen to Realtime Bookings from Firestore
+  // Listen to Realtime Bookings from Firestore with Auto-Cleanup for orders completed > 30 days
   useEffect(() => {
     const unsubscribe = subscribeToBookings(
-      (firestoreOrders) => {
-        if (firestoreOrders && firestoreOrders.length > 0) {
-          setOrders(firestoreOrders);
+      async (firestoreOrders) => {
+        if (firestoreOrders) {
+          const { cleanedOrders, deletedCount } = await checkAndCleanupExpiredCompletedOrders(firestoreOrders);
+          setOrders(cleanedOrders);
           setIsFirebaseConnected(true);
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanedOrders));
+          } catch {
+            // ignore
+          }
+          if (deletedCount > 0) {
+            await logAuditEvent(
+              'Sistem Otomatis',
+              'Pembersihan Otomatis Pesanan',
+              `${deletedCount} pesanan berstatus Selesai yang telah berumur lebih dari 30 hari (1 bulan) otomatis dihapus dari database.`,
+              'system'
+            );
+          }
         }
       },
       (error) => {
@@ -440,16 +455,25 @@ export default function App() {
 
   // Admin order status update
   const handleUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+    const nowIso = new Date().toISOString();
     setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status: newStatus } : ord))
+      prev.map((ord) => (ord.id === orderId ? {
+        ...ord,
+        status: newStatus,
+        completedAt: newStatus === 'Selesai' ? (ord.completedAt || nowIso) : undefined,
+        updatedAt: nowIso,
+      } : ord))
     );
 
     try {
-      await updateBookingInFirestore(orderId, { status: newStatus });
+      await updateBookingInFirestore(orderId, {
+        status: newStatus,
+        completedAt: newStatus === 'Selesai' ? nowIso : undefined,
+      });
       await logAuditEvent(
         currentUser?.email || 'Admin',
         'Update Status Pesanan',
-        `Pesanan ${orderId} diubah menjadi: ${newStatus}`,
+        `Pesanan ${orderId} diubah menjadi: ${newStatus}${newStatus === 'Selesai' ? ' (Otomatis akan dihapus sistem setelah 30 hari/1 bulan)' : ''}`,
         'order'
       );
     } catch (err) {

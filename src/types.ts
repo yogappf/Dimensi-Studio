@@ -48,6 +48,8 @@ export interface BookingOrder {
   paymentPreference: 'DP 30%' | 'DP 50%' | 'Lunas';
   driveFolderId?: string;
   driveFolderUrl?: string;
+  completedAt?: string; // ISO date string when marked as Selesai
+  updatedAt?: string;
 }
 
 export interface PortfolioItem {
