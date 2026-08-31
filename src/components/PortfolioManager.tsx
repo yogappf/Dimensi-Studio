@@ -89,6 +89,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setTimeout(() => setToastMessage(null), 3000);
   };
 
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -101,10 +103,11 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     }
 
     if (!allValid) {
-      alert('Terdapat ukuran file yang melebihi 10MB.');
+      alert('Terdapat ukuran file yang melebihi batas 10MB.');
       return;
     }
 
+    setIsUploading(true);
     try {
       const newUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
@@ -112,23 +115,28 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         newUrls.push(compressed);
       }
       
-      // If replaceMode is true or user is re-uploading to overwrite previous photo
-      const updatedUrls = replaceMode 
-        ? newUrls 
-        : [...(formData.imageUrls || []), ...newUrls];
-
-      setFormData({ 
-        ...formData, 
-        imageUrls: updatedUrls,
-        imageUrl: updatedUrls[0] || '' 
+      setFormData((prev) => {
+        const currentList = prev.imageUrls && prev.imageUrls.length > 0
+          ? prev.imageUrls
+          : (prev.imageUrl ? [prev.imageUrl] : []);
+        const updatedUrls = replaceMode ? newUrls : [...currentList, ...newUrls];
+        return {
+          ...prev,
+          imageUrls: updatedUrls,
+          imageUrl: updatedUrls[0] || prev.imageUrl || '',
+        };
       });
+
       showToast(replaceMode 
-        ? `Foto lama dibersihkan. ${files.length} foto baru siap disimpan.` 
-        : `${files.length} foto berhasil ditambahkan.`
+        ? `Foto lama diganti. ${newUrls.length} foto baru siap disimpan.` 
+        : `${newUrls.length} foto berhasil ditambahkan.`
       );
     } catch (err) {
       console.error('Error compressing image:', err);
       alert('Gagal memproses gambar. Silakan coba lagi.');
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
     }
   };
 
@@ -143,6 +151,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       imageUrls: [],
       description: '',
     });
+    setReplaceMode(true);
+    setEditingItem(null);
     setIsAddModalOpen(true);
   };
 
@@ -157,55 +167,74 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
       description: item.description,
     });
+    setReplaceMode(true);
   };
 
   const handleCategorySelect = (selectedSlug: string) => {
     const matched = categoryOptions.find((c) => c.id === selectedSlug);
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       category: selectedSlug,
       categoryName: matched ? matched.name : selectedSlug,
-    });
+    }));
   };
 
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title?.trim()) {
-      alert('Judul portofolio wajib diisi.');
-      return;
-    }
-    if (!formData.imageUrl?.trim()) {
-      alert('Tautan URL gambar portofolio wajib diisi.');
+    const title = formData.title?.trim();
+    if (!title) {
+      alert('Judul karya portofolio wajib diisi.');
       return;
     }
 
+    const finalImageUrls = (formData.imageUrls && formData.imageUrls.length > 0)
+      ? formData.imageUrls.filter((url) => Boolean(url && url.trim()))
+      : (formData.imageUrl?.trim() ? [formData.imageUrl.trim()] : []);
+
+    const finalImageUrl = formData.imageUrl?.trim() || finalImageUrls[0] || '';
+
+    if (!finalImageUrl) {
+      alert('Silakan masukkan tautan URL gambar atau unggah foto portofolio terlebih dahulu.');
+      return;
+    }
+
+    const category = formData.category || 'wedding';
+    const matchedCategory = categoryOptions.find((c) => c.id === category);
+    const categoryName = formData.categoryName || matchedCategory?.name || category;
+    const location = formData.location?.trim() || 'Dimensi Studio Jakarta';
+    const description = formData.description?.trim() || '';
+
+    const payloadImageUrls = finalImageUrls.length > 0 ? finalImageUrls : [finalImageUrl];
+
     if (editingItem) {
       onUpdatePortfolio(editingItem.id, {
-        title: formData.title.trim(),
-        category: formData.category || 'wedding',
-        categoryName: formData.categoryName || 'Koleksi',
-        location: formData.location?.trim() || 'Dimensi Studio',
-        imageUrl: formData.imageUrl.trim(),
-        imageUrls: formData.imageUrls,
-        description: formData.description?.trim() || '',
+        title,
+        category,
+        categoryName,
+        location,
+        imageUrl: finalImageUrl,
+        imageUrls: payloadImageUrls,
+        description,
       });
-      showToast(`Karya "${formData.title}" berhasil diperbarui.`);
+      showToast(`Karya "${title}" berhasil diperbarui.`);
       setEditingItem(null);
+      setIsAddModalOpen(false);
     } else {
-      const newId = `port-${Date.now().toString(36)}`;
+      const newId = `port-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
       const newItem: PortfolioItem = {
         id: newId,
-        title: formData.title.trim(),
-        category: formData.category || 'wedding',
-        categoryName: formData.categoryName || 'Koleksi',
-        location: formData.location?.trim() || 'Dimensi Studio',
-        imageUrl: formData.imageUrl.trim(),
-        imageUrls: formData.imageUrls,
-        description: formData.description?.trim() || '',
+        title,
+        category,
+        categoryName,
+        location,
+        imageUrl: finalImageUrl,
+        imageUrls: payloadImageUrls,
+        description,
       };
       onAddPortfolio(newItem);
-      showToast(`Karya portofolio baru "${newItem.title}" berhasil ditambahkan.`);
+      showToast(`Karya portofolio baru "${newItem.title}" berhasil disimpan.`);
       setIsAddModalOpen(false);
+      setEditingItem(null);
     }
   };
 
@@ -451,7 +480,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               Karya ini akan langsung dipublikasikan pada Galeri Portofolio di halaman utama beranda konsumen.
             </p>
 
-            <form onSubmit={handleSaveSubmit} className="space-y-4">
+            <form onSubmit={handleSaveSubmit} noValidate className="space-y-4">
               <div>
                 <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
                   Judul Karya / Sesi Foto *
@@ -507,15 +536,21 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
 
               <div>
                 <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                  Tautan URL Foto (High Resolution) *
+                  Tautan URL Foto / Unggah File Foto *
                 </label>
                 <input
-                  type="url"
-                  required
+                  type="text"
                   value={formData.imageUrl || ''}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData((prev) => ({
+                      ...prev,
+                      imageUrl: val,
+                      imageUrls: val ? [val, ...(prev.imageUrls?.slice(1) || [])] : prev.imageUrls,
+                    }));
+                  }}
+                  placeholder="https://images.unsplash.com/... atau gunakan tombol Upload di bawah"
+                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none font-mono"
                   id="portfolio-form-image"
                 />
 
@@ -562,15 +597,22 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     )}
                   </div>
 
-                  <label className="w-full cursor-pointer px-3 py-2.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors">
-                    <Upload className="w-4 h-4 text-[#D4AF37]" />
+                  <label className={`w-full cursor-pointer px-3 py-2.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors ${
+                    isUploading ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''
+                  }`}>
+                    <Upload className={`w-4 h-4 text-[#D4AF37] ${isUploading ? 'animate-spin' : ''}`} />
                     <span>
-                      {replaceMode ? 'Upload Ulang (Otomatis Menimpa & Menghapus Foto Awal)' : 'Upload Foto Tambahan'}
+                      {isUploading
+                        ? 'Sedang Memproses Foto...'
+                        : replaceMode
+                        ? 'Upload Ulang (Otomatis Menimpa & Menghapus Foto Awal)'
+                        : 'Upload Foto Tambahan'}
                     </span>
                     <input
                       type="file"
                       accept="image/*"
                       multiple
+                      disabled={isUploading}
                       onChange={handleFileUpload}
                       className="hidden"
                     />

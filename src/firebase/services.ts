@@ -773,12 +773,12 @@ export async function savePortfolioToFirestore(item: PortfolioItem): Promise<voi
 
     const cleanPayload: Record<string, any> = {
       id: item.id,
-      title: item.title,
-      category: item.category,
+      title: item.title || '',
+      category: item.category || 'wedding',
       categoryName: item.categoryName || '',
       location: item.location || '',
       imageUrl: item.imageUrl || '',
-      imageUrls: item.imageUrls || [],
+      imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : []),
       description: item.description || '',
       updatedAt: new Date().toISOString(),
     };
