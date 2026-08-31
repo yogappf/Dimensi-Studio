@@ -161,6 +161,8 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     }
   }, [studioConfig]);
 
+  const [bannerReplaceMode, setBannerReplaceMode] = useState(true);
+
   const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -180,11 +182,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
         ? configForm.heroImageUrls
         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
-      const updatedList = [...currentList, compressed];
+      
+      const updatedList = bannerReplaceMode ? [compressed] : [...currentList, compressed];
       const updatedConfig = {
         ...studioConfig,
         ...configForm,
-        heroImageUrl: updatedList[0],
+        heroImageUrl: updatedList[0] || '',
         heroImageUrls: updatedList,
       };
       setConfigForm(updatedConfig);
@@ -194,7 +197,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       } catch (firestoreErr) {
         console.warn('Firestore save warning (saved locally):', firestoreErr);
       }
-      setHeroToast('Foto banner berhasil ditambahkan dan disimpan!');
+      setHeroToast(bannerReplaceMode ? 'Foto banner lama diganti dengan foto baru!' : 'Foto banner berhasil ditambahkan ke slide!');
       setTimeout(() => setHeroToast(''), 3000);
     } catch (err) {
       console.error('Error compressing or saving banner image:', err);
@@ -1168,9 +1171,35 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     )}
                   </div>
                   <div className="space-y-2 max-w-[200px]">
+                    {/* Banner Mode Toggle */}
+                    <div className="flex items-center gap-1 p-1 bg-black/50 border border-white/10 rounded">
+                      <button
+                        type="button"
+                        onClick={() => setBannerReplaceMode(true)}
+                        className={`flex-1 py-1 text-[10px] font-mono rounded cursor-pointer transition-colors ${
+                          bannerReplaceMode
+                            ? 'bg-[#D4AF37] text-black font-bold'
+                            : 'bg-transparent text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        ✓ Timpa
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setBannerReplaceMode(false)}
+                        className={`flex-1 py-1 text-[10px] font-mono rounded cursor-pointer transition-colors ${
+                          !bannerReplaceMode
+                            ? 'bg-[#D4AF37] text-black font-bold'
+                            : 'bg-transparent text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        + Tambah
+                      </button>
+                    </div>
+
                     <label className="w-full cursor-pointer px-2 py-1.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors">
                       <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      <span>Upload Lokal</span>
+                      <span>{bannerReplaceMode ? 'Upload & Ganti' : 'Upload Tambahan'}</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -1189,26 +1218,63 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
 
                     {/* Banner Slideshow List Thumbnails */}
                     <div className="pt-2 border-t border-white/10 space-y-1">
-                      <span className="text-[10px] font-mono text-gray-400 uppercase block">Slideshow ({configForm.heroImageUrls?.length || (configForm.heroImageUrl ? 1 : 0)})</span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-gray-400 uppercase block">Slideshow ({configForm.heroImageUrls?.length || (configForm.heroImageUrl ? 1 : 0)})</span>
+                        {(configForm.heroImageUrls?.length || configForm.heroImageUrl) ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const updatedConfig = {
+                                ...studioConfig,
+                                ...configForm,
+                                heroImageUrl: '',
+                                heroImageUrls: [],
+                              };
+                              setConfigForm(updatedConfig);
+                              onUpdateStudioConfig(updatedConfig);
+                              try {
+                                await saveStudioConfigToFirestore(updatedConfig);
+                              } catch {
+                                // ignore
+                              }
+                              setHeroToast('Semua foto banner dihapus.');
+                              setTimeout(() => setHeroToast(''), 3000);
+                            }}
+                            className="text-[9px] font-mono text-rose-400 hover:text-rose-300 cursor-pointer"
+                          >
+                            Hapus Semua
+                          </button>
+                        ) : null}
+                      </div>
                       <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-black/40 border border-white/10">
                         {(configForm.heroImageUrls && configForm.heroImageUrls.length > 0 ? configForm.heroImageUrls : (configForm.heroImageUrl ? [configForm.heroImageUrl] : [])).map((img, idx) => (
                           <div key={idx} className="relative w-10 h-12 bg-black border border-white/20 group">
                             <img src={img} alt={`Banner ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={async () => {
                                 const list = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
                                   ? configForm.heroImageUrls
                                   : [configForm.heroImageUrl || ''];
                                 const filtered = list.filter((_, i) => i !== idx);
-                                setConfigForm({
+                                const updatedConfig = {
+                                  ...studioConfig,
                                   ...configForm,
                                   heroImageUrls: filtered,
                                   heroImageUrl: filtered[0] || '',
-                                });
+                                };
+                                setConfigForm(updatedConfig);
+                                onUpdateStudioConfig(updatedConfig);
+                                try {
+                                  await saveStudioConfigToFirestore(updatedConfig);
+                                } catch {
+                                  // ignore
+                                }
+                                setHeroToast('Foto banner dihapus dari database.');
+                                setTimeout(() => setHeroToast(''), 3000);
                               }}
                               className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Hapus"
+                              title="Hapus Slide Ini dari Database"
                             >
                               <X className="w-2.5 h-2.5" />
                             </button>

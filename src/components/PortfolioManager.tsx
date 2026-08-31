@@ -82,6 +82,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     description: '',
   });
 
+  const [replaceMode, setReplaceMode] = useState(true);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
@@ -110,13 +112,20 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         newUrls.push(compressed);
       }
       
-      const updatedUrls = [...(formData.imageUrls || []), ...newUrls];
+      // If replaceMode is true or user is re-uploading to overwrite previous photo
+      const updatedUrls = replaceMode 
+        ? newUrls 
+        : [...(formData.imageUrls || []), ...newUrls];
+
       setFormData({ 
         ...formData, 
         imageUrls: updatedUrls,
-        imageUrl: formData.imageUrl || updatedUrls[0] || '' 
+        imageUrl: updatedUrls[0] || '' 
       });
-      showToast(`${files.length} gambar berhasil dikompres dan siap disimpan.`);
+      showToast(replaceMode 
+        ? `Foto lama dibersihkan. ${files.length} foto baru siap disimpan.` 
+        : `${files.length} foto berhasil ditambahkan.`
+      );
     } catch (err) {
       console.error('Error compressing image:', err);
       alert('Gagal memproses gambar. Silakan coba lagi.');
@@ -510,11 +519,54 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   id="portfolio-form-image"
                 />
 
-                {/* Local Computer File Upload */}
-                <div className="mt-2.5">
-                  <label className="w-full cursor-pointer px-3 py-2 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors">
+                {/* Upload Mode & Actions */}
+                <div className="mt-2.5 space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[#141414] border border-white/10 rounded">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setReplaceMode(true)}
+                        className={`px-2.5 py-1 text-[11px] font-mono rounded cursor-pointer transition-colors ${
+                          replaceMode
+                            ? 'bg-[#D4AF37] text-black font-bold'
+                            : 'bg-[#222] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        ✓ Ganti & Hapus Foto Lama (Upload Ulang)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setReplaceMode(false)}
+                        className={`px-2.5 py-1 text-[11px] font-mono rounded cursor-pointer transition-colors ${
+                          !replaceMode
+                            ? 'bg-[#D4AF37] text-black font-bold'
+                            : 'bg-[#222] text-gray-400 hover:text-white'
+                        }`}
+                      >
+                        + Tambah Foto
+                      </button>
+                    </div>
+
+                    {((formData.imageUrls && formData.imageUrls.length > 0) || formData.imageUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, imageUrl: '', imageUrls: [] });
+                          showToast('Semua foto lama telah dihapus.');
+                        }}
+                        className="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 text-[10px] font-mono flex items-center gap-1 cursor-pointer rounded"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Hapus Semua Foto</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <label className="w-full cursor-pointer px-3 py-2.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-colors">
                     <Upload className="w-4 h-4 text-[#D4AF37]" />
-                    <span>Upload Foto dari Komputer Lokal (Bisa Multiple)</span>
+                    <span>
+                      {replaceMode ? 'Upload Ulang (Otomatis Menimpa & Menghapus Foto Awal)' : 'Upload Foto Tambahan'}
+                    </span>
                     <input
                       type="file"
                       accept="image/*"
@@ -523,7 +575,11 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       className="hidden"
                     />
                   </label>
-                  <p className="text-[10px] text-gray-500 font-mono mt-1">Mendukung file JPG, PNG, WebP (Maks. 10MB per file). Pilih beberapa file sekaligus.</p>
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    {replaceMode
+                      ? '⚡ Mode Timpa Aktif: Foto lama di database akan otomatis dihapus dan diganti dengan foto baru saat disimpan.'
+                      : 'ℹ️ Mode Tambah Aktif: Foto baru akan ditambahkan ke daftar slide foto.'}
+                  </p>
                 </div>
 
                 {/* Image Live Previews */}

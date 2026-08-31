@@ -687,9 +687,23 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
 
                 {/* Image Preview & URL input */}
                 <div className="flex gap-3 items-center">
-                  <div className="w-16 h-16 shrink-0 bg-[#0A0A0A] border border-white/25 overflow-hidden">
+                  <div className="w-16 h-16 shrink-0 bg-[#0A0A0A] border border-white/25 overflow-hidden relative group">
                     {imageUrl ? (
-                      <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <>
+                        <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageUrl('');
+                            setImageToast('Foto lama dihapus.');
+                            setTimeout(() => setImageToast(''), 3000);
+                          }}
+                          title="Hapus / Reset Foto"
+                          className="absolute inset-0 bg-black/70 text-rose-400 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-600">
                         <ImageIcon className="w-6 h-6" />
@@ -697,6 +711,23 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
                     )}
                   </div>
                   <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono text-gray-400">Tautan Gambar Cover</span>
+                      {imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setImageUrl('');
+                            setImageToast('Foto lama dibersihkan.');
+                            setTimeout(() => setImageToast(''), 3000);
+                          }}
+                          className="text-[10px] font-mono text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Hapus Foto Lama
+                        </button>
+                      )}
+                    </div>
                     <input
                       type="url"
                       placeholder="https://images.unsplash.com/..."
@@ -704,7 +735,9 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
                       onChange={(e) => setImageUrl(e.target.value)}
                       className="w-full px-3 py-1.5 bg-[#0A0A0A] border border-white/15 text-white placeholder-gray-600 focus:outline-none focus:border-[#D4AF37] font-mono text-[11px]"
                     />
-                    <p className="text-[10px] text-gray-500">URL langsung, pilih dari galeri portofolio, atau upload file dari komputer.</p>
+                    <p className="text-[10px] text-gray-400 font-mono">
+                      ⚡ Upload atau pilih foto baru akan otomatis menimpa & menghapus foto awal di database saat disimpan.
+                    </p>
                   </div>
                 </div>
 
