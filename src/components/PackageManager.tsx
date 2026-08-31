@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PhotoPackage, CategoryType, PortfolioItem } from '../types';
 import { PHOTO_PACKAGES } from '../data/mockData';
 import { formatRupiah } from '../utils/formatters';
+import { compressImage } from '../utils/imageCompressor';
 import {
   Package,
   Plus,
@@ -77,7 +78,7 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
   const [recommendedFor, setRecommendedFor] = useState('Semua Klien & Pasangan');
   const [formError, setFormError] = useState('');
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -86,21 +87,26 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Ukuran file maksimal 5MB agar performa database tetap optimal.');
-      return;
+    try {
+      setImageToast('Mengompresi gambar...');
+      const compressed = await compressImage(file, 900, 900, 0.75);
+      setImageUrl(compressed);
+      setImageToast('Foto berhasil diunggah dan dioptimalkan!');
+      setTimeout(() => setImageToast(''), 3500);
+    } catch (err) {
+      console.warn('Error compressing package image:', err);
+      // Fallback
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const result = uploadEvent.target?.result as string;
+        if (result) {
+          setImageUrl(result);
+          setImageToast('Foto berhasil diunggah!');
+          setTimeout(() => setImageToast(''), 3000);
+        }
+      };
+      reader.readAsDataURL(file);
     }
-
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      if (result) {
-        setImageUrl(result);
-        setImageToast('Foto berhasil diunggah dari komputer lokal!');
-        setTimeout(() => setImageToast(''), 3000);
-      }
-    };
-    reader.readAsDataURL(file);
   };
 
   // Open Form for Adding New Package
@@ -126,14 +132,14 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
     setEditingPackage(pkg);
     setName(pkg.name);
     setCategory(pkg.category);
-    setTagline(pkg.tagline);
+    setTagline(pkg.tagline || '');
     setPrice(pkg.price);
     setOriginalPrice(pkg.originalPrice ? String(pkg.originalPrice) : '');
-    setDuration(pkg.duration);
+    setDuration(pkg.duration || '60 Menit');
     setPopular(Boolean(pkg.popular));
-    setFeaturesText(pkg.features.join('\n'));
-    setDeliverablesText(pkg.deliverables.join('\n'));
-    setImageUrl(pkg.imageUrl);
+    setFeaturesText(Array.isArray(pkg.features) ? pkg.features.join('\n') : '');
+    setDeliverablesText(Array.isArray(pkg.deliverables) ? pkg.deliverables.join('\n') : '');
+    setImageUrl(pkg.imageUrl || '');
     setRecommendedFor(pkg.recommendedFor || '');
     setFormError('');
     setIsFormOpen(true);
@@ -176,15 +182,18 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
         name: name.trim(),
         category,
         tagline: tagline.trim(),
-        price,
-        originalPrice: parsedOrigPrice,
-        duration: duration.trim(),
-        popular,
+        price: Number(price),
+        duration: duration.trim() || '60 Menit',
+        popular: Boolean(popular),
         features: featuresList,
         deliverables: deliverablesList,
         imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
         recommendedFor: recommendedFor.trim(),
       };
+
+      if (parsedOrigPrice !== undefined && !isNaN(parsedOrigPrice)) {
+        updated.originalPrice = parsedOrigPrice;
+      }
 
       onUpdatePackage(editingPackage.id, updated);
       setSuccessNotice(`Paket "${name}" berhasil diperbarui.`);
@@ -196,15 +205,18 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
         name: name.trim(),
         category,
         tagline: tagline.trim(),
-        price,
-        originalPrice: parsedOrigPrice,
+        price: Number(price),
         duration: duration.trim() || '60 Menit',
-        popular,
+        popular: Boolean(popular),
         features: featuresList,
         deliverables: deliverablesList,
         imageUrl: imageUrl.trim() || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1000&q=80',
         recommendedFor: recommendedFor.trim() || 'Semua Klien',
       };
+
+      if (parsedOrigPrice !== undefined && !isNaN(parsedOrigPrice)) {
+        newPkg.originalPrice = parsedOrigPrice;
+      }
 
       onAddPackage(newPkg);
       setSuccessNotice(`Paket baru "${name}" berhasil ditambahkan ke katalog & cloud.`);

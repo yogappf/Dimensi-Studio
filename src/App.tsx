@@ -542,34 +542,56 @@ export default function App() {
 
   // Package Management Handlers
   const handleAddPackage = async (newPkg: PhotoPackage) => {
-    setPackages((prev) => [newPkg, ...prev]);
+    setPackages((prev) => {
+      const next = [newPkg, ...prev];
+      try {
+        localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await savePackageToFirestore(newPkg);
       await logAuditEvent(currentUser?.email || 'Admin', 'Tambah Paket Foto', `Paket "${newPkg.name}" ditambahkan.`, 'package');
     } catch (err) {
-      console.error('Error adding package to Firestore:', err);
+      console.warn('Error adding package to Firestore:', err);
     }
   };
 
   const handleUpdatePackage = async (pkgId: string, updatedPkg: Partial<PhotoPackage>) => {
-    setPackages((prev) =>
-      prev.map((p) => (p.id === pkgId ? { ...p, ...updatedPkg } : p))
-    );
+    setPackages((prev) => {
+      const next = prev.map((p) => (p.id === pkgId ? { ...p, ...updatedPkg } : p));
+      try {
+        localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await updatePackageInFirestore(pkgId, updatedPkg);
       await logAuditEvent(currentUser?.email || 'Admin', 'Update Paket Foto', `Paket ID ${pkgId} diperbarui.`, 'package');
     } catch (err) {
-      console.error('Error updating package in Firestore:', err);
+      console.warn('Error updating package in Firestore:', err);
     }
   };
 
   const handleDeletePackage = async (pkgId: string) => {
-    setPackages((prev) => prev.filter((p) => p.id !== pkgId));
+    setPackages((prev) => {
+      const next = prev.filter((p) => p.id !== pkgId);
+      try {
+        localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await deletePackageFromFirestore(pkgId);
       await logAuditEvent(currentUser?.email || 'Admin', 'Hapus Paket Foto', `Paket ID ${pkgId} dihapus.`, 'package');
     } catch (err) {
-      console.error('Error deleting package in Firestore:', err);
+      console.warn('Error deleting package in Firestore:', err);
     }
   };
 
@@ -589,31 +611,53 @@ export default function App() {
 
   // Add-on Management Handlers
   const handleAddAddon = async (newAddon: AddOnItem) => {
-    setAddons((prev) => [newAddon, ...prev]);
+    setAddons((prev) => {
+      const next = [newAddon, ...prev];
+      try {
+        localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await saveAddonToFirestore(newAddon);
     } catch (err) {
-      console.error('Error adding addon to Firestore:', err);
+      console.warn('Error adding addon to Firestore:', err);
     }
   };
 
   const handleUpdateAddon = async (addonId: string, updated: Partial<AddOnItem>) => {
-    setAddons((prev) =>
-      prev.map((a) => (a.id === addonId ? { ...a, ...updated } : a))
-    );
+    setAddons((prev) => {
+      const next = prev.map((a) => (a.id === addonId ? { ...a, ...updated } : a));
+      try {
+        localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await updateAddonInFirestore(addonId, updated);
     } catch (err) {
-      console.error('Error updating addon in Firestore:', err);
+      console.warn('Error updating addon in Firestore:', err);
     }
   };
 
   const handleDeleteAddon = async (addonId: string) => {
-    setAddons((prev) => prev.filter((a) => a.id !== addonId));
+    setAddons((prev) => {
+      const next = prev.filter((a) => a.id !== addonId);
+      try {
+        localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await deleteAddonFromFirestore(addonId);
     } catch (err) {
-      console.error('Error deleting addon in Firestore:', err);
+      console.warn('Error deleting addon in Firestore:', err);
     }
   };
 
@@ -633,31 +677,53 @@ export default function App() {
 
   // Portfolio Management Handlers
   const handleAddPortfolio = async (newItem: PortfolioItem) => {
-    setPortfolios((prev) => [newItem, ...prev]);
+    setPortfolios((prev) => {
+      const next = [newItem, ...prev];
+      try {
+        localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await savePortfolioToFirestore(newItem);
     } catch (err) {
-      console.error('Error adding portfolio to Firestore:', err);
+      console.warn('Error adding portfolio to Firestore:', err);
     }
   };
 
   const handleUpdatePortfolio = async (id: string, updated: Partial<PortfolioItem>) => {
-    setPortfolios((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, ...updated } : item))
-    );
+    setPortfolios((prev) => {
+      const next = prev.map((item) => (item.id === id ? { ...item, ...updated } : item));
+      try {
+        localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await updatePortfolioInFirestore(id, updated);
     } catch (err) {
-      console.error('Error updating portfolio in Firestore:', err);
+      console.warn('Error updating portfolio in Firestore:', err);
     }
   };
 
   const handleDeletePortfolio = async (id: string) => {
-    setPortfolios((prev) => prev.filter((item) => item.id !== id));
+    setPortfolios((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
     try {
       await deletePortfolioFromFirestore(id);
     } catch (err) {
-      console.error('Error deleting portfolio in Firestore:', err);
+      console.warn('Error deleting portfolio in Firestore:', err);
     }
   };
 

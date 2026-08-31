@@ -30,7 +30,7 @@ export function handleFirestoreError(
   error: unknown,
   operationType: OperationType,
   path: string | null
-): never {
+): FirestoreErrorInfo {
   const currentUser = auth.currentUser;
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
@@ -50,6 +50,6 @@ export function handleFirestoreError(
     path,
   };
 
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.warn(`[Firestore Graceful Notice] ${operationType} on ${path || 'unknown'}:`, errInfo.error);
+  return errInfo;
 }

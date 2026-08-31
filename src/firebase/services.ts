@@ -239,15 +239,19 @@ export async function updateBookingInFirestore(
 
     const docRef = doc(db, BOOKINGS_COLLECTION, orderId);
     const sanitizedUpdates: Record<string, any> = {
-      ...updates,
       updatedAt: new Date().toISOString(),
     };
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        sanitizedUpdates[key] = value;
+      }
+    }
     if (updates.status === 'Selesai' && !updates.completedAt) {
       sanitizedUpdates.completedAt = new Date().toISOString();
     } else if (updates.status && updates.status !== 'Selesai') {
       sanitizedUpdates.completedAt = null;
     }
-    await updateDoc(docRef, sanitizedUpdates);
+    await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
     console.warn(`Firestore update warning for ${path}:`, error);
   }
@@ -447,24 +451,31 @@ export async function updatePackageInFirestore(
   try {
     try {
       const saved = localStorage.getItem(PACKAGES_STORAGE_KEY);
-      if (saved) {
-        const list: PhotoPackage[] = JSON.parse(saved);
-        const idx = list.findIndex((p) => p.id === pkgId);
-        if (idx >= 0) {
-          list[idx] = { ...list[idx], ...updates };
-          localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(list));
+      let list: PhotoPackage[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((p) => p.id === pkgId);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...updates };
+      } else {
+        const defaultPkg = PHOTO_PACKAGES.find((p) => p.id === pkgId);
+        if (defaultPkg) {
+          list.push({ ...defaultPkg, ...updates });
         }
       }
+      localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(list));
     } catch {
       // ignore
     }
 
     const docRef = doc(db, PACKAGES_COLLECTION, pkgId);
     const sanitizedUpdates: Record<string, any> = {
-      ...updates,
       updatedAt: new Date().toISOString(),
     };
-    await updateDoc(docRef, sanitizedUpdates);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        sanitizedUpdates[key] = value;
+      }
+    }
+    await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
     console.warn(`Firestore update warning for ${path}:`, error);
   }
@@ -616,24 +627,31 @@ export async function updateAddonInFirestore(
   try {
     try {
       const saved = localStorage.getItem(ADDONS_STORAGE_KEY);
-      if (saved) {
-        const list: AddOnItem[] = JSON.parse(saved);
-        const idx = list.findIndex((a) => a.id === addonId);
-        if (idx >= 0) {
-          list[idx] = { ...list[idx], ...updates };
-          localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(list));
+      let list: AddOnItem[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((a) => a.id === addonId);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...updates };
+      } else {
+        const defaultAddon = ADD_ON_SERVICES.find((a) => a.id === addonId);
+        if (defaultAddon) {
+          list.push({ ...defaultAddon, ...updates });
         }
       }
+      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(list));
     } catch {
       // ignore
     }
 
     const docRef = doc(db, ADDONS_COLLECTION, addonId);
     const sanitizedUpdates: Record<string, any> = {
-      ...updates,
       updatedAt: new Date().toISOString(),
     };
-    await updateDoc(docRef, sanitizedUpdates);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        sanitizedUpdates[key] = value;
+      }
+    }
+    await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
     console.warn(`Firestore update warning for ${path}:`, error);
   }
@@ -781,24 +799,31 @@ export async function updatePortfolioInFirestore(
   try {
     try {
       const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
-      if (saved) {
-        const list: PortfolioItem[] = JSON.parse(saved);
-        const idx = list.findIndex((p) => p.id === portfolioId);
-        if (idx >= 0) {
-          list[idx] = { ...list[idx], ...updates };
-          localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
+      let list: PortfolioItem[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((p) => p.id === portfolioId);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...updates };
+      } else {
+        const defaultPortfolio = PORTFOLIO_ITEMS.find((p) => p.id === portfolioId);
+        if (defaultPortfolio) {
+          list.push({ ...defaultPortfolio, ...updates });
         }
       }
+      localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
     } catch {
       // ignore
     }
 
     const docRef = doc(db, PORTFOLIOS_COLLECTION, portfolioId);
     const sanitizedUpdates: Record<string, any> = {
-      ...updates,
       updatedAt: new Date().toISOString(),
     };
-    await updateDoc(docRef, sanitizedUpdates);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        sanitizedUpdates[key] = value;
+      }
+    }
+    await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
     console.warn(`Firestore update warning for ${path}:`, error);
   }
@@ -1020,7 +1045,13 @@ export async function updateStaffInFirestore(staffId: string, updates: Partial<A
     }
 
     const docRef = doc(db, ADMIN_STAFF_COLLECTION, staffId);
-    await updateDoc(docRef, updates);
+    const sanitizedUpdates: Record<string, any> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        sanitizedUpdates[key] = value;
+      }
+    }
+    await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
     console.warn(`Firestore update warning for ${path}:`, error);
   }
