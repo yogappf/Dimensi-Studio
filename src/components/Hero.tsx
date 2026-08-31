@@ -106,18 +106,18 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
             </div>
 
             {/* Geometric Showcase 3-Boxes Grid */}
-            <div className="grid grid-cols-3 gap-3 pt-4">
+            <div className="grid grid-cols-3 gap-2.5 pt-3">
               <div 
                 onClick={() => {
                   onSelectPackageFilter('wedding');
                   const el = document.getElementById('paket-layanan');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="bg-[#1A1A1A] border border-white/10 p-3.5 sm:p-4 flex flex-col justify-end relative h-28 cursor-pointer hover:border-[#D4AF37] transition-colors group"
+                className="bg-[#1A1A1A] border border-white/10 p-2.5 sm:p-3 flex flex-col justify-end relative h-20 sm:h-22 cursor-pointer hover:border-[#D4AF37] transition-colors group"
               >
-                <div className="absolute top-2 right-2 text-[10px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">01</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Wedding</div>
-                <div className="text-xs sm:text-sm font-medium text-white">Janji Suci</div>
+                <div className="absolute top-1.5 right-2 text-[9px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">01</div>
+                <div className="text-[9px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Wedding</div>
+                <div className="text-[11px] sm:text-xs font-medium text-white truncate">Janji Suci</div>
               </div>
 
               <div 
@@ -126,11 +126,11 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
                   const el = document.getElementById('paket-layanan');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="bg-[#222222] border border-white/10 p-3.5 sm:p-4 flex flex-col justify-end relative h-28 cursor-pointer hover:border-[#D4AF37] transition-colors group"
+                className="bg-[#222222] border border-white/10 p-2.5 sm:p-3 flex flex-col justify-end relative h-20 sm:h-22 cursor-pointer hover:border-[#D4AF37] transition-colors group"
               >
-                <div className="absolute top-2 right-2 text-[10px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">02</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Engagement</div>
-                <div className="text-xs sm:text-sm font-medium text-white">Lamaran</div>
+                <div className="absolute top-1.5 right-2 text-[9px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">02</div>
+                <div className="text-[9px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Engagement</div>
+                <div className="text-[11px] sm:text-xs font-medium text-white truncate">Lamaran</div>
               </div>
 
               <div 
@@ -139,11 +139,11 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
                   const el = document.getElementById('paket-layanan');
                   if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="bg-[#1A1A1A] border border-white/10 p-3.5 sm:p-4 flex flex-col justify-end relative h-28 cursor-pointer hover:border-[#D4AF37] transition-colors group"
+                className="bg-[#1A1A1A] border border-white/10 p-2.5 sm:p-3 flex flex-col justify-end relative h-20 sm:h-22 cursor-pointer hover:border-[#D4AF37] transition-colors group"
               >
-                <div className="absolute top-2 right-2 text-[10px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">03</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Portrait</div>
-                <div className="text-xs sm:text-sm font-medium text-white">Profil Studio</div>
+                <div className="absolute top-1.5 right-2 text-[9px] font-mono text-gray-500 group-hover:text-[#D4AF37] transition-colors">03</div>
+                <div className="text-[9px] uppercase tracking-wider text-[#D4AF37] mb-0.5">Portrait</div>
+                <div className="text-[11px] sm:text-xs font-medium text-white truncate">Profil Studio</div>
               </div>
             </div>
 
@@ -218,14 +218,14 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
                     </button>
 
                     {/* Dots indicator */}
-                    <div className="absolute top-4 right-4 z-30 flex items-center gap-1.5 px-2.5 py-1 bg-black/70 backdrop-blur-sm border border-white/10 shadow-md">
+                    <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 px-2 py-0.5 bg-black/75 backdrop-blur-sm border border-white/10 shadow-md">
                       {bannerImages.map((_, idx) => (
                         <button
                           key={idx}
                           type="button"
                           onClick={() => setCurrentSlide(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            idx === currentSlide ? 'bg-[#D4AF37] w-4' : 'bg-white/40 hover:bg-white'
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            idx === currentSlide ? 'bg-[#D4AF37] w-3.5' : 'bg-white/40 hover:bg-white'
                           }`}
                         />
                       ))}
@@ -233,25 +233,27 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
                   </>
                 )}
 
-                {/* Floating geometric overlay card bottom */}
-                <div className="absolute bottom-4 left-4 right-4 p-4 bg-[#0F0F0F]/95 border border-white/10 text-[#E0E0E0] z-30">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold tracking-[0.2em] text-[#D4AF37] uppercase">{cardSubtitle}</span>
-                      <h4 className="font-serif font-bold text-sm text-white">{cardTitle}</h4>
+                {/* Floating geometric overlay card bottom - Sleek & Compact */}
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-3.5 sm:left-3.5 sm:right-3.5 p-2.5 sm:p-3 bg-[#0F0F0F]/85 backdrop-blur-md border border-white/15 text-[#E0E0E0] z-30 shadow-xl">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[8px] sm:text-[9px] font-bold tracking-[0.18em] text-[#D4AF37] uppercase block">{cardSubtitle}</span>
+                      <h4 className="font-serif font-semibold text-xs sm:text-sm text-white truncate leading-snug">{cardTitle}</h4>
                     </div>
-                    <div className="w-8 h-8 border border-white/20 flex items-center justify-center text-[#D4AF37]">
-                      <Camera className="w-3.5 h-3.5" />
+                    <div className="w-6 h-6 shrink-0 border border-white/15 bg-black/40 flex items-center justify-center text-[#D4AF37]">
+                      <Camera className="w-3 h-3" />
                     </div>
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1 line-clamp-1">
-                    {cardDescription}
-                  </p>
+                  {cardDescription && (
+                    <p className="text-[10px] sm:text-[11px] text-gray-400 mt-0.5 line-clamp-1 leading-tight">
+                      {cardDescription}
+                    </p>
+                  )}
                 </div>
 
-                {/* Top Badge */}
-                <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 bg-[#0A0A0A]/90 border border-white/10 text-[10px] uppercase tracking-widest text-[#D4AF37]">
-                  <Award className="w-3 h-3 text-[#D4AF37]" />
+                {/* Top Badge - Sleek & Compact */}
+                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-0.5 bg-[#0A0A0A]/85 backdrop-blur-md border border-white/15 text-[9px] uppercase tracking-widest text-[#D4AF37] shadow-md">
+                  <Award className="w-2.5 h-2.5 text-[#D4AF37]" />
                   <span>{badgeText}</span>
                 </div>
               </div>

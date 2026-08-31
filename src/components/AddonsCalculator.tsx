@@ -29,8 +29,8 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<CategoryType>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [selectedPkgId, setSelectedPkgId] = useState<string>(packages[0]?.id || PHOTO_PACKAGES[0].id);
-  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>(['addon-drone']);
+  const [selectedPkgId, setSelectedPkgId] = useState<string | null>(null);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
 
   // Extract distinct categories from actual packages
   const categoryList = useMemo(() => {
@@ -91,7 +91,7 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
     });
   }, [packages, selectedCategory, searchQuery]);
 
-  const selectedPackage = packages.find((p) => p.id === selectedPkgId) || packages[0] || PHOTO_PACKAGES[0];
+  const selectedPackage = selectedPkgId ? (packages.find((p) => p.id === selectedPkgId) || null) : null;
 
   const handleToggleAddon = (addonId: string) => {
     setSelectedAddonIds((prev) =>
@@ -101,7 +101,8 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
 
   const selectedAddonsList = addons.filter((a) => selectedAddonIds.includes(a.id));
   const addonsTotal = selectedAddonsList.reduce((acc, curr) => acc + curr.price, 0);
-  const grandTotal = selectedPackage.price + addonsTotal;
+  const packagePrice = selectedPackage ? selectedPackage.price : 0;
+  const grandTotal = packagePrice + addonsTotal;
 
   return (
     <section id="kalkulator-simulasi" className="py-16 bg-[#0A0A0A] text-[#E0E0E0] border-b border-white/10 scroll-mt-10">
@@ -136,7 +137,11 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
                 </h3>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-gray-400 font-mono hidden sm:inline">Terpilih:</span>
-                  <span className="text-xs text-[#D4AF37] font-semibold font-serif">{formatRupiah(selectedPackage.price)}</span>
+                  {selectedPackage ? (
+                    <span className="text-xs text-[#D4AF37] font-semibold font-serif">{formatRupiah(selectedPackage.price)}</span>
+                  ) : (
+                    <span className="text-xs text-gray-500 font-mono italic">Belum Dipilih</span>
+                  )}
                 </div>
               </div>
 
@@ -216,7 +221,7 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
                       <button
                         key={pkg.id}
                         type="button"
-                        onClick={() => setSelectedPkgId(pkg.id)}
+                        onClick={() => setSelectedPkgId((prev) => (prev === pkg.id ? null : pkg.id))}
                         className={`p-3.5 text-left border transition-all flex flex-col justify-between cursor-pointer relative group ${
                           isSelected
                             ? 'bg-[#D4AF37]/10 border-[#D4AF37] text-white shadow-sm ring-1 ring-[#D4AF37]/50'
@@ -279,7 +284,9 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
                   <span className="w-5 h-5 bg-[#D4AF37] text-black font-mono flex items-center justify-center text-[10px] font-black">2</span>
                   <span>Layanan Tambahan (Opsional Add-ons):</span>
                 </h3>
-                <span className="text-[10px] uppercase font-mono text-gray-400">{selectedAddonIds.length} dipilih</span>
+                <span className="text-[10px] uppercase font-mono text-gray-400">
+                  {selectedAddonIds.length > 0 ? `${selectedAddonIds.length} dipilih` : 'Belum ada dipilih'}
+                </span>
               </div>
 
               <div className="space-y-2.5">
@@ -339,23 +346,30 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
               <div className="space-y-3 text-xs">
                 
                 {/* Base Package */}
-                <div className="p-3 bg-[#0A0A0A] border border-white/10 flex justify-between items-center">
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold text-white block">{selectedPackage.name}</span>
-                      <span className="text-[9px] font-mono px-1 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
-                        {CATEGORY_MAP[selectedPackage.category]?.label || selectedPackage.category}
-                      </span>
+                {selectedPackage ? (
+                  <div className="p-3 bg-[#0A0A0A] border border-white/10 flex justify-between items-center">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-white block">{selectedPackage.name}</span>
+                        <span className="text-[9px] font-mono px-1 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
+                          {CATEGORY_MAP[selectedPackage.category]?.label || selectedPackage.category}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-gray-400">Durasi: {selectedPackage.duration}</span>
                     </div>
-                    <span className="text-[10px] font-mono text-gray-400">Durasi: {selectedPackage.duration}</span>
+                    <span className="font-bold text-[#D4AF37] font-serif">{formatRupiah(selectedPackage.price)}</span>
                   </div>
-                  <span className="font-bold text-[#D4AF37] font-serif">{formatRupiah(selectedPackage.price)}</span>
-                </div>
+                ) : (
+                  <div className="p-4 bg-[#0A0A0A] border border-dashed border-white/15 text-center text-gray-400 text-xs space-y-1">
+                    <span className="text-[#D4AF37] font-semibold block">Belum ada paket utama yang dipilih</span>
+                    <span className="text-[10px] text-gray-500 font-mono block">Silakan klik salah satu paket pada pilihan di sebelah kiri</span>
+                  </div>
+                )}
 
                 {/* Addons List */}
                 {selectedAddonsList.length > 0 ? (
                   <div className="space-y-1.5 pt-1">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400 block">Layanan Tambahan Terpilih:</span>
+                    <span className="text-[10px] uppercase font-mono tracking-wider text-gray-400 block">Layanan Tambahan Terpilih ({selectedAddonsList.length}):</span>
                     {selectedAddonsList.map((addon) => (
                       <div key={addon.id} className="flex justify-between items-center text-gray-300 pl-2.5 border-l border-[#D4AF37]">
                         <span className="text-[11px] truncate max-w-[200px]">{addon.name}</span>
@@ -364,7 +378,7 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <div className="text-[11px] text-gray-500 italic py-1">
+                  <div className="text-[11px] text-gray-500 italic py-1 border-t border-white/5 pt-2">
                     Belum ada add-ons tambahan yang dipilih
                   </div>
                 )}
@@ -390,11 +404,20 @@ export const AddonsCalculator: React.FC<AddonsCalculatorProps> = ({
 
               {/* Action Button */}
               <button
-                onClick={() => onProceedWithConfig(selectedPkgId, selectedAddonIds)}
-                className="w-full py-3.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-[0.2em] shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                onClick={() => {
+                  if (selectedPkgId) {
+                    onProceedWithConfig(selectedPkgId, selectedAddonIds);
+                  }
+                }}
+                disabled={!selectedPkgId}
+                className={`w-full py-3.5 font-bold text-xs uppercase tracking-[0.2em] shadow-sm flex items-center justify-center gap-2 transition-all ${
+                  selectedPkgId
+                    ? 'bg-[#D4AF37] hover:bg-white text-black cursor-pointer'
+                    : 'bg-white/10 text-gray-500 cursor-not-allowed border border-white/10'
+                }`}
                 id="calc-booking-btn"
               >
-                <span>Lanjutkan ke Formulir Order</span>
+                <span>{selectedPkgId ? 'Lanjutkan ke Formulir Order' : 'Pilih Paket Utama Terlebih Dahulu'}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 

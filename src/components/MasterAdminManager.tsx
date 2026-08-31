@@ -49,7 +49,9 @@ import {
   Check,
   X,
   Loader2,
+  Crop,
 } from 'lucide-react';
+import { BannerCropperModal } from './BannerCropperModal';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
 import {
   saveStudioConfigToFirestore,
@@ -162,8 +164,11 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   }, [studioConfig]);
 
   const [bannerReplaceMode, setBannerReplaceMode] = useState(true);
+  const [isBannerCropperOpen, setIsBannerCropperOpen] = useState(false);
+  const [cropperImageSrc, setCropperImageSrc] = useState<string | null>(null);
+  const [cropperTargetIndex, setCropperTargetIndex] = useState<number | null>(null);
 
-  const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -172,37 +177,76 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       return;
     }
 
-    if (file.size > 15 * 1024 * 1024) {
-      alert('Ukuran file maksimal 15MB.');
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Ukuran file maksimal 20MB.');
       return;
     }
 
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        setCropperImageSrc(result);
+        setCropperTargetIndex(null);
+        setIsBannerCropperOpen(true);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedDataUrl: string) => {
     try {
-      const compressed = await compressImage(file, 900, 900, 0.70);
       const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
         ? configForm.heroImageUrls
         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
-      
-      const updatedList = bannerReplaceMode ? [compressed] : [...currentList, compressed];
+
+      let updatedList: string[] = [];
+
+      if (cropperTargetIndex !== null && cropperTargetIndex >= 0) {
+        // Edit existing slide index
+        updatedList = [...currentList];
+        updatedList[cropperTargetIndex] = croppedDataUrl;
+      } else {
+        // New upload
+        updatedList = bannerReplaceMode ? [croppedDataUrl] : [...currentList, croppedDataUrl];
+      }
+
       const updatedConfig = {
         ...studioConfig,
         ...configForm,
-        heroImageUrl: updatedList[0] || '',
+        heroImageUrl: updatedList[0] || croppedDataUrl,
         heroImageUrls: updatedList,
       };
+
       setConfigForm(updatedConfig);
       onUpdateStudioConfig(updatedConfig);
+
       try {
         await saveStudioConfigToFirestore(updatedConfig);
       } catch (firestoreErr) {
         console.warn('Firestore save warning (saved locally):', firestoreErr);
       }
-      setHeroToast(bannerReplaceMode ? 'Foto banner lama diganti dengan foto baru!' : 'Foto banner berhasil ditambahkan ke slide!');
-      setTimeout(() => setHeroToast(''), 3000);
+
+      setHeroToast(
+        cropperTargetIndex !== null
+          ? 'Posisi crop slide banner berhasil diperbarui!'
+          : bannerReplaceMode
+          ? 'Foto banner berhasil di-crop & disimpan!'
+          : 'Foto banner baru berhasil di-crop & ditambahkan ke slide!'
+      );
+      setTimeout(() => setHeroToast(''), 3500);
     } catch (err) {
-      console.error('Error compressing or saving banner image:', err);
-      alert('Gagal memproses gambar banner. Silakan coba lagi.');
+      console.error('Error saving cropped banner:', err);
+      alert('Gagal menyimpan hasil crop banner.');
     }
+  };
+
+  const openCropperForImage = (imageSrc: string, targetIdx: number | null = null) => {
+    if (!imageSrc) return;
+    setCropperImageSrc(imageSrc);
+    setCropperTargetIndex(targetIdx);
+    setIsBannerCropperOpen(true);
   };
 
   // JSON Backup / Restore State
@@ -1161,15 +1205,39 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                 <div className="md:col-span-1 space-y-2">
                   <label className="text-[11px] font-mono uppercase text-gray-300 block">Foto Banner / Showcase Samping</label>
-                  <div className="w-full aspect-[4/5] max-w-[200px] bg-black border border-white/20 overflow-hidden relative">
+                  <div className="w-full aspect-[4/5] max-w-[200px] bg-black border border-white/20 overflow-hidden relative group">
                     {configForm.heroImageUrl ? (
-                      <img src={configForm.heroImageUrl} alt="Hero Showcase" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <>
+                        <img src={configForm.heroImageUrl} alt="Hero Showcase" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
+                          <button
+                            type="button"
+                            onClick={() => openCropperForImage(configForm.heroImageUrl || '', 0)}
+                            className="px-2.5 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[10px] font-mono flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer"
+                          >
+                            <Crop className="w-3.5 h-3.5" />
+                            <span>Atur / Crop Foto</span>
+                          </button>
+                        </div>
+                      </>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-600">
                         <ImageIcon className="w-6 h-6" />
                       </div>
                     )}
                   </div>
+                  
+                  {configForm.heroImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => openCropperForImage(configForm.heroImageUrl || '', 0)}
+                      className="w-full max-w-[200px] py-1 px-2 bg-black/60 hover:bg-black border border-[#D4AF37]/40 text-[#D4AF37] hover:text-white text-[10px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Crop className="w-3 h-3 text-[#D4AF37]" />
+                      <span>Atur / Crop Foto Aktif</span>
+                    </button>
+                  )}
+
                   <div className="space-y-2 max-w-[200px]">
                     {/* Banner Mode Toggle */}
                     <div className="flex items-center gap-1 p-1 bg-black/50 border border-white/10 rounded">
@@ -1199,7 +1267,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
 
                     <label className="w-full cursor-pointer px-2 py-1.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors">
                       <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      <span>{bannerReplaceMode ? 'Upload & Ganti' : 'Upload Tambahan'}</span>
+                      <span>{bannerReplaceMode ? 'Upload & Crop Banner' : 'Upload & Crop Tambahan'}</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -1250,34 +1318,45 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                         {(configForm.heroImageUrls && configForm.heroImageUrls.length > 0 ? configForm.heroImageUrls : (configForm.heroImageUrl ? [configForm.heroImageUrl] : [])).map((img, idx) => (
                           <div key={idx} className="relative w-10 h-12 bg-black border border-white/20 group">
                             <img src={img} alt={`Banner ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const list = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
-                                  ? configForm.heroImageUrls
-                                  : [configForm.heroImageUrl || ''];
-                                const filtered = list.filter((_, i) => i !== idx);
-                                const updatedConfig = {
-                                  ...studioConfig,
-                                  ...configForm,
-                                  heroImageUrls: filtered,
-                                  heroImageUrl: filtered[0] || '',
-                                };
-                                setConfigForm(updatedConfig);
-                                onUpdateStudioConfig(updatedConfig);
-                                try {
-                                  await saveStudioConfigToFirestore(updatedConfig);
-                                } catch {
-                                  // ignore
-                                }
-                                setHeroToast('Foto banner dihapus dari database.');
-                                setTimeout(() => setHeroToast(''), 3000);
-                              }}
-                              className="absolute -top-1 -right-1 bg-red-600 hover:bg-red-700 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                              title="Hapus Slide Ini dari Database"
-                            >
-                              <X className="w-2.5 h-2.5" />
-                            </button>
+                            
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-0.5">
+                              <button
+                                type="button"
+                                onClick={() => openCropperForImage(img, idx)}
+                                className="bg-[#D4AF37] hover:bg-white text-black p-0.5"
+                                title="Crop / Atur Posisi Slide Ini"
+                              >
+                                <Crop className="w-2.5 h-2.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  const list = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
+                                    ? configForm.heroImageUrls
+                                    : [configForm.heroImageUrl || ''];
+                                  const filtered = list.filter((_, i) => i !== idx);
+                                  const updatedConfig = {
+                                    ...studioConfig,
+                                    ...configForm,
+                                    heroImageUrls: filtered,
+                                    heroImageUrl: filtered[0] || '',
+                                  };
+                                  setConfigForm(updatedConfig);
+                                  onUpdateStudioConfig(updatedConfig);
+                                  try {
+                                    await saveStudioConfigToFirestore(updatedConfig);
+                                  } catch {
+                                    // ignore
+                                  }
+                                  setHeroToast('Foto banner dihapus dari database.');
+                                  setTimeout(() => setHeroToast(''), 3000);
+                                }}
+                                className="bg-red-600 hover:bg-red-700 text-white p-0.5"
+                                title="Hapus Slide Ini dari Database"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1862,6 +1941,21 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           </div>
         </div>
       )}
+
+      {/* Banner Image Cropper Modal */}
+      <BannerCropperModal
+        isOpen={isBannerCropperOpen}
+        imageSrc={cropperImageSrc}
+        onClose={() => {
+          setIsBannerCropperOpen(false);
+          setCropperImageSrc(null);
+          setCropperTargetIndex(null);
+        }}
+        onCropComplete={handleCropComplete}
+        title={configForm.heroCardTitle || 'The Royal Eternity'}
+        subtitle={configForm.heroCardSubtitle || 'Signature Series'}
+        badgeText={configForm.heroBadgeText || 'Top Rated Studio'}
+      />
 
     </div>
   );
