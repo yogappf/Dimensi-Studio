@@ -199,8 +199,24 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   
   // Modals state
   const [detailOrder, setDetailOrder] = useState<BookingOrder | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<BookingOrder | null>(null);
+  const [deleteNotice, setDeleteNotice] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState('');
+
+  const confirmDeleteOrder = () => {
+    if (orderToDelete) {
+      const deletedName = orderToDelete.clientName;
+      const deletedId = orderToDelete.id;
+      onDeleteOrder(orderToDelete.id);
+      if (detailOrder?.id === orderToDelete.id) {
+        setDetailOrder(null);
+      }
+      setOrderToDelete(null);
+      setDeleteNotice(`Data konsumen "${deletedName}" (${deletedId}) berhasil dihapus.`);
+      setTimeout(() => setDeleteNotice(''), 4000);
+    }
+  };
 
   // Manual Add Form State
   const [manualName, setManualName] = useState('');
@@ -694,18 +710,30 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
       {activeSubTab === 'orders' && (
         <>
-          {/* Export Success Notification Toast */}
-      {exportSuccessMsg && (
-        <div className="p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn">
-          <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-[#D4AF37] shrink-0" />
-            <span>{exportSuccessMsg}</span>
-          </div>
-          <button onClick={() => setExportSuccessMsg('')} className="text-[#D4AF37] hover:text-white cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+          {/* Export & Delete Success Notification Toasts */}
+          {exportSuccessMsg && (
+            <div className="p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/40 text-[#D4AF37] text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn mb-4">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-[#D4AF37] shrink-0" />
+                <span>{exportSuccessMsg}</span>
+              </div>
+              <button onClick={() => setExportSuccessMsg('')} className="text-[#D4AF37] hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {deleteNotice && (
+            <div className="p-4 bg-rose-950/40 border border-rose-500/40 text-rose-300 text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn mb-4">
+              <div className="flex items-center gap-2.5">
+                <Trash2 className="w-5 h-5 text-rose-400 shrink-0" />
+                <span>{deleteNotice}</span>
+              </div>
+              <button onClick={() => setDeleteNotice('')} className="text-rose-400 hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
@@ -982,11 +1010,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
                           {/* Delete Record */}
                           <button
-                            onClick={() => {
-                              if (confirm(`Apakah Anda yakin ingin menghapus data booking ${order.clientName} (${order.id})?`)) {
-                                onDeleteOrder(order.id);
-                              }
-                            }}
+                            onClick={() => setOrderToDelete(order)}
                             className="p-1.5 bg-[#0A0A0A] hover:bg-rose-950/40 text-rose-400 border border-rose-500/30 transition-colors cursor-pointer"
                             title="Hapus Data Konsumen"
                             id={`btn-del-order-${order.id}`}
@@ -1228,14 +1252,10 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </button>
               )}
               <button
-                onClick={() => {
-                  if (confirm(`Apakah Anda yakin ingin menghapus data booking ${detailOrder.clientName} (${detailOrder.id})?`)) {
-                    onDeleteOrder(detailOrder.id);
-                    setDetailOrder(null);
-                  }
-                }}
+                onClick={() => setOrderToDelete(detailOrder)}
                 className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-rose-950/40 text-rose-400 border border-rose-500/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer"
                 title="Hapus Data Booking Ini"
+                id={`modal-btn-del-order-${detailOrder.id}`}
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Hapus</span>
@@ -1453,6 +1473,67 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
             </form>
 
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Delete Confirmation for Consumer Order */}
+      {orderToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#141414] border border-rose-500/40 w-full max-w-md p-6 text-center shadow-2xl relative text-[#E0E0E0]">
+            <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mx-auto mb-4 text-rose-400">
+              <Trash2 className="w-6 h-6 stroke-[2.2]" />
+            </div>
+
+            <h4 className="text-lg font-serif font-bold text-white mb-2">
+              Hapus Data Konsumen?
+            </h4>
+
+            <p className="text-xs text-gray-300 mb-4 leading-relaxed">
+              Apakah Anda yakin ingin menghapus data pemesanan konsumen berikut secara permanen dari database?
+            </p>
+
+            <div className="p-3.5 bg-[#0A0A0A] border border-white/10 text-left space-y-1.5 mb-6 text-xs font-mono">
+              <div className="flex justify-between text-gray-400">
+                <span>ID Booking:</span>
+                <span className="text-[#D4AF37] font-bold">{orderToDelete.id}</span>
+              </div>
+              <div className="flex justify-between text-gray-300">
+                <span className="text-gray-400">Nama Konsumen:</span>
+                <span className="font-bold text-white">{orderToDelete.clientName}</span>
+              </div>
+              <div className="flex justify-between text-gray-300">
+                <span className="text-gray-400">Paket Foto:</span>
+                <span className="text-white truncate max-w-[200px]">{orderToDelete.packageName}</span>
+              </div>
+              <div className="flex justify-between text-gray-300">
+                <span className="text-gray-400">Jadwal Sesi:</span>
+                <span className="text-white">{formatDateIndonesian(orderToDelete.sessionDate)} ({orderToDelete.sessionTime})</span>
+              </div>
+              <div className="flex justify-between text-gray-300 pt-1.5 border-t border-white/10 font-bold">
+                <span className="text-gray-400">Total Biaya:</span>
+                <span className="text-[#D4AF37]">{formatRupiah(orderToDelete.totalPrice)}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setOrderToDelete(null)}
+                className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs font-mono uppercase tracking-wider font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteOrder}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono uppercase tracking-wider font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-rose-950/50"
+                id="btn-confirm-delete-order"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Ya, Hapus Data</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

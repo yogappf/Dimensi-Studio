@@ -499,7 +499,15 @@ export default function App() {
 
   // Admin delete order
   const handleDeleteOrder = async (orderId: string) => {
-    setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
+    setOrders((prev) => {
+      const updated = prev.filter((ord) => ord.id !== orderId);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
     try {
       await deleteBookingFromFirestore(orderId);
       await logAuditEvent(currentUser?.email || 'Admin', 'Hapus Pesanan', `Pesanan ${orderId} telah dihapus.`, 'order');

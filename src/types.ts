@@ -80,6 +80,17 @@ export interface DriveFileItem {
 
 export type AdminRole = 'master' | 'editor' | 'finance' | 'staff';
 
+export interface BankAccountItem {
+  id: string;
+  bankCode: string; // 'BCA' | 'MANDIRI' | 'BRI' | 'BNI' | 'BSI' | 'CIMB' | 'PERMATA' | 'DANAMON' | 'BTN' | 'MEGA' | 'SINARMAS' | 'OCBC' | 'PANIN' | 'MAYBANK' | 'JAGO' | 'SEABANK' | 'BTPN' | 'QRIS' | 'OTHER';
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+  isActive: boolean; // whether this bank is shown/enabled for customer display
+  isPrimary?: boolean;
+  notes?: string;
+}
+
 export interface AdminStaff {
   id: string;
   name: string;
@@ -104,6 +115,7 @@ export interface StudioConfig {
   bankBCA: string;
   bankMandiri: string;
   bankBRI: string;
+  bankAccounts?: BankAccountItem[];
   qrisUrl?: string;
   staffPasscode: string;
   masterPasscode: string;

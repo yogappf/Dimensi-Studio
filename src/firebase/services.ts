@@ -21,6 +21,7 @@ import { db, auth, googleProvider } from './config';
 import { handleFirestoreError, OperationType } from './errors';
 import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem, AdminStaff, StudioConfig, AuditLogItem } from '../types';
 import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, STUDIO_INFO } from '../data/mockData';
+import { DEFAULT_INITIAL_BANK_ACCOUNTS } from '../utils/bankOptions';
 
 const BOOKINGS_COLLECTION = 'bookings';
 const PACKAGES_COLLECTION = 'packages';
@@ -43,6 +44,7 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   bankBCA: 'BCA 8720-1928-33 a/n Dimensi Fotografi Studio',
   bankMandiri: 'Mandiri 137-00-1928374-1 a/n PT Dimensi Visual Karya',
   bankBRI: 'BRI 0341-01-002938-50-8 a/n Dimensi Fotografi',
+  bankAccounts: DEFAULT_INITIAL_BANK_ACCOUNTS,
   qrisUrl: '',
   staffPasscode: 'DIMENSI2026',
   masterPasscode: 'MASTER_DIMENSI_2026',

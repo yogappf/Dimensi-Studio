@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { BookingOrder, StudioConfig } from '../types';
 import { STUDIO_INFO } from '../data/mockData';
 import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, normalizeWhatsAppNumber } from '../utils/formatters';
+import { getResolvedBankAccounts, getBankPreset } from '../utils/bankOptions';
+import { DEFAULT_STUDIO_CONFIG } from '../firebase/services';
 import {
   CheckCircle,
   MessageCircle,
@@ -35,67 +37,26 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
   if (!order) return null;
 
   const [copiedBank, setCopiedBank] = useState<string | null>(null);
-  const [selectedBankKey, setSelectedBankKey] = useState<string>('bca');
   const [paymentSenderName, setPaymentSenderName] = useState<string>('');
 
   // Determine active studio configuration
-  const activeConfig = studioConfig || {
-    studioName: STUDIO_INFO.name,
-    whatsapp: STUDIO_INFO.whatsapp,
-    phone: STUDIO_INFO.phone,
-    email: STUDIO_INFO.email,
-    address: STUDIO_INFO.address,
-    bankBCA: 'BCA: 123-456-7890 a.n Dimensi Fotografi',
-    bankMandiri: 'Mandiri: 137-00-1234567-8 a.n Dimensi Studio',
-    bankBRI: 'BRI: 0123-01-001234-53-0 a.n Dimensi ID',
-  };
+  const activeConfig: StudioConfig = studioConfig || DEFAULT_STUDIO_CONFIG;
 
   const adminWhatsApp = activeConfig.whatsapp || activeConfig.phone || (activeConfig as any).masterPhone || STUDIO_INFO.whatsapp;
 
-  // Parse bank strings into structured objects
-  const parseBankInfo = (bankStr: string, defaultName: string) => {
-    if (!bankStr) return { bankName: defaultName, accountNumber: '', accountHolder: '' };
-    // Example format: "BCA: 123-456-7890 a.n Dimensi Fotografi" or "123-456-7890 a.n Dimensi"
-    const parts = bankStr.split(':');
-    let bankName = defaultName;
-    let rest = bankStr;
-    if (parts.length > 1) {
-      bankName = parts[0].trim();
-      rest = parts.slice(1).join(':').trim();
-    }
-    const anParts = rest.split(/a\.?n\.?/i);
-    const accountNumber = anParts[0].trim();
-    const accountHolder = anParts[1] ? anParts[1].trim() : 'Dimensi Fotografi Studio';
-    return { bankName, accountNumber, accountHolder, raw: bankStr };
-  };
+  // Resolve all available bank accounts from studio configuration
+  const allResolvedBanks = getResolvedBankAccounts(activeConfig);
+  // Filter for active ones selected by admin to be shown to customers
+  const activeBankList = allResolvedBanks.filter((b) => b.isActive !== false);
+  // Fallback to all if none active
+  const displayBanks = activeBankList.length > 0 ? activeBankList : allResolvedBanks.slice(0, 3);
 
-  const bankList = [
-    {
-      key: 'bca',
-      code: 'BCA',
-      ...parseBankInfo(activeConfig.bankBCA || 'BCA: 123-456-7890 a.n Dimensi Fotografi', 'Bank BCA'),
-      color: 'border-blue-500/40 hover:border-blue-400 bg-blue-950/20 text-blue-300',
-      badgeBg: 'bg-blue-600 text-white',
-    },
-    {
-      key: 'mandiri',
-      code: 'Mandiri',
-      ...parseBankInfo(activeConfig.bankMandiri || 'Mandiri: 137-00-1234567-8 a.n Dimensi Studio', 'Bank Mandiri'),
-      color: 'border-amber-500/40 hover:border-amber-400 bg-amber-950/20 text-amber-300',
-      badgeBg: 'bg-amber-600 text-white',
-    },
-    {
-      key: 'bri',
-      code: 'BRI',
-      ...parseBankInfo(activeConfig.bankBRI || 'BRI: 0123-01-001234-53-0 a.n Dimensi ID', 'Bank BRI'),
-      color: 'border-sky-500/40 hover:border-sky-400 bg-sky-950/20 text-sky-300',
-      badgeBg: 'bg-sky-600 text-white',
-    },
-  ];
+  const initialSelectedKey = displayBanks.find((b) => b.isPrimary)?.id || displayBanks[0]?.id || 'bank-bca';
+  const [selectedBankKey, setSelectedBankKey] = useState<string>(initialSelectedKey);
 
   const handleCopyAccountNumber = (textToCopy: string, bankKey: string) => {
-    // Only copy clean numbers and dashes
-    const cleanNumber = textToCopy.replace(/[^0-9-]/g, '') || textToCopy;
+    // Only copy clean numbers and dashes or clean text
+    const cleanNumber = textToCopy.replace(/[^0-9a-zA-Z-]/g, '') || textToCopy;
     try {
       navigator.clipboard.writeText(cleanNumber);
       setCopiedBank(bankKey);
@@ -105,7 +66,7 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
     }
   };
 
-  const selectedBankObj = bankList.find((b) => b.key === selectedBankKey) || bankList[0];
+  const selectedBankObj = displayBanks.find((b) => b.id === selectedBankKey) || displayBanks[0];
   const dpAmount = Math.round(order.totalPrice * 0.5);
 
   const waLink = generateWhatsAppLink(
@@ -171,7 +132,7 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
                   Nomor Rekening Pembayaran Studio
                 </h4>
                 <p className="text-[11px] text-gray-300">
-                  Pilih salah satu rekening resmi di bawah untuk transfer DP / Pelunasan:
+                  Pilih salah satu rekening resmi di bawah untuk transfer DP / Pelunasan ({displayBanks.length} Rekening Aktif):
                 </p>
               </div>
             </div>
@@ -181,15 +142,16 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
           </div>
 
           {/* Bank Account Selection & Copy Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {bankList.map((bank) => {
-              const isSelected = selectedBankKey === bank.key;
-              const isCopied = copiedBank === bank.key;
+          <div className={`grid grid-cols-1 ${displayBanks.length === 1 ? 'sm:grid-cols-1 max-w-md mx-auto' : displayBanks.length === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3'} gap-2.5`}>
+            {displayBanks.map((bank) => {
+              const isSelected = selectedBankKey === bank.id;
+              const isCopied = copiedBank === bank.id;
+              const preset = getBankPreset(bank.bankCode || bank.bankName);
 
               return (
                 <div
-                  key={bank.key}
-                  onClick={() => setSelectedBankKey(bank.key)}
+                  key={bank.id}
+                  onClick={() => setSelectedBankKey(bank.id)}
                   className={`p-3 border transition-all cursor-pointer relative flex flex-col justify-between ${
                     isSelected
                       ? 'bg-[#1e1a0d] border-[#D4AF37] shadow-md ring-1 ring-[#D4AF37]/50'
@@ -198,9 +160,14 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
                 >
                   <div>
                     <div className="flex items-center justify-between gap-1 mb-1.5">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold font-mono uppercase ${bank.badgeBg}`}>
-                        {bank.code}
+                      <span className={`px-2 py-0.5 text-[10px] font-bold font-mono uppercase ${preset.badgeBg} text-white`}>
+                        {preset.shortName || bank.bankCode || 'BANK'}
                       </span>
+                      {bank.isPrimary && !isSelected && (
+                        <span className="text-[9px] text-[#D4AF37] font-mono border border-[#D4AF37]/40 px-1">
+                          Utama
+                        </span>
+                      )}
                       {isSelected && (
                         <span className="text-[10px] text-[#D4AF37] font-mono font-bold flex items-center gap-0.5">
                           <Check className="w-3 h-3" /> Dipilih
@@ -208,7 +175,7 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
                       )}
                     </div>
 
-                    <div className="text-[10px] text-gray-400 font-mono">No. Rekening:</div>
+                    <div className="text-[10px] text-gray-400 font-mono">{bank.bankName}</div>
                     <div className="text-sm font-bold font-mono text-white tracking-wider my-0.5 truncate select-all">
                       {bank.accountNumber || '-'}
                     </div>
@@ -223,7 +190,7 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleCopyAccountNumber(bank.accountNumber, bank.key);
+                        handleCopyAccountNumber(bank.accountNumber, bank.id);
                       }}
                       className={`w-full py-1.5 px-2 text-[10px] font-mono font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
                         isCopied

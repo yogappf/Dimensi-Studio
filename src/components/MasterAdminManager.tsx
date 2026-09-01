@@ -10,6 +10,7 @@ import {
   PhotoPackage,
   AddOnItem,
   PortfolioItem,
+  BankAccountItem,
 } from '../types';
 import {
   Crown,
@@ -50,9 +51,19 @@ import {
   X,
   Loader2,
   Crop,
+  Star,
+  CheckSquare,
+  Square,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { BannerCropperModal } from './BannerCropperModal';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
+import {
+  INDONESIAN_BANK_PRESETS,
+  getBankPreset,
+  getResolvedBankAccounts,
+  BankPreset,
+} from '../utils/bankOptions';
 import {
   saveStudioConfigToFirestore,
   saveStaffToFirestore,
@@ -159,11 +170,119 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         if (studioConfig.staffPasscode) setStaffPasscode(studioConfig.staffPasscode);
         if (studioConfig.masterPasscode) setMasterPasscode(studioConfig.masterPasscode);
       }
-      setConfigForm((prev) => ({ ...prev, ...studioConfig }));
+      setConfigForm((prev) => {
+        const resolvedBanks = getResolvedBankAccounts(studioConfig);
+        return {
+          ...prev,
+          ...studioConfig,
+          bankAccounts: studioConfig.bankAccounts && studioConfig.bankAccounts.length > 0
+            ? studioConfig.bankAccounts
+            : resolvedBanks,
+        };
+      });
     }
   }, [studioConfig]);
 
+  // Bank accounts helper handlers
+  const bankAccountsList: BankAccountItem[] = configForm.bankAccounts && configForm.bankAccounts.length > 0
+    ? configForm.bankAccounts
+    : getResolvedBankAccounts(configForm);
+
+  const handleUpdateBankList = (newList: BankAccountItem[]) => {
+    // Keep legacy bank strings in sync for any external consumer
+    const bcaAcc = newList.find((b) => b.bankCode === 'BCA' || b.bankName.toUpperCase().includes('BCA'));
+    const mandiriAcc = newList.find((b) => b.bankCode === 'MANDIRI' || b.bankName.toUpperCase().includes('MANDIRI'));
+    const briAcc = newList.find((b) => b.bankCode === 'BRI' || b.bankName.toUpperCase().includes('BRI'));
+
+    setConfigForm((prev) => ({
+      ...prev,
+      bankAccounts: newList,
+      bankBCA: bcaAcc ? `${bcaAcc.bankName}: ${bcaAcc.accountNumber} a.n ${bcaAcc.accountHolder}` : prev.bankBCA,
+      bankMandiri: mandiriAcc ? `${mandiriAcc.bankName}: ${mandiriAcc.accountNumber} a.n ${mandiriAcc.accountHolder}` : prev.bankMandiri,
+      bankBRI: briAcc ? `${briAcc.bankName}: ${briAcc.accountNumber} a.n ${briAcc.accountHolder}` : prev.bankBRI,
+    }));
+  };
+
+  const handleToggleBankActive = (id: string) => {
+    const updated = bankAccountsList.map((item) =>
+      item.id === id ? { ...item, isActive: !item.isActive } : item
+    );
+    handleUpdateBankList(updated);
+  };
+
+  const handleSetPrimaryBank = (id: string) => {
+    const updated = bankAccountsList.map((item) => ({
+      ...item,
+      isPrimary: item.id === id,
+      isActive: item.id === id ? true : item.isActive,
+    }));
+    handleUpdateBankList(updated);
+  };
+
+  const handleUpdateBankField = (id: string, field: keyof BankAccountItem, value: any) => {
+    const updated = bankAccountsList.map((item) => {
+      if (item.id === id) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    });
+    handleUpdateBankList(updated);
+  };
+
+  const handleBankPresetChange = (id: string, presetCode: string) => {
+    const preset = getBankPreset(presetCode);
+    const updated = bankAccountsList.map((item) => {
+      if (item.id === id) {
+        return {
+          ...item,
+          bankCode: preset.code,
+          bankName: preset.code === 'OTHER' ? (item.bankName || 'Bank Lainnya') : preset.name,
+        };
+      }
+      return item;
+    });
+    handleUpdateBankList(updated);
+  };
+
+  const handleAddBankAccount = () => {
+    const availablePreset = INDONESIAN_BANK_PRESETS.find(
+      (p) => !bankAccountsList.some((b) => b.bankCode === p.code)
+    ) || INDONESIAN_BANK_PRESETS[0];
+
+    const newAcc: BankAccountItem = {
+      id: `bank-${Date.now()}`,
+      bankCode: availablePreset.code,
+      bankName: availablePreset.name,
+      accountNumber: '',
+      accountHolder: configForm.studioName || 'Dimensi Fotografi Studio',
+      isActive: true,
+      isPrimary: bankAccountsList.length === 0,
+    };
+    handleUpdateBankList([...bankAccountsList, newAcc]);
+  };
+
+  const handleDeleteBankAccount = (id: string) => {
+    if (bankAccountsList.length <= 1) {
+      alert('Minimal harus ada 1 data rekening bank studio.');
+      return;
+    }
+    const filtered = bankAccountsList.filter((b) => b.id !== id);
+    if (filtered.length > 0 && !filtered.some((b) => b.isPrimary)) {
+      filtered[0].isPrimary = true;
+    }
+    handleUpdateBankList(filtered);
+  };
+
+  const handleToggleAllBanks = (active: boolean) => {
+    const updated = bankAccountsList.map((item, idx) => ({
+      ...item,
+      isActive: active || idx === 0,
+    }));
+    handleUpdateBankList(updated);
+  };
+
   const [bannerReplaceMode, setBannerReplaceMode] = useState(true);
+  const [staffToDelete, setStaffToDelete] = useState<{ id: string; name: string } | null>(null);
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
   const [isBannerCropperOpen, setIsBannerCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState<string | null>(null);
@@ -443,9 +562,18 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingConfig(true);
+
+    const bcaAcc = bankAccountsList.find((b) => b.bankCode === 'BCA' || b.bankName.toUpperCase().includes('BCA'));
+    const mandiriAcc = bankAccountsList.find((b) => b.bankCode === 'MANDIRI' || b.bankName.toUpperCase().includes('MANDIRI'));
+    const briAcc = bankAccountsList.find((b) => b.bankCode === 'BRI' || b.bankName.toUpperCase().includes('BRI'));
+
     const mergedConfig: StudioConfig = {
       ...studioConfig,
       ...configForm,
+      bankAccounts: bankAccountsList,
+      bankBCA: bcaAcc ? `${bcaAcc.bankName}: ${bcaAcc.accountNumber} a.n ${bcaAcc.accountHolder}` : (configForm.bankBCA || studioConfig.bankBCA),
+      bankMandiri: mandiriAcc ? `${mandiriAcc.bankName}: ${mandiriAcc.accountNumber} a.n ${mandiriAcc.accountHolder}` : (configForm.bankMandiri || studioConfig.bankMandiri),
+      bankBRI: briAcc ? `${briAcc.bankName}: ${briAcc.accountNumber} a.n ${briAcc.accountHolder}` : (configForm.bankBRI || studioConfig.bankBRI),
       masterPasscode: masterPasscodeVal || studioConfig.masterPasscode || 'MASTER_DIMENSI_2026',
       masterUsername: masterUsername || studioConfig.masterUsername || 'dimensi',
       staffPasscode: staffPasscode || studioConfig.staffPasscode || 'DIMENSI2026',
@@ -464,7 +592,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       await logAuditEvent(
         currentUser?.email || 'Master Admin',
         'Update Profil Studio',
-        'Memperbarui identitas studio, kontak, dan info rekening pembayaran.',
+        `Memperbarui identitas studio, kontak, dan ${bankAccountsList.filter((b) => b.isActive).length} rekening bank aktif untuk konsumen.`,
         'system'
       );
     } catch (err) {
@@ -602,20 +730,25 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     setIsStaffModalOpen(false);
   };
 
-  const handleDeleteStaffClick = async (staffId: string, name: string) => {
-    if (confirm(`Yakin ingin menghapus akses admin untuk ${name}?`)) {
-      onDeleteStaff(staffId);
-      try {
-        await deleteStaffFromFirestore(staffId);
-        await logAuditEvent(
-          currentUser?.email || 'Master Admin',
-          'Hapus Akses Staf Admin',
-          `Menghapus akses staf: ${name}`,
-          'security'
-        );
-      } catch (err) {
-        console.error('Error deleting staff:', err);
-      }
+  const handleDeleteStaffClick = (staffId: string, name: string) => {
+    setStaffToDelete({ id: staffId, name });
+  };
+
+  const confirmDeleteStaff = async () => {
+    if (!staffToDelete) return;
+    const { id: staffId, name } = staffToDelete;
+    onDeleteStaff(staffId);
+    setStaffToDelete(null);
+    try {
+      await deleteStaffFromFirestore(staffId);
+      await logAuditEvent(
+        currentUser?.email || 'Master Admin',
+        'Hapus Akses Staf Admin',
+        `Menghapus akses staf: ${name}`,
+        'security'
+      );
+    } catch (err) {
+      console.error('Error deleting staff:', err);
     }
   };
 
@@ -1799,43 +1932,244 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               </div>
             </div>
 
-            {/* Bank Accounts Section */}
-            <div className="pt-4 border-t border-white/10 space-y-4">
-              <h4 className="text-xs font-mono uppercase tracking-wider text-[#D4AF37] flex items-center gap-2">
-                <CreditCard className="w-4 h-4" />
-                <span>Rincian Rekening Bank & Pembayaran DP Konsumen</span>
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-mono text-gray-300">Rekening Bank BCA</label>
-                  <input
-                    type="text"
-                    value={configForm.bankBCA}
-                    onChange={(e) => setConfigForm({ ...configForm, bankBCA: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
-                  />
+            {/* Bank Accounts Section with Indonesian Bank List & Customer Visibility Toggle */}
+            <div className="pt-6 border-t border-white/10 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#111111] p-4 border border-white/10">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-[#D4AF37] text-black">
+                      <CreditCard className="w-4 h-4 stroke-[2.2]" />
+                    </div>
+                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                      Rincian Rekening Bank & Pengaturan Tampilan Konsumen
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-gray-400 max-w-2xl">
+                    Pilih rekening bank mana saja yang ingin ditampilkan ke konsumen saat melakukan checkout booking dan nota pembayaran. Anda dapat memilih dari daftar nama bank Indonesia terlengkap atau menambahkan rekening baru.
+                  </p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-mono text-gray-300">Rekening Bank Mandiri</label>
-                  <input
-                    type="text"
-                    value={configForm.bankMandiri}
-                    onChange={(e) => setConfigForm({ ...configForm, bankMandiri: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
-                  />
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <span className="px-2.5 py-1 text-[11px] font-mono font-bold bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37] whitespace-nowrap">
+                    {bankAccountsList.filter((b) => b.isActive).length} Aktif Ditampilkan ({bankAccountsList.length} Total)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleAddBankAccount}
+                    className="px-3 py-1.5 bg-[#D4AF37] hover:bg-white text-black text-xs font-mono font-bold uppercase flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    title="Tambah Rekening Bank Baru"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Tambah Rekening</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Bulk toggles */}
+              <div className="flex items-center justify-between gap-2 px-1 text-[11px] font-mono text-gray-400">
+                <span>Daftar Rekening Studio:</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAllBanks(true)}
+                    className="text-[#D4AF37] hover:underline cursor-pointer"
+                  >
+                    Tampilkan Semua ke Konsumen
+                  </button>
+                  <span className="text-gray-600">|</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleAllBanks(false)}
+                    className="text-gray-400 hover:text-white hover:underline cursor-pointer"
+                  >
+                    Sembunyikan Selain Utama
+                  </button>
+                </div>
+              </div>
+
+              {/* Bank accounts cards list */}
+              <div className="space-y-3">
+                {bankAccountsList.map((bank, index) => {
+                  const preset = getBankPreset(bank.bankCode || bank.bankName);
+                  const isCustom = bank.bankCode === 'OTHER';
+
+                  return (
+                    <div
+                      key={bank.id}
+                      className={`p-4 border transition-all ${
+                        bank.isActive
+                          ? 'bg-[#141414] border-[#D4AF37]/40 shadow-md'
+                          : 'bg-[#0d0d0d] border-white/10 opacity-75 hover:opacity-100'
+                      }`}
+                    >
+                      {/* Top bar within each card */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-3 border-b border-white/10">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className={`px-2.5 py-0.5 text-xs font-mono font-bold uppercase ${preset.badgeBg} text-white`}>
+                            {preset.shortName || bank.bankCode || `BANK #${index + 1}`}
+                          </span>
+                          
+                          {/* Visibility Toggle Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBankActive(bank.id)}
+                            className={`px-2.5 py-1 text-[11px] font-mono font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                              bank.isActive
+                                ? 'bg-emerald-950/40 border-emerald-500/60 text-emerald-400 hover:bg-emerald-900/50'
+                                : 'bg-neutral-900 border-white/20 text-gray-400 hover:text-white hover:border-white/40'
+                            }`}
+                            title={bank.isActive ? 'Klik untuk sembunyikan dari konsumen' : 'Klik untuk tampilkan ke konsumen'}
+                          >
+                            {bank.isActive ? (
+                              <>
+                                <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                                <span>TAMPILKAN KE KONSUMEN (AKTIF)</span>
+                              </>
+                            ) : (
+                              <>
+                                <Square className="w-3.5 h-3.5 text-gray-500" />
+                                <span>DISEMBUNYIKAN (NONAKTIF)</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Primary Badge */}
+                          {bank.isPrimary ? (
+                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[#D4AF37]/20 border border-[#D4AF37]/50 text-[#D4AF37] flex items-center gap-1">
+                              <Star className="w-3 h-3 fill-[#D4AF37]" /> Rekening Utama
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleSetPrimaryBank(bank.id)}
+                              className="text-[10px] font-mono text-gray-400 hover:text-[#D4AF37] hover:underline cursor-pointer"
+                            >
+                              Jadikan Utama
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBankAccount(bank.id)}
+                          className="text-gray-400 hover:text-red-400 p-1 transition-colors self-end sm:self-auto cursor-pointer"
+                          title="Hapus Rekening Ini"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Fields */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* Preset Bank List Dropdown */}
+                        <div className="space-y-1">
+                          <label className="block text-[11px] font-mono text-gray-300">
+                            Pilih Nama Bank
+                          </label>
+                          <select
+                            value={bank.bankCode || 'BCA'}
+                            onChange={(e) => handleBankPresetChange(bank.id, e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/20 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none cursor-pointer"
+                          >
+                            {INDONESIAN_BANK_PRESETS.map((p) => (
+                              <option key={p.code} value={p.code}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          {isCustom && (
+                            <input
+                              type="text"
+                              placeholder="Ketik Nama Bank / E-Wallet..."
+                              value={bank.bankName}
+                              onChange={(e) => handleUpdateBankField(bank.id, 'bankName', e.target.value)}
+                              className="w-full mt-1.5 px-3 py-1.5 bg-[#0A0A0A] border border-white/20 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                            />
+                          )}
+                        </div>
+
+                        {/* Account Number */}
+                        <div className="space-y-1">
+                          <label className="block text-[11px] font-mono text-gray-300">
+                            Nomor Rekening
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={preset.defaultPlaceholder || 'Contoh: 8720-1928-33'}
+                            value={bank.accountNumber}
+                            onChange={(e) => handleUpdateBankField(bank.id, 'accountNumber', e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/20 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none tracking-wider"
+                          />
+                        </div>
+
+                        {/* Account Holder */}
+                        <div className="space-y-1">
+                          <label className="block text-[11px] font-mono text-gray-300">
+                            Atas Nama (a.n)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Contoh: Dimensi Fotografi Studio"
+                            value={bank.accountHolder}
+                            onChange={(e) => handleUpdateBankField(bank.id, 'accountHolder', e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/20 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Customer Live Preview Box */}
+              <div className="p-4 bg-gradient-to-b from-[#18140a] to-[#0d0d0d] border border-[#D4AF37]/50 mt-4">
+                <div className="flex items-center justify-between gap-2 pb-2 mb-3 border-b border-[#D4AF37]/30">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#D4AF37] flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span>Pratinjau Tampilan Pilihan Bank Konsumen di Nota Booking:</span>
+                  </span>
+                  <span className="text-[10px] font-mono text-gray-400">
+                    ({bankAccountsList.filter((b) => b.isActive).length} Rekening Aktif Tampil)
+                  </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] font-mono text-gray-300">Rekening Bank BRI</label>
-                  <input
-                    type="text"
-                    value={configForm.bankBRI}
-                    onChange={(e) => setConfigForm({ ...configForm, bankBRI: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
-                  />
-                </div>
+                {bankAccountsList.filter((b) => b.isActive).length === 0 ? (
+                  <p className="text-xs text-amber-300 py-2 italic font-mono">
+                    ⚠️ Semua rekening disembunyikan. Harap aktifkan minimal 1 rekening agar konsumen dapat melakukan transfer pembayaran.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {bankAccountsList.filter((b) => b.isActive).map((bank) => {
+                      const preset = getBankPreset(bank.bankCode || bank.bankName);
+                      return (
+                        <div
+                          key={`preview-${bank.id}`}
+                          className="p-2.5 bg-[#121212] border border-[#D4AF37]/40 flex flex-col justify-between"
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase ${preset.badgeBg} text-white`}>
+                                {preset.shortName || bank.bankCode}
+                              </span>
+                              {bank.isPrimary && (
+                                <span className="text-[9px] text-[#D4AF37] font-mono">Utama</span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-gray-400 font-mono">{bank.bankName}</div>
+                            <div className="text-xs font-mono font-bold text-white tracking-wider my-0.5 truncate">
+                              {bank.accountNumber || '-'}
+                            </div>
+                            <div className="text-[10px] text-gray-400 truncate">
+                              a.n <span className="text-gray-200">{bank.accountHolder || '-'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -2204,6 +2538,44 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         subtitle={configForm.heroCardSubtitle || 'Signature Series'}
         badgeText={configForm.heroBadgeText || 'Top Rated Studio'}
       />
+
+      {/* Modal: Delete Confirmation for Staff */}
+      {staffToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#141414] border border-rose-500/40 w-full max-w-md p-6 text-center shadow-2xl relative text-[#E0E0E0]">
+            <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mx-auto mb-4 text-rose-400">
+              <Trash2 className="w-6 h-6 stroke-[2.2]" />
+            </div>
+
+            <h4 className="text-lg font-serif font-bold text-white mb-2">
+              Hapus Akses Staf Admin?
+            </h4>
+
+            <p className="text-xs text-gray-300 mb-4 leading-relaxed">
+              Apakah Anda yakin ingin menghapus hak akses admin untuk staf <strong className="text-white">"{staffToDelete.name}"</strong>?
+            </p>
+
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setStaffToDelete(null)}
+                className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs font-mono uppercase tracking-wider font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteStaff}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono uppercase tracking-wider font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-rose-950/50"
+                id="btn-confirm-delete-staff"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Ya, Hapus Akses</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

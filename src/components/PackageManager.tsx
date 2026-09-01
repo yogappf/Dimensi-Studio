@@ -64,6 +64,8 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
   const [isPortfolioPickerOpen, setIsPortfolioPickerOpen] = useState(false);
   const [imageToast, setImageToast] = useState('');
 
+  const [packageToDelete, setPackageToDelete] = useState<PhotoPackage | null>(null);
+
   // Form Fields State
   const [name, setName] = useState('');
   const [category, setCategory] = useState<CategoryType>('wedding');
@@ -228,9 +230,15 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
 
   // Delete Handler
   const handleDelete = (pkg: PhotoPackage) => {
-    if (confirm(`Apakah Anda yakin ingin menghapus paket "${pkg.name}"? Paket ini tidak akan muncul lagi di katalog pemesanan.`)) {
-      onDeletePackage(pkg.id);
-      setSuccessNotice(`Paket "${pkg.name}" berhasil dihapus.`);
+    setPackageToDelete(pkg);
+  };
+
+  const confirmDeletePackage = () => {
+    if (packageToDelete) {
+      const name = packageToDelete.name;
+      onDeletePackage(packageToDelete.id);
+      setPackageToDelete(null);
+      setSuccessNotice(`Paket "${name}" berhasil dihapus.`);
       setTimeout(() => setSuccessNotice(''), 4000);
     }
   };
@@ -850,6 +858,44 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Delete Confirmation for Package */}
+      {packageToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#141414] border border-rose-500/40 w-full max-w-md p-6 text-center shadow-2xl relative text-[#E0E0E0]">
+            <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mx-auto mb-4 text-rose-400">
+              <Trash2 className="w-6 h-6 stroke-[2.2]" />
+            </div>
+
+            <h4 className="text-lg font-serif font-bold text-white mb-2">
+              Hapus Paket Foto?
+            </h4>
+
+            <p className="text-xs text-gray-300 mb-4 leading-relaxed">
+              Apakah Anda yakin ingin menghapus paket <strong className="text-white font-serif">"{packageToDelete.name}"</strong>? Paket ini tidak akan muncul lagi di katalog pemesanan publik.
+            </p>
+
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setPackageToDelete(null)}
+                className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs font-mono uppercase tracking-wider font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeletePackage}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono uppercase tracking-wider font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-rose-950/50"
+                id="btn-confirm-delete-package"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Ya, Hapus Paket</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
