@@ -355,6 +355,11 @@ export function subscribeToBookings(
           driveFolderUrl: data.driveFolderUrl || undefined,
           completedAt: data.completedAt || undefined,
           updatedAt: data.updatedAt || undefined,
+          paymentProofUrl: data.paymentProofUrl || undefined,
+          paymentProofUploadedAt: data.paymentProofUploadedAt || undefined,
+          paymentProofNote: data.paymentProofNote || undefined,
+          paymentProofType: data.paymentProofType || undefined,
+          paymentProofBank: data.paymentProofBank || undefined,
         });
       });
 
