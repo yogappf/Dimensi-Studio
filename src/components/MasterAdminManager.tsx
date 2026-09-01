@@ -163,12 +163,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     }
   }, [studioConfig]);
 
-  const [bannerReplaceMode, setBannerReplaceMode] = useState(true);
+  const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
   const [isBannerCropperOpen, setIsBannerCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState<string | null>(null);
   const [cropperTargetIndex, setCropperTargetIndex] = useState<number | null>(null);
 
-  const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>, targetIdx: number | null = null) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -187,7 +187,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       const result = event.target?.result as string;
       if (result) {
         setCropperImageSrc(result);
-        setCropperTargetIndex(null);
+        setCropperTargetIndex(targetIdx);
         setIsBannerCropperOpen(true);
       }
     };
@@ -197,22 +197,25 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
 
   const handleCropComplete = async (croppedDataUrl: string) => {
     try {
-      const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
-        ? configForm.heroImageUrls
+      // Retrieve current slide list reliably
+      const currentList: string[] = (configForm.heroImageUrls && configForm.heroImageUrls.length > 0)
+        ? [...configForm.heroImageUrls]
         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
 
       let updatedList: string[] = [];
 
-      if (cropperTargetIndex !== null && cropperTargetIndex >= 0) {
-        // Edit existing slide index
+      if (cropperTargetIndex !== null && cropperTargetIndex >= 0 && cropperTargetIndex < currentList.length) {
+        // Editing / replacing an existing slide at target index
         updatedList = [...currentList];
         updatedList[cropperTargetIndex] = croppedDataUrl;
+        setSelectedSlideIndex(cropperTargetIndex);
       } else {
-        // New upload
-        updatedList = bannerReplaceMode ? [croppedDataUrl] : [...currentList, croppedDataUrl];
+        // Adding a new slide: ALWAYS APPEND so photo 1, 2, 3... are all preserved!
+        updatedList = [...currentList, croppedDataUrl];
+        setSelectedSlideIndex(updatedList.length - 1);
       }
 
-      const updatedConfig = {
+      const updatedConfig: StudioConfig = {
         ...studioConfig,
         ...configForm,
         heroImageUrl: updatedList[0] || croppedDataUrl,
@@ -230,10 +233,8 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
 
       setHeroToast(
         cropperTargetIndex !== null
-          ? 'Posisi crop slide banner berhasil diperbarui!'
-          : bannerReplaceMode
-          ? 'Foto banner berhasil di-crop & disimpan!'
-          : 'Foto banner baru berhasil di-crop & ditambahkan ke slide!'
+          ? `Slide #${cropperTargetIndex + 1} berhasil diperbarui & disimpan!`
+          : `Foto banner baru berhasil ditambahkan (Total: ${updatedList.length} slide)!`
       );
       setTimeout(() => setHeroToast(''), 3500);
     } catch (err) {
@@ -1202,166 +1203,262 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                <div className="md:col-span-1 space-y-2">
-                  <label className="text-[11px] font-mono uppercase text-gray-300 block">Foto Banner / Showcase Samping</label>
-                  <div className="w-full aspect-[4/5] max-w-[200px] bg-black border border-white/20 overflow-hidden relative group">
-                    {configForm.heroImageUrl ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                <div className="md:col-span-1 space-y-2.5">
+                  {(() => {
+                    const heroSlides = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
+                      ? configForm.heroImageUrls
+                      : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
+                    const activeIndex = Math.min(Math.max(0, selectedSlideIndex), Math.max(0, heroSlides.length - 1));
+                    const activeImage = heroSlides[activeIndex] || configForm.heroImageUrl || '';
+
+                    return (
                       <>
-                        <img src={configForm.heroImageUrl} alt="Hero Showcase" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center p-2">
-                          <button
-                            type="button"
-                            onClick={() => openCropperForImage(configForm.heroImageUrl || '', 0)}
-                            className="px-2.5 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[10px] font-mono flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer"
-                          >
-                            <Crop className="w-3.5 h-3.5" />
-                            <span>Atur / Crop Foto</span>
-                          </button>
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-mono uppercase text-gray-300 block font-bold">
+                            Foto Banner Showcase
+                          </label>
+                          {heroSlides.length > 0 && (
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 font-semibold">
+                              Slide #{activeIndex + 1} / {heroSlides.length}
+                            </span>
+                          )}
                         </div>
-                      </>
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-600">
-                        <ImageIcon className="w-6 h-6" />
-                      </div>
-                    )}
-                  </div>
-                  
-                  {configForm.heroImageUrl && (
-                    <button
-                      type="button"
-                      onClick={() => openCropperForImage(configForm.heroImageUrl || '', 0)}
-                      className="w-full max-w-[200px] py-1 px-2 bg-black/60 hover:bg-black border border-[#D4AF37]/40 text-[#D4AF37] hover:text-white text-[10px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Crop className="w-3 h-3 text-[#D4AF37]" />
-                      <span>Atur / Crop Foto Aktif</span>
-                    </button>
-                  )}
 
-                  <div className="space-y-2 max-w-[200px]">
-                    {/* Banner Mode Toggle */}
-                    <div className="flex items-center gap-1 p-1 bg-black/50 border border-white/10 rounded">
-                      <button
-                        type="button"
-                        onClick={() => setBannerReplaceMode(true)}
-                        className={`flex-1 py-1 text-[10px] font-mono rounded cursor-pointer transition-colors ${
-                          bannerReplaceMode
-                            ? 'bg-[#D4AF37] text-black font-bold'
-                            : 'bg-transparent text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        ✓ Timpa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setBannerReplaceMode(false)}
-                        className={`flex-1 py-1 text-[10px] font-mono rounded cursor-pointer transition-colors ${
-                          !bannerReplaceMode
-                            ? 'bg-[#D4AF37] text-black font-bold'
-                            : 'bg-transparent text-gray-400 hover:text-white'
-                        }`}
-                      >
-                        + Tambah
-                      </button>
-                    </div>
+                        {/* Banner Preview Frame */}
+                        <div className="w-full aspect-[4/5] max-w-[210px] bg-black border-2 border-[#D4AF37]/60 overflow-hidden relative group shadow-2xl">
+                          {activeImage ? (
+                            <>
+                              <img
+                                src={activeImage}
+                                alt={`Hero Showcase Slide ${activeIndex + 1}`}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                              />
 
-                    <label className="w-full cursor-pointer px-2 py-1.5 bg-[#1A1A1A] hover:bg-[#222222] border border-dashed border-[#D4AF37]/50 text-gray-300 hover:text-white text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors">
-                      <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      <span>{bannerReplaceMode ? 'Upload & Crop Banner' : 'Upload & Crop Tambahan'}</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleHeroFileUpload}
-                        className="hidden"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setIsHeroPortfolioPickerOpen(true)}
-                      className="w-full py-1.5 px-2 bg-[#1A1A1A] hover:bg-[#222222] border border-[#D4AF37]/30 text-[#D4AF37] hover:text-amber-300 text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Layers className="w-3.5 h-3.5" />
-                      <span>Dari Portofolio</span>
-                    </button>
+                              {/* Slide number watermark */}
+                              <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 bg-black/85 backdrop-blur-sm border border-white/20 text-[9px] font-mono text-[#D4AF37] pointer-events-none">
+                                Slide #{activeIndex + 1}
+                              </div>
 
-                    {/* Banner Slideshow List Thumbnails */}
-                    <div className="pt-2 border-t border-white/10 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-gray-400 uppercase block">Slideshow ({configForm.heroImageUrls?.length || (configForm.heroImageUrl ? 1 : 0)})</span>
-                        {(configForm.heroImageUrls?.length || configForm.heroImageUrl) ? (
+                              {/* Overlay actions on hover */}
+                              <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1.5 p-2.5">
+                                <button
+                                  type="button"
+                                  onClick={() => openCropperForImage(activeImage, activeIndex)}
+                                  className="px-2.5 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[10px] font-mono flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer w-full justify-center"
+                                >
+                                  <Crop className="w-3.5 h-3.5" />
+                                  <span>Crop Slide #{activeIndex + 1}</span>
+                                </button>
+
+                                {activeIndex > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const reordered = [
+                                        activeImage,
+                                        ...heroSlides.filter((_, i) => i !== activeIndex),
+                                      ];
+                                      const updatedConfig = {
+                                        ...studioConfig,
+                                        ...configForm,
+                                        heroImageUrl: reordered[0],
+                                        heroImageUrls: reordered,
+                                      };
+                                      setConfigForm(updatedConfig);
+                                      onUpdateStudioConfig(updatedConfig);
+                                      setSelectedSlideIndex(0);
+                                      try {
+                                        await saveStudioConfigToFirestore(updatedConfig);
+                                      } catch {
+                                        // ignore
+                                      }
+                                      setHeroToast('Slide ini dipindah menjadi Slide Utama (Slide #1)!');
+                                      setTimeout(() => setHeroToast(''), 3000);
+                                    }}
+                                    className="px-2 py-1 bg-black/80 hover:bg-black border border-[#D4AF37]/50 text-[#D4AF37] hover:text-white text-[9px] font-mono flex items-center gap-1 transition-colors cursor-pointer w-full justify-center"
+                                  >
+                                    <span>★ Jadikan Slide 1</span>
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-gray-600 p-3 text-center">
+                              <ImageIcon className="w-7 h-7 mb-1" />
+                              <span className="text-[10px] font-mono">Belum ada foto banner</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {activeImage && (
+                          <div className="grid grid-cols-2 gap-1.5 max-w-[210px]">
+                            <button
+                              type="button"
+                              onClick={() => openCropperForImage(activeImage, activeIndex)}
+                              className="py-1 px-1.5 bg-black/70 hover:bg-black border border-[#D4AF37]/50 text-[#D4AF37] hover:text-white text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                              title={`Crop / Atur Posisi Bounding Box Slide #${activeIndex + 1}`}
+                            >
+                              <Crop className="w-3 h-3 text-[#D4AF37]" />
+                              <span>Crop #{activeIndex + 1}</span>
+                            </button>
+
+                            <label className="cursor-pointer py-1 px-1.5 bg-black/70 hover:bg-black border border-white/30 text-gray-300 hover:text-white text-[10px] font-mono flex items-center justify-center gap-1 transition-colors">
+                              <RefreshCw className="w-3 h-3 text-amber-400" />
+                              <span>Ganti #{activeIndex + 1}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleHeroFileUpload(e, activeIndex)}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        )}
+
+                        <div className="space-y-1.5 max-w-[210px] pt-1">
+                          {/* Add New Slide Button */}
+                          <label className="w-full cursor-pointer px-2 py-2 bg-[#1A1A1A] hover:bg-[#252525] border border-dashed border-[#D4AF37] text-white hover:text-[#D4AF37] text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors shadow">
+                            <Plus className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span className="font-bold">+ Upload Slide Baru</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleHeroFileUpload(e, null)}
+                              className="hidden"
+                            />
+                          </label>
+
                           <button
                             type="button"
-                            onClick={async () => {
-                              const updatedConfig = {
-                                ...studioConfig,
-                                ...configForm,
-                                heroImageUrl: '',
-                                heroImageUrls: [],
-                              };
-                              setConfigForm(updatedConfig);
-                              onUpdateStudioConfig(updatedConfig);
-                              try {
-                                await saveStudioConfigToFirestore(updatedConfig);
-                              } catch {
-                                // ignore
-                              }
-                              setHeroToast('Semua foto banner dihapus.');
-                              setTimeout(() => setHeroToast(''), 3000);
-                            }}
-                            className="text-[9px] font-mono text-rose-400 hover:text-rose-300 cursor-pointer"
+                            onClick={() => setIsHeroPortfolioPickerOpen(true)}
+                            className="w-full py-1.5 px-2 bg-[#1A1A1A] hover:bg-[#222222] border border-white/20 text-[#D4AF37] hover:text-amber-300 text-[10px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                           >
-                            Hapus Semua
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>+ Dari Portofolio</span>
                           </button>
-                        ) : null}
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-black/40 border border-white/10">
-                        {(configForm.heroImageUrls && configForm.heroImageUrls.length > 0 ? configForm.heroImageUrls : (configForm.heroImageUrl ? [configForm.heroImageUrl] : [])).map((img, idx) => (
-                          <div key={idx} className="relative w-10 h-12 bg-black border border-white/20 group">
-                            <img src={img} alt={`Banner ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-0.5">
-                              <button
-                                type="button"
-                                onClick={() => openCropperForImage(img, idx)}
-                                className="bg-[#D4AF37] hover:bg-white text-black p-0.5"
-                                title="Crop / Atur Posisi Slide Ini"
-                              >
-                                <Crop className="w-2.5 h-2.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  const list = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
-                                    ? configForm.heroImageUrls
-                                    : [configForm.heroImageUrl || ''];
-                                  const filtered = list.filter((_, i) => i !== idx);
-                                  const updatedConfig = {
-                                    ...studioConfig,
-                                    ...configForm,
-                                    heroImageUrls: filtered,
-                                    heroImageUrl: filtered[0] || '',
-                                  };
-                                  setConfigForm(updatedConfig);
-                                  onUpdateStudioConfig(updatedConfig);
-                                  try {
-                                    await saveStudioConfigToFirestore(updatedConfig);
-                                  } catch {
-                                    // ignore
-                                  }
-                                  setHeroToast('Foto banner dihapus dari database.');
-                                  setTimeout(() => setHeroToast(''), 3000);
-                                }}
-                                className="bg-red-600 hover:bg-red-700 text-white p-0.5"
-                                title="Hapus Slide Ini dari Database"
-                              >
-                                <X className="w-2.5 h-2.5" />
-                              </button>
+
+                          {/* Banner Slideshow List Thumbnails */}
+                          <div className="pt-2 border-t border-white/10 space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-mono text-gray-300 font-semibold uppercase block">
+                                Daftar Slideshow ({heroSlides.length})
+                              </span>
+                              {heroSlides.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!confirm('Hapus semua slide banner?')) return;
+                                    const updatedConfig = {
+                                      ...studioConfig,
+                                      ...configForm,
+                                      heroImageUrl: '',
+                                      heroImageUrls: [],
+                                    };
+                                    setConfigForm(updatedConfig);
+                                    onUpdateStudioConfig(updatedConfig);
+                                    setSelectedSlideIndex(0);
+                                    try {
+                                      await saveStudioConfigToFirestore(updatedConfig);
+                                    } catch {
+                                      // ignore
+                                    }
+                                    setHeroToast('Semua foto banner dihapus.');
+                                    setTimeout(() => setHeroToast(''), 3000);
+                                  }}
+                                  className="text-[9px] font-mono text-rose-400 hover:text-rose-300 cursor-pointer"
+                                >
+                                  Hapus Semua
+                                </button>
+                              )}
+                            </div>
+
+                            <p className="text-[9.5px] text-gray-400 font-sans leading-tight">
+                              Klik pada thumbnail untuk melihat hasil crop di kolom banner atas:
+                            </p>
+
+                            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-black/60 border border-white/15">
+                              {heroSlides.map((img, idx) => {
+                                const isCurrentActive = activeIndex === idx;
+                                return (
+                                  <div
+                                    key={idx}
+                                    onClick={() => setSelectedSlideIndex(idx)}
+                                    className={`relative w-12 h-15 bg-black cursor-pointer transition-all duration-150 group border ${
+                                      isCurrentActive
+                                        ? 'border-[#D4AF37] ring-2 ring-[#D4AF37] shadow-lg z-10 scale-105'
+                                        : 'border-white/20 hover:border-white/60 opacity-75 hover:opacity-100'
+                                    }`}
+                                    title={`Klik untuk melihat hasil crop Slide #${idx + 1}`}
+                                  >
+                                    <img
+                                      src={img}
+                                      alt={`Banner ${idx}`}
+                                      className="w-full h-full object-cover"
+                                      referrerPolicy="no-referrer"
+                                    />
+
+                                    {/* Number tag */}
+                                    <div className={`absolute top-0.5 left-0.5 px-1 font-mono font-bold text-[8px] leading-tight ${
+                                      isCurrentActive ? 'bg-[#D4AF37] text-black' : 'bg-black/80 text-gray-300'
+                                    }`}>
+                                      #{idx + 1}
+                                    </div>
+
+                                    {/* Action Buttons on Hover */}
+                                    <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 p-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openCropperForImage(img, idx);
+                                        }}
+                                        className="bg-[#D4AF37] hover:bg-white text-black p-1 rounded-none transition-colors w-full flex items-center justify-center"
+                                        title="Crop / Atur Posisi Slide Ini"
+                                      >
+                                        <Crop className="w-2.5 h-2.5" />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          const filtered = heroSlides.filter((_, i) => i !== idx);
+                                          const updatedConfig = {
+                                            ...studioConfig,
+                                            ...configForm,
+                                            heroImageUrls: filtered,
+                                            heroImageUrl: filtered[0] || '',
+                                          };
+                                          setConfigForm(updatedConfig);
+                                          onUpdateStudioConfig(updatedConfig);
+                                          if (selectedSlideIndex >= filtered.length) {
+                                            setSelectedSlideIndex(Math.max(0, filtered.length - 1));
+                                          }
+                                          try {
+                                            await saveStudioConfigToFirestore(updatedConfig);
+                                          } catch {
+                                            // ignore
+                                          }
+                                          setHeroToast('Foto banner dihapus dari database.');
+                                          setTimeout(() => setHeroToast(''), 3000);
+                                        }}
+                                        className="bg-red-600 hover:bg-red-700 text-white p-1 rounded-none transition-colors w-full flex items-center justify-center"
+                                        title="Hapus Slide Ini dari Database"
+                                      >
+                                        <X className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 <div className="md:col-span-2 space-y-3">
@@ -1899,17 +1996,26 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                 {portfolios.map((item) => (
                   <div
                     key={item.id}
-                    onClick={() => {
+                    onClick={async () => {
                       const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
                         ? configForm.heroImageUrls
                         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
                       const updatedList = [...currentList, item.imageUrl];
-                      setConfigForm({
+                      const updatedConfig: StudioConfig = {
+                        ...studioConfig,
                         ...configForm,
                         heroImageUrl: updatedList[0],
                         heroImageUrls: updatedList,
-                      });
+                      };
+                      setConfigForm(updatedConfig);
+                      onUpdateStudioConfig(updatedConfig);
+                      setSelectedSlideIndex(updatedList.length - 1);
                       setIsHeroPortfolioPickerOpen(false);
+                      try {
+                        await saveStudioConfigToFirestore(updatedConfig);
+                      } catch (err) {
+                        console.warn('Firestore save warning:', err);
+                      }
                       setHeroToast(`Berhasil menambahkan banner dari portofolio: ${item.title}`);
                       setTimeout(() => setHeroToast(''), 3000);
                     }}
