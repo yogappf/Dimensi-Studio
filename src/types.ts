@@ -50,6 +50,11 @@ export interface BookingOrder {
   driveFolderUrl?: string;
   completedAt?: string; // ISO date string when marked as Selesai
   updatedAt?: string;
+  paymentProofUrl?: string;
+  paymentProofUploadedAt?: string;
+  paymentProofNote?: string;
+  paymentProofType?: 'DP' | 'Pelunasan' | 'DP / Pelunasan';
+  paymentProofBank?: string;
 }
 
 export interface PortfolioItem {

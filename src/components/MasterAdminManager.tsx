@@ -281,6 +281,23 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     handleUpdateBankList(updated);
   };
 
+  const handleQRISFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Mohon pilih file gambar QRIS (PNG, JPG, WEBP).');
+        return;
+      }
+      try {
+        const compressed = await compressImage(file, 800, 800, 0.8);
+        setConfigForm((prev) => ({ ...prev, qrisUrl: compressed }));
+      } catch (err) {
+        console.error('QRIS compression failed:', err);
+        alert('Gagal memproses gambar QRIS.');
+      }
+    }
+  };
+
   const [bannerReplaceMode, setBannerReplaceMode] = useState(true);
   const [staffToDelete, setStaffToDelete] = useState<{ id: string; name: string } | null>(null);
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
@@ -2170,6 +2187,78 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     })}
                   </div>
                 )}
+              </div>
+
+              {/* QRIS Code Payment Guide Upload Section */}
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#111111] p-4 border border-white/10">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-[#D4AF37] text-black">
+                        <ImageIcon className="w-4 h-4 stroke-[2.2]" />
+                      </div>
+                      <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+                        Unggah Foto QRIS Pembayaran Studio
+                      </h4>
+                    </div>
+                    <p className="text-[11px] text-gray-400 max-w-2xl">
+                      Unggah kode QRIS resmi studio (GoPay, QRIS Nasional, BCA, dll). Gambar ini akan otomatis muncul di bagian bawah nota pembayaran/reservasi sebagai panduan transfer instan bagi pelanggan.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-[#141414] border border-white/15 space-y-4">
+                  {configForm.qrisUrl ? (
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="w-36 h-36 bg-white border border-[#D4AF37] p-2 flex items-center justify-center shrink-0">
+                        <img
+                          src={configForm.qrisUrl}
+                          alt="QRIS Studio"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <div className="space-y-2 flex-1 text-left">
+                        <div className="text-xs font-bold text-emerald-400 font-mono flex items-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>QRIS Studio Berhasil Diunggah & Aktif</span>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          Kode QRIS ini akan dicetak di bagian bawah nota pembayaran A5 agar konsumen dapat langsung melakukan scan QR untuk pelunasan atau DP.
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <label className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/20 text-xs font-mono uppercase cursor-pointer">
+                            <span>Ganti Gambar QRIS</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleQRISFileSelect}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setConfigForm({ ...configForm, qrisUrl: '' })}
+                            className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 border border-red-500/30 text-xs font-mono uppercase cursor-pointer"
+                          >
+                            Hapus QRIS
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="border-2 border-dashed border-white/20 hover:border-[#D4AF37] bg-black/40 p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors">
+                      <ImageIcon className="w-8 h-8 text-gray-500 mb-2" />
+                      <span className="text-xs font-semibold text-white">Klik atau Tarik Foto QRIS ke Sini</span>
+                      <span className="text-[10px] text-gray-400 mt-1 font-mono">Format PNG, JPG, WEBP (Disarankan ukuran kotak / QR Code)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleQRISFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
 

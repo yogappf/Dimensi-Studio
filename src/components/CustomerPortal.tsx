@@ -3,6 +3,10 @@ import { User } from 'firebase/auth';
 import { BookingOrder, OrderStatus, StudioConfig } from '../types';
 import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, normalizeWhatsAppNumber } from '../utils/formatters';
 import { STUDIO_INFO } from '../data/mockData';
+import { PrintableReceipt } from './PrintableReceipt';
+import { printOrDownloadReceipt, downloadReceiptHTMLFile } from '../utils/receiptPrinter';
+import { getResolvedBankAccounts } from '../utils/bankOptions';
+import { compressImage } from '../utils/imageCompressor';
 import {
   Search,
   Calendar,
@@ -23,6 +27,14 @@ import {
   Download,
   Share2,
   X,
+  Upload,
+  Image as ImageIcon,
+  Copy,
+  Check,
+  Loader2,
+  Eye,
+  FileCheck,
+  CreditCard,
 } from 'lucide-react';
 
 interface CustomerPortalProps {
@@ -30,6 +42,7 @@ interface CustomerPortalProps {
   currentUser: User | null;
   onGoToBooking: () => void;
   studioConfig?: StudioConfig;
+  onUpdateOrder?: (orderId: string, updates: Partial<BookingOrder>) => Promise<void> | void;
 }
 
 export const CustomerPortal: React.FC<CustomerPortalProps> = ({
@@ -37,15 +50,34 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   currentUser,
   onGoToBooking,
   studioConfig,
+  onUpdateOrder,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<BookingOrder | null>(null);
+
+  // Upload proof modal state
+  const [uploadProofOrder, setUploadProofOrder] = useState<BookingOrder | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofPreview, setProofPreview] = useState<string | null>(null);
+  const [proofType, setProofType] = useState<'DP' | 'Pelunasan'>('DP');
+  const [selectedBankId, setSelectedBankId] = useState<string>('');
+  const [proofNote, setProofNote] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [copiedBankId, setCopiedBankId] = useState<string | null>(null);
+  const [uploadSuccessOrder, setUploadSuccessOrder] = useState<BookingOrder | null>(null);
+
+  // Image viewer modal for proof
+  const [viewingProofUrl, setViewingProofUrl] = useState<string | null>(null);
 
   const adminWhatsApp = normalizeWhatsAppNumber(
     studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
   );
   const studioPhoneDisplay = studioConfig?.phone || studioConfig?.whatsapp || STUDIO_INFO.phone;
   const studioInstagramDisplay = studioConfig?.instagram || STUDIO_INFO.instagram;
+
+  const activeBankAccounts = useMemo(() => {
+    return getResolvedBankAccounts(studioConfig).filter((b) => b.isActive !== false);
+  }, [studioConfig]);
 
   // If user is logged in with email, find orders matching email or phone or createdBy
   const userOrders = useMemo(() => {
@@ -131,6 +163,106 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   const printReceipt = (order: BookingOrder) => {
     setSelectedOrder(order);
+  };
+
+  // Open upload modal
+  const handleOpenUploadModal = (order: BookingOrder) => {
+    setUploadProofOrder(order);
+    setProofFile(null);
+    setProofPreview(order.paymentProofUrl || null);
+    setProofType(order.paymentPreference === 'Lunas' ? 'Pelunasan' : 'DP');
+    setProofNote(order.paymentProofNote || '');
+    const defaultBank = activeBankAccounts.find((b) => b.isPrimary) || activeBankAccounts[0];
+    setSelectedBankId(defaultBank ? defaultBank.id : '');
+  };
+
+  // Handle file select
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        alert('Mohon pilih file gambar (JPG, PNG, WEBP).');
+        return;
+      }
+      setProofFile(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setProofPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Copy bank number
+  const handleCopyAccountNumber = (accNumber: string, id: string) => {
+    navigator.clipboard.writeText(accNumber.replace(/[^0-9]/g, '') || accNumber);
+    setCopiedBankId(id);
+    setTimeout(() => setCopiedBankId(null), 2500);
+  };
+
+  // Submit proof
+  const handleSubmitProof = async () => {
+    if (!uploadProofOrder) return;
+    if (!proofPreview && !proofFile) {
+      alert('Silakan pilih file foto bukti transfer terlebih dahulu.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      let finalProofUrl = proofPreview || '';
+      if (proofFile) {
+        finalProofUrl = await compressImage(proofFile, 800, 800, 0.60);
+      }
+
+      const selectedBank = activeBankAccounts.find((b) => b.id === selectedBankId);
+      const bankLabel = selectedBank
+        ? `${selectedBank.bankName} (${selectedBank.accountNumber})`
+        : 'Transfer Bank Studio';
+
+      const updates: Partial<BookingOrder> = {
+        paymentProofUrl: finalProofUrl,
+        paymentProofUploadedAt: new Date().toISOString(),
+        paymentProofType: proofType,
+        paymentProofBank: bankLabel,
+        paymentProofNote: proofNote.trim() || undefined,
+      };
+
+      if (onUpdateOrder) {
+        await onUpdateOrder(uploadProofOrder.id, updates);
+      }
+
+      const updatedOrderObj = { ...uploadProofOrder, ...updates };
+      setUploadProofOrder(null);
+      setUploadSuccessOrder(updatedOrderObj);
+    } catch (err) {
+      console.error('Failed to upload payment proof:', err);
+      alert('Terjadi kesalahan saat memproses bukti transfer. Silakan coba lagi.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Generate WhatsApp confirmation link after uploading proof
+  const generateProofWhatsAppLink = (order: BookingOrder) => {
+    const isLunas = order.paymentPreference === 'Lunas';
+    const isDP30 = order.paymentPreference === 'DP 30%';
+    const dpRatio = isLunas ? 1.0 : (isDP30 ? 0.3 : 0.5);
+    const nominal = Math.round(order.totalPrice * dpRatio);
+
+    const message = `Halo Dimensi Fotografi Studio! 📸✨
+
+Saya telah mengunggah bukti transfer untuk pesanan:
+*ID Pesanan*: ${order.id}
+*Nama Klien*: ${order.clientName}
+*Paket Foto*: ${order.packageName}
+*Jenis Pembayaran*: ${order.paymentProofType || (isLunas ? 'Pelunasan 100%' : `DP (${order.paymentPreference})`)}
+*Nominal Transfer*: ${formatRupiah(nominal)}
+*Bank Tujuan*: ${order.paymentProofBank || 'Bank Studio'}
+${order.paymentProofNote ? `*Catatan*: ${order.paymentProofNote}\n` : ''}
+Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
+
+    return `https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(message)}`;
   };
 
   return (
@@ -299,6 +431,33 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                         </div>
                       )}
 
+                      {/* Payment Proof Status Banner if already uploaded */}
+                      {order.paymentProofUrl && (
+                        <div className="p-3 bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <div className="truncate">
+                              <span className="text-xs font-bold text-amber-300 block truncate">
+                                Bukti Transfer Terunggah ({order.paymentProofType || 'DP/Pelunasan'})
+                              </span>
+                              <span className="text-[10px] text-gray-400 font-mono block truncate">
+                                {order.paymentProofUploadedAt
+                                  ? `${new Date(order.paymentProofUploadedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+                                  : 'Menunggu verifikasi admin'}
+                                {order.paymentProofBank ? ` • ${order.paymentProofBank}` : ''}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setViewingProofUrl(order.paymentProofUrl || null)}
+                            className="px-2.5 py-1 bg-black/80 hover:bg-black text-[#D4AF37] hover:text-white border border-[#D4AF37]/40 text-[10px] uppercase font-mono tracking-wider font-semibold whitespace-nowrap cursor-pointer transition-colors"
+                          >
+                            Lihat Bukti
+                          </button>
+                        </div>
+                      )}
+
                       {/* Google Drive Photo Deliverables Link */}
                       {order.driveFolderUrl ? (
                         <div className="p-3 bg-gradient-to-r from-[#D4AF37]/15 to-emerald-500/10 border border-[#D4AF37]/40 space-y-2">
@@ -336,22 +495,38 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                     </div>
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
-                    <button
-                      onClick={() => printReceipt(order)}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/15 text-xs font-mono uppercase tracking-wider cursor-pointer"
-                      id={`print-receipt-${order.id}`}
-                    >
-                      <Receipt className="w-3.5 h-3.5 text-[#D4AF37]" />
-                      <span>Cetak Bukti</span>
-                    </button>
+                    {order.status === 'Menunggu Konfirmasi' ? (
+                      /* KETIKA MENUNGGU KONFIRMASI: Tombol Cetak Dihapus, Tampilkan Tombol Upload Bukti Transfer DP/Pelunasan */
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUploadModal(order)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#D4AF37] hover:bg-white text-black text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md transition-all"
+                        id={`btn-upload-proof-${order.id}`}
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{order.paymentProofUrl ? 'Ganti Bukti Transfer' : 'Upload Bukti Transfer DP/Pelunasan'}</span>
+                      </button>
+                    ) : (
+                      /* KETIKA STATUS SUDAH TERKONFIRMASI: Tombol Berubah Menjadi Cetak Bukti */
+                      <button
+                        type="button"
+                        onClick={() => printReceipt(order)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/15 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
+                        id={`print-receipt-${order.id}`}
+                        title="Cetak nota atau simpan bukti reservasi"
+                      >
+                        <Receipt className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <span>Cetak Bukti</span>
+                      </button>
+                    )}
 
                     <a
                       href={waLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider cursor-pointer shadow-md"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider cursor-pointer shadow-md transition-colors"
                       id={`chat-wa-order-${order.id}`}
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
@@ -386,7 +561,350 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         </div>
       )}
 
-      {/* Digital Receipt / Invoice Modal */}
+      {/* MODAL UPLOAD BUKTI TRANSFER DP / PELUNASAN */}
+      {uploadProofOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-[#141414] border border-[#D4AF37]/60 p-6 sm:p-7 shadow-2xl text-[#E0E0E0] max-h-[92vh] overflow-y-auto">
+            {/* Close Button */}
+            <button
+              onClick={() => setUploadProofOrder(null)}
+              className="absolute top-4 right-4 p-2 bg-black/60 border border-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Header */}
+            <div className="border-b border-white/10 pb-4 mb-5">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-mono uppercase tracking-wider mb-2">
+                <Upload className="w-3 h-3" />
+                <span>Upload Bukti Pembayaran</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-white uppercase font-display">
+                Unggah Bukti Transfer DP / Pelunasan
+              </h3>
+              <p className="text-xs text-gray-400 mt-1 font-mono">
+                ID Pesanan: <strong className="text-[#D4AF37]">{uploadProofOrder.id}</strong> • {uploadProofOrder.clientName}
+              </p>
+            </div>
+
+            {/* Billing Info Summary */}
+            {(() => {
+              const isLunasPref = uploadProofOrder.paymentPreference === 'Lunas';
+              const isDP30Pref = uploadProofOrder.paymentPreference === 'DP 30%';
+              const dpRatio = isLunasPref ? 1.0 : (isDP30Pref ? 0.3 : 0.5);
+              const dpNominal = Math.round(uploadProofOrder.totalPrice * dpRatio);
+
+              return (
+                <div className="space-y-4">
+                  <div className="p-3.5 bg-[#1A1A1A] border border-white/10 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Paket Foto</span>
+                      <span className="font-semibold text-white">{uploadProofOrder.packageName}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400">Total Investasi</span>
+                      <span className="font-bold font-mono text-white">{formatRupiah(uploadProofOrder.totalPrice)}</span>
+                    </div>
+                    <div className="pt-2 border-t border-white/10 flex justify-between items-center text-xs">
+                      <span className="text-gray-300">
+                        {isLunasPref ? 'Ketentuan Bayar (Lunas)' : `Minimal DP (${isDP30Pref ? '30%' : '50%'})`}
+                      </span>
+                      <span className="text-sm font-bold font-mono text-[#D4AF37]">
+                        {formatRupiah(dpNominal)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Payment Type Selection */}
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
+                      1. Pilih Jenis Pembayaran yang Ditransfer:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setProofType('DP')}
+                        className={`p-2.5 text-xs text-left border cursor-pointer transition-all ${
+                          proofType === 'DP'
+                            ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-white font-bold'
+                            : 'bg-black/40 border-white/10 text-gray-400 hover:border-white/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>Uang Muka (DP)</span>
+                          {proofType === 'DP' && <Check className="w-3.5 h-3.5 text-[#D4AF37]" />}
+                        </div>
+                        <span className="text-[11px] font-mono text-[#D4AF37] block mt-1">
+                          {formatRupiah(dpNominal)}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setProofType('Pelunasan')}
+                        className={`p-2.5 text-xs text-left border cursor-pointer transition-all ${
+                          proofType === 'Pelunasan'
+                            ? 'bg-[#D4AF37]/15 border-[#D4AF37] text-white font-bold'
+                            : 'bg-black/40 border-white/10 text-gray-400 hover:border-white/30'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>Pelunasan (100%)</span>
+                          {proofType === 'Pelunasan' && <Check className="w-3.5 h-3.5 text-[#D4AF37]" />}
+                        </div>
+                        <span className="text-[11px] font-mono text-[#D4AF37] block mt-1">
+                          {formatRupiah(uploadProofOrder.totalPrice)}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Studio Bank Accounts for Transfer */}
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
+                      2. Transfer ke Rekening Resmi Studio:
+                    </label>
+                    <div className="space-y-2">
+                      {activeBankAccounts.map((bank) => {
+                        const isSelected = selectedBankId === bank.id;
+                        const isCopied = copiedBankId === bank.id;
+
+                        return (
+                          <div
+                            key={bank.id}
+                            onClick={() => setSelectedBankId(bank.id)}
+                            className={`p-3 border flex items-center justify-between gap-3 cursor-pointer transition-all ${
+                              isSelected
+                                ? 'bg-[#1e1c15] border-[#D4AF37]'
+                                : 'bg-[#0F0F0F] border-white/10 hover:border-white/30'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-white/10 text-gray-200 uppercase">
+                                  {bank.bankCode || bank.bankName}
+                                </span>
+                                <span className="text-xs font-semibold text-white truncate">{bank.bankName}</span>
+                              </div>
+                              <div className="font-mono text-sm font-bold text-[#D4AF37] mt-1 tracking-wider">
+                                {bank.accountNumber || '-'}
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-mono">
+                                a/n {bank.accountHolder}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyAccountNumber(bank.accountNumber, bank.id);
+                              }}
+                              className="px-2.5 py-1.5 bg-black/60 hover:bg-black text-gray-300 hover:text-white border border-white/20 text-[10px] font-mono uppercase tracking-wider flex items-center gap-1.5 shrink-0 transition-colors"
+                              title="Salin Nomor Rekening"
+                            >
+                              {isCopied ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span className="text-emerald-400">Tersalin</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3 text-[#D4AF37]" />
+                                  <span>Salin</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Upload Image Section */}
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300 mb-2">
+                      3. Foto Bukti Transfer / Struk / Screenshot m-Banking:
+                    </label>
+
+                    {proofPreview ? (
+                      <div className="relative p-2 bg-black border border-[#D4AF37]/50 rounded-none space-y-2">
+                        <img
+                          src={proofPreview}
+                          alt="Bukti Transfer"
+                          className="w-full max-h-56 object-contain bg-neutral-900 border border-white/10"
+                        />
+                        <div className="flex items-center justify-between pt-1">
+                          <span className="text-[11px] text-gray-400 font-mono flex items-center gap-1">
+                            <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Foto bukti siap dikirim</span>
+                          </span>
+                          <label className="px-3 py-1 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/20 text-[11px] uppercase font-mono cursor-pointer">
+                            <span>Ganti Foto</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="border-2 border-dashed border-white/20 hover:border-[#D4AF37] bg-black/40 p-6 flex flex-col items-center justify-center text-center cursor-pointer transition-colors">
+                        <ImageIcon className="w-8 h-8 text-gray-500 mb-2" />
+                        <span className="text-xs font-semibold text-white">Klik atau Tarik Foto Bukti ke Sini</span>
+                        <span className="text-[10px] text-gray-400 mt-1 font-mono">Format JPG, PNG, WEBP (Maks 10MB)</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Optional Note */}
+                  <div>
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-400 mb-1">
+                      Catatan Tambahan (Opsional):
+                    </label>
+                    <input
+                      type="text"
+                      value={proofNote}
+                      onChange={(e) => setProofNote(e.target.value)}
+                      placeholder="Cth: Rekening atas nama Budi / Transfer lewat BCA Mobile"
+                      className="w-full px-3 py-2 bg-black border border-white/15 text-xs text-white placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-3 border-t border-white/10 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={isUploading || (!proofPreview && !proofFile)}
+                      onClick={handleSubmitProof}
+                      className="flex-1 py-3 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                      id="btn-submit-payment-proof"
+                    >
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Mengunggah Bukti...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="w-4 h-4" />
+                          <span>Kirim Bukti Transfer</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isUploading}
+                      onClick={() => setUploadProofOrder(null)}
+                      className="px-4 py-3 bg-[#1A1A1A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SUCCESS BUKTI TRANSFER TERKIRIM */}
+      {uploadSuccessOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md bg-[#141414] border border-[#D4AF37] p-6 text-center shadow-2xl space-y-4">
+            <div className="w-14 h-14 bg-emerald-500/20 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto text-emerald-400">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-white uppercase font-display">
+                Bukti Transfer Berhasil Diunggah!
+              </h3>
+              <p className="text-xs text-gray-300">
+                Terima kasih! Bukti pembayaran untuk pesanan <strong className="text-[#D4AF37]">{uploadSuccessOrder.id}</strong> telah tercatat di sistem kami dan sedang diverifikasi oleh admin.
+              </p>
+            </div>
+
+            <div className="p-3 bg-black/60 border border-white/10 text-left text-xs font-mono space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-400">Status Pesanan:</span>
+                <span className="text-amber-400 font-bold">Menunggu Konfirmasi Admin</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-400">Jenis:</span>
+                <span className="text-white">{uploadSuccessOrder.paymentProofType || 'DP/Pelunasan'}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <a
+                href={generateProofWhatsAppLink(uploadSuccessOrder)}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-colors"
+                id="btn-confirm-wa-after-upload"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>Kirim Notifikasi via WhatsApp</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setUploadSuccessOrder(null)}
+                className="w-full py-2.5 bg-[#1A1A1A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold cursor-pointer"
+              >
+                Selesai & Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN IMAGE VIEWER MODAL */}
+      {viewingProofUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
+          <div className="relative max-w-2xl w-full bg-[#141414] border border-[#D4AF37]/50 p-4 space-y-3 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <span className="text-xs font-mono font-bold uppercase text-[#D4AF37] flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>Pratinjau Bukti Transfer</span>
+              </span>
+              <button
+                onClick={() => setViewingProofUrl(null)}
+                className="p-1 text-gray-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-black flex items-center justify-center max-h-[70vh] overflow-hidden">
+              <img
+                src={viewingProofUrl}
+                alt="Bukti Transfer Pembayaran"
+                className="max-h-[70vh] max-w-full object-contain"
+              />
+            </div>
+            <div className="text-right pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setViewingProofUrl(null)}
+                className="px-4 py-1.5 bg-[#1A1A1A] hover:bg-white/10 text-white text-xs uppercase font-mono cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Digital Receipt / Invoice Modal (Hanya untuk pesanan yang sudah terkonfirmasi) */}
       {selectedOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
           <div className="relative w-full max-w-lg bg-[#141414] border border-[#D4AF37]/60 p-6 sm:p-7 shadow-2xl text-[#E0E0E0] max-h-[90vh] overflow-y-auto">
@@ -502,15 +1020,26 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
             </div>
 
             {/* Modal Actions */}
-            <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-2">
+            <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-2 no-print">
               <button
                 type="button"
-                onClick={() => window.print()}
+                onClick={() => selectedOrder && printOrDownloadReceipt(selectedOrder, studioConfig)}
                 className="flex-1 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
                 id="btn-print-receipt-action"
+                title="Cetak nota atau simpan sebagai PDF (Ukuran A5 / Setengah A4)"
               >
                 <Receipt className="w-3.5 h-3.5" />
-                <span>Cetak / Simpan PDF</span>
+                <span>Cetak (A5)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => selectedOrder && downloadReceiptHTMLFile(selectedOrder, studioConfig)}
+                className="px-3.5 py-2.5 bg-[#0A0A0A] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                id="btn-download-receipt-action"
+                title="Unduh file nota digital"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Unduh</span>
               </button>
               <a
                 href={generateWhatsAppLink(selectedOrder, adminWhatsApp)}
@@ -530,6 +1059,13 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Dedicated 1-Page Printable Receipt (Only visible during print / PDF generation) */}
+          <PrintableReceipt
+            order={selectedOrder}
+            studioConfig={studioConfig}
+            className="hidden print:block"
+          />
         </div>
       )}
     </section>

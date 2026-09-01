@@ -941,6 +941,7 @@ export default function App() {
             currentUser={currentUser}
             onGoToBooking={handleOpenBooking}
             studioConfig={studioConfig}
+            onUpdateOrder={handleUpdateOrder}
           />
         )}
 

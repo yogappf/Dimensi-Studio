@@ -4,6 +4,8 @@ import { STUDIO_INFO } from '../data/mockData';
 import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, normalizeWhatsAppNumber } from '../utils/formatters';
 import { getResolvedBankAccounts, getBankPreset } from '../utils/bankOptions';
 import { DEFAULT_STUDIO_CONFIG } from '../firebase/services';
+import { PrintableReceipt } from './PrintableReceipt';
+import { printOrDownloadReceipt, downloadReceiptHTMLFile } from '../utils/receiptPrinter';
 import {
   CheckCircle,
   MessageCircle,
@@ -20,7 +22,9 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  DollarSign
+  DollarSign,
+  Download,
+  ExternalLink
 } from 'lucide-react';
 
 interface BookingSuccessModalProps {
@@ -67,7 +71,13 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
   };
 
   const selectedBankObj = displayBanks.find((b) => b.id === selectedBankKey) || displayBanks[0];
-  const dpAmount = Math.round(order.totalPrice * 0.5);
+  const isLunas = order.paymentPreference === 'Lunas';
+  const isDP30 = order.paymentPreference === 'DP 30%';
+  const dpRatio = isLunas ? 1.0 : (isDP30 ? 0.3 : 0.5);
+  const dpAmount = Math.round(order.totalPrice * dpRatio);
+  const dpLabel = isLunas
+    ? 'Ketentuan Pembayaran (Lunas 100%):'
+    : (isDP30 ? 'Minimal DP (30%):' : 'Minimal DP (50%):');
 
   const waLink = generateWhatsAppLink(
     order,
@@ -79,11 +89,13 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
   );
 
   const handlePrint = () => {
-    try {
-      window.print();
-    } catch {
-      // ignore
-    }
+    if (!order) return;
+    printOrDownloadReceipt(order, activeConfig, selectedBankKey);
+  };
+
+  const handleDownload = () => {
+    if (!order) return;
+    downloadReceiptHTMLFile(order, activeConfig, selectedBankKey);
   };
 
   return (
@@ -221,12 +233,14 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             <div className="p-3 bg-[#0c0c0c] border border-white/10 flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-mono uppercase text-gray-400 block">Minimal DP (50%):</span>
+                <span className="text-[10px] font-mono uppercase text-gray-400 block">{dpLabel}</span>
                 <span className="text-base font-bold font-serif text-[#D4AF37]">
                   {formatRupiah(dpAmount)}
                 </span>
               </div>
-              <span className="text-[10px] text-gray-500 font-mono text-right">Untuk kunci slot fotografer</span>
+              <span className="text-[10px] text-gray-500 font-mono text-right">
+                {isLunas ? 'Pelunasan di awal' : 'Untuk kunci slot fotografer'}
+              </span>
             </div>
 
             <div className="p-3 bg-[#0c0c0c] border border-white/10 flex items-center justify-between">
@@ -352,7 +366,7 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
         </div>
 
         {/* SECTION 3: ACTION BUTTONS (WHATSAPP + PRINT + CLOSE) */}
-        <div className="mt-5 space-y-2.5">
+        <div className="mt-5 space-y-2.5 no-print">
           {/* Main WhatsApp Send CTA */}
           <a
             href={waLink}
@@ -365,14 +379,25 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
             <span>Kirim Rincian Pemesanan & Konfirmasi WhatsApp</span>
           </a>
 
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               onClick={handlePrint}
-              className="py-2.5 px-3 bg-[#0A0A0A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="py-2.5 px-3 bg-[#D4AF37] hover:bg-white text-black text-xs uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
               id="modal-print-btn"
+              title="Cetak nota atau simpan sebagai PDF (Ukuran A5 / Setengah A4)"
             >
-              <Printer className="w-4 h-4 text-[#D4AF37]" />
-              <span>Cetak / PDF</span>
+              <Printer className="w-4 h-4" />
+              <span>Cetak (A5)</span>
+            </button>
+
+            <button
+              onClick={handleDownload}
+              className="py-2.5 px-3 bg-[#0A0A0A] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/30 text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              id="modal-download-btn"
+              title="Unduh nota digital sebagai file HTML/PDF (Ukuran A5 / Setengah A4)"
+            >
+              <Download className="w-4 h-4" />
+              <span>Unduh Nota</span>
             </button>
 
             <button
@@ -386,6 +411,14 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
         </div>
 
       </div>
+
+      {/* Dedicated 1-Page Printable Receipt (Only visible during print / PDF generation) */}
+      <PrintableReceipt
+        order={order}
+        studioConfig={activeConfig}
+        selectedBankId={selectedBankKey}
+        className="hidden print:block"
+      />
     </div>
   );
 };

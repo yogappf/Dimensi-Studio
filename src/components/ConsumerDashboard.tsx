@@ -18,6 +18,8 @@ import { AddonManager } from './AddonManager';
 import { PortfolioManager } from './PortfolioManager';
 import { DriveManager } from './DriveManager';
 import { MasterAdminManager } from './MasterAdminManager';
+import { PrintableReceipt } from './PrintableReceipt';
+import { printOrDownloadReceipt, downloadReceiptHTMLFile } from '../utils/receiptPrinter';
 import {
   FileSpreadsheet,
   Download,
@@ -39,6 +41,7 @@ import {
   Mail,
   MapPin,
   FileText,
+  FileCheck,
   AlertCircle,
   Database,
   LogIn,
@@ -53,6 +56,7 @@ import {
   Share2,
   ExternalLink,
   Crown,
+  Printer,
 } from 'lucide-react';
 
 interface ConsumerDashboardProps {
@@ -944,6 +948,17 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                           {formatRupiah(order.totalPrice)}
                         </div>
                         <div className="text-[10px] text-gray-500 font-mono">{order.paymentPreference}</div>
+                        {order.paymentProofUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setDetailOrder(order)}
+                            className="inline-flex items-center gap-1 text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 mt-1 cursor-pointer hover:bg-emerald-900/50"
+                            title="Klik untuk melihat bukti transfer pembayaran yang diunggah konsumen"
+                          >
+                            <FileCheck className="w-2.5 h-2.5 text-emerald-400" />
+                            <span>Bukti DP/Lunas</span>
+                          </button>
+                        )}
                       </td>
 
                       {/* Status Dropdown */}
@@ -1154,6 +1169,85 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </div>
               )}
 
+              {/* Payment Proof Verification Section */}
+              {detailOrder.paymentProofUrl ? (
+                <div className="p-3.5 bg-gradient-to-br from-amber-950/20 to-black border border-amber-500/40 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono uppercase font-bold text-amber-300 flex items-center gap-1.5">
+                      <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Bukti Transfer ({detailOrder.paymentProofType || 'DP / Pelunasan'})</span>
+                    </span>
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      {detailOrder.paymentProofUploadedAt
+                        ? new Date(detailOrder.paymentProofUploadedAt).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'Baru saja'}
+                    </span>
+                  </div>
+
+                  {detailOrder.paymentProofBank && (
+                    <div className="text-[11px] text-gray-300 font-mono">
+                      <span className="text-gray-500">Tujuan:</span> {detailOrder.paymentProofBank}
+                    </div>
+                  )}
+
+                  {detailOrder.paymentProofNote && (
+                    <div className="text-[11px] text-gray-300 bg-black/50 p-2 border border-white/5">
+                      <span className="text-gray-500 font-mono text-[10px] uppercase block">Catatan Pengirim:</span>
+                      <span>{detailOrder.paymentProofNote}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-1">
+                    <a
+                      href={detailOrder.paymentProofUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block group relative overflow-hidden border border-white/10 bg-black max-h-48 cursor-pointer"
+                    >
+                      <img
+                        src={detailOrder.paymentProofUrl}
+                        alt="Bukti Transfer"
+                        className="w-full h-40 object-contain mx-auto group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-mono text-white transition-opacity">
+                        Klik untuk Buka Ukuran Penuh
+                      </div>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-white/[0.02] border border-white/10 text-xs text-gray-500 font-mono flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500/70 shrink-0" />
+                  <span>Konsumen belum mengunggah foto bukti transfer DP/Pelunasan.</span>
+                </div>
+              )}
+
+              {/* Quick Confirm Payment Proof Button for Admin */}
+              {detailOrder.status === 'Menunggu Konfirmasi' && detailOrder.paymentProofUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdateOrderStatus(detailOrder.id, 'Terkonfirmasi & Terjadwal');
+                    setDetailOrder({
+                      ...detailOrder,
+                      status: 'Terkonfirmasi & Terjadwal',
+                    });
+                    alert('Bukti transfer telah diverifikasi! Status pesanan berhasil diubah menjadi Terkonfirmasi & Terjadwal.');
+                  }}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all"
+                  id="btn-admin-quick-confirm"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Verifikasi & Ubah Status Jadi Terkonfirmasi</span>
+                </button>
+              )}
+
               {/* Google Drive Photo Deliverables Cloud Section */}
               <div className="p-3.5 bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-[#D4AF37]/40 space-y-3">
                 <div className="flex items-center justify-between">
@@ -1226,7 +1320,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
             </div>
 
-            <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-3">
+            <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-3 no-print">
               {detailOrder.status === 'Selesai' ? (
                 <a
                   href={generateClientCompletionWhatsAppLink(detailOrder)}
@@ -1252,6 +1346,26 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </button>
               )}
               <button
+                type="button"
+                onClick={() => printOrDownloadReceipt(detailOrder, studioConfig)}
+                className="px-4 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-colors"
+                id={`modal-btn-print-order-${detailOrder.id}`}
+                title="Cetak nota atau simpan sebagai PDF (Ukuran A5 / Setengah A4)"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Cetak (A5)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => downloadReceiptHTMLFile(detailOrder, studioConfig)}
+                className="px-3.5 py-2.5 bg-[#0A0A0A] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
+                id={`modal-btn-download-order-${detailOrder.id}`}
+                title="Unduh nota digital sebagai file HTML/PDF"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Unduh</span>
+              </button>
+              <button
                 onClick={() => setOrderToDelete(detailOrder)}
                 className="px-4 py-2.5 bg-[#0A0A0A] hover:bg-rose-950/40 text-rose-400 border border-rose-500/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer"
                 title="Hapus Data Booking Ini"
@@ -1269,6 +1383,13 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             </div>
 
           </div>
+
+          {/* Dedicated 1-Page Printable Receipt (Only visible during print / PDF generation) */}
+          <PrintableReceipt
+            order={detailOrder}
+            studioConfig={studioConfig}
+            className="hidden print:block"
+          />
         </div>
       )}
 

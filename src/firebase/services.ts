@@ -203,6 +203,11 @@ export async function saveBookingToFirestore(order: BookingOrder): Promise<void>
       driveFolderId: order.driveFolderId || '',
       driveFolderUrl: order.driveFolderUrl || '',
       completedAt: order.completedAt || (order.status === 'Selesai' ? new Date().toISOString() : null),
+      paymentProofUrl: order.paymentProofUrl || '',
+      paymentProofUploadedAt: order.paymentProofUploadedAt || '',
+      paymentProofNote: order.paymentProofNote || '',
+      paymentProofType: order.paymentProofType || '',
+      paymentProofBank: order.paymentProofBank || '',
       createdAt: order.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

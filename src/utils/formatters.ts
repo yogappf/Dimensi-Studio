@@ -62,7 +62,15 @@ export function generateWhatsAppLink(
   paymentInfo?: { selectedBank?: string; transferProofNote?: string }
 ): string {
   const cleanPhone = normalizeWhatsAppNumber(studioPhone);
-  const dpAmount = Math.round(order.totalPrice * 0.5);
+  const isLunas = order.paymentPreference === 'Lunas';
+  const isDP30 = order.paymentPreference === 'DP 30%';
+  const dpRatio = isLunas ? 1.0 : (isDP30 ? 0.3 : 0.5);
+  const dpAmount = Math.round(order.totalPrice * dpRatio);
+  const dpLabelText = isLunas
+    ? `*Ketentuan Bayar*: Lunas 100% (${formatRupiah(dpAmount)})`
+    : (isDP30
+        ? `*Estimasi DP (30%)*: ${formatRupiah(dpAmount)}\n*Ketentuan Bayar*: ${order.paymentPreference}`
+        : `*Estimasi DP (50%)*: ${formatRupiah(dpAmount)}\n*Ketentuan Bayar*: ${order.paymentPreference}`);
 
   let message = `Halo Dimensi Fotografi Studio! 📸✨
 
@@ -76,8 +84,7 @@ Saya ingin mengonfirmasi pendaftaran / order jasa foto dengan rincian berikut:
 *Pilihan Paket*: ${order.packageName} (${formatRupiah(order.packagePrice)})
 *Tambahan (Add-ons)*: ${order.addOnsText || 'Tidak ada'}
 *Total Biaya*: ${formatRupiah(order.totalPrice)}
-*Estimasi DP (50%)*: ${formatRupiah(dpAmount)}
-*Ketentuan Bayar*: ${order.paymentPreference}
+${dpLabelText}
 
 *Jadwal Sesi*: ${formatDateIndonesian(order.sessionDate)}
 *Waktu Sesi*: ${order.sessionTime}
