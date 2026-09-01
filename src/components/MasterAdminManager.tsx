@@ -163,15 +163,112 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     }
   }, [studioConfig]);
 
+  const [bannerReplaceMode, setBannerReplaceMode] = useState(true);
   const [selectedSlideIndex, setSelectedSlideIndex] = useState<number>(0);
   const [isBannerCropperOpen, setIsBannerCropperOpen] = useState(false);
   const [cropperImageSrc, setCropperImageSrc] = useState<string | null>(null);
   const [cropperTargetIndex, setCropperTargetIndex] = useState<number | null>(null);
 
-  const handleHeroFileUpload = (e: React.ChangeEvent<HTMLInputElement>, targetIdx: number | null = null) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const src = e.target?.result as string;
+        if (!src) return reject(new Error('Gagal membaca file'));
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 960;
+          let w = img.naturalWidth;
+          let h = img.naturalHeight;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, w);
+          canvas.height = Math.max(1, h);
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(src);
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        };
+        img.onerror = () => resolve(src);
+        img.src = src;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
 
+  const handleHeroFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, targetIdx: number | null = null) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    // Multi-file upload selected
+    if (files.length > 1 && targetIdx === null) {
+      try {
+        setHeroToast(`Memproses ${files.length} foto banner...`);
+        const processedImages: string[] = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.type.startsWith('image/')) {
+            const dataUrl = await processImageFile(file);
+            processedImages.push(dataUrl);
+          }
+        }
+
+        if (processedImages.length === 0) {
+          alert('Tidak ada file gambar yang valid.');
+          return;
+        }
+
+        const currentList: string[] = (configForm.heroImageUrls && configForm.heroImageUrls.length > 0)
+          ? [...configForm.heroImageUrls]
+          : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
+
+        const updatedList = bannerReplaceMode
+          ? processedImages
+          : [...currentList, ...processedImages];
+
+        const updatedConfig: StudioConfig = {
+          ...studioConfig,
+          ...configForm,
+          heroImageUrl: updatedList[0] || '',
+          heroImageUrls: updatedList,
+        };
+
+        setConfigForm(updatedConfig);
+        onUpdateStudioConfig(updatedConfig);
+        setSelectedSlideIndex(bannerReplaceMode ? 0 : updatedList.length - 1);
+
+        try {
+          await saveStudioConfigToFirestore(updatedConfig);
+        } catch (firestoreErr) {
+          console.warn('Firestore save warning:', firestoreErr);
+        }
+
+        setHeroToast(
+          bannerReplaceMode
+            ? `Berhasil menimpa banner dengan ${processedImages.length} foto baru!`
+            : `Berhasil menambahkan ${processedImages.length} foto baru (Total: ${updatedList.length} slide)!`
+        );
+        setTimeout(() => setHeroToast(''), 3500);
+      } catch (err) {
+        console.error('Error uploading multiple images:', err);
+        alert('Gagal mengupload beberapa foto.');
+      } finally {
+        e.target.value = '';
+      }
+      return;
+    }
+
+    // Single file upload: open crop modal
+    const file = files[0];
     if (!file.type.startsWith('image/')) {
       alert('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
       return;
@@ -210,9 +307,9 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         updatedList[cropperTargetIndex] = croppedDataUrl;
         setSelectedSlideIndex(cropperTargetIndex);
       } else {
-        // Adding a new slide: ALWAYS APPEND so photo 1, 2, 3... are all preserved!
-        updatedList = [...currentList, croppedDataUrl];
-        setSelectedSlideIndex(updatedList.length - 1);
+        // New upload: respect bannerReplaceMode (Timpa replaces, Tambah appends)
+        updatedList = bannerReplaceMode ? [croppedDataUrl] : [...currentList, croppedDataUrl];
+        setSelectedSlideIndex(bannerReplaceMode ? 0 : updatedList.length - 1);
       }
 
       const updatedConfig: StudioConfig = {
@@ -234,7 +331,9 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       setHeroToast(
         cropperTargetIndex !== null
           ? `Slide #${cropperTargetIndex + 1} berhasil diperbarui & disimpan!`
-          : `Foto banner baru berhasil ditambahkan (Total: ${updatedList.length} slide)!`
+          : bannerReplaceMode
+          ? 'Foto banner berhasil di-crop & disimpan!'
+          : `Foto banner baru berhasil di-crop & ditambahkan (Total: ${updatedList.length} slide)!`
       );
       setTimeout(() => setHeroToast(''), 3500);
     } catch (err) {
@@ -1317,18 +1416,53 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                           </div>
                         )}
 
-                        <div className="space-y-1.5 max-w-[210px] pt-1">
-                          {/* Add New Slide Button */}
+                        <div className="space-y-2 max-w-[210px] pt-1">
+                          {/* Banner Mode Toggle (Timpa / Tambah) */}
+                          <div className="flex items-center gap-1 p-1 bg-black/70 border border-white/15">
+                            <button
+                              type="button"
+                              onClick={() => setBannerReplaceMode(true)}
+                              className={`flex-1 py-1 text-[10px] font-mono transition-colors cursor-pointer font-bold ${
+                                bannerReplaceMode
+                                  ? 'bg-[#D4AF37] text-black shadow'
+                                  : 'bg-transparent text-gray-400 hover:text-white'
+                              }`}
+                              title="Mode Timpa: Foto baru akan menggantikan seluruh slide banner"
+                            >
+                              ✓ Timpa
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setBannerReplaceMode(false)}
+                              className={`flex-1 py-1 text-[10px] font-mono transition-colors cursor-pointer font-bold ${
+                                !bannerReplaceMode
+                                  ? 'bg-[#D4AF37] text-black shadow'
+                                  : 'bg-transparent text-gray-400 hover:text-white'
+                              }`}
+                              title="Mode Tambah: Foto baru akan ditambahkan ke daftar slide banner"
+                            >
+                              + Tambah
+                            </button>
+                          </div>
+
+                          {/* Upload Banner Button (Multiple Files Supported) */}
                           <label className="w-full cursor-pointer px-2 py-2 bg-[#1A1A1A] hover:bg-[#252525] border border-dashed border-[#D4AF37] text-white hover:text-[#D4AF37] text-[11px] font-mono flex items-center justify-center gap-1.5 transition-colors shadow">
-                            <Plus className="w-3.5 h-3.5 text-[#D4AF37]" />
-                            <span className="font-bold">+ Upload Slide Baru</span>
+                            <Upload className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span className="font-bold">
+                              {bannerReplaceMode ? 'Upload Foto (Timpa)' : 'Upload Foto (+ Tambah)'}
+                            </span>
                             <input
                               type="file"
+                              multiple
                               accept="image/*"
                               onChange={(e) => handleHeroFileUpload(e, null)}
                               className="hidden"
                             />
                           </label>
+
+                          <p className="text-[9px] text-gray-400 font-sans leading-tight">
+                            Bisa pilih 1 foto (untuk di-crop) atau beberapa foto sekaligus.
+                          </p>
 
                           <button
                             type="button"
@@ -1336,7 +1470,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                             className="w-full py-1.5 px-2 bg-[#1A1A1A] hover:bg-[#222222] border border-white/20 text-[#D4AF37] hover:text-amber-300 text-[10px] font-mono flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                           >
                             <Layers className="w-3.5 h-3.5" />
-                            <span>+ Dari Portofolio</span>
+                            <span>{bannerReplaceMode ? 'Pilih Portofolio (Timpa)' : '+ Dari Portofolio'}</span>
                           </button>
 
                           {/* Banner Slideshow List Thumbnails */}
@@ -2000,23 +2134,31 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                       const currentList = configForm.heroImageUrls && configForm.heroImageUrls.length > 0
                         ? configForm.heroImageUrls
                         : (configForm.heroImageUrl ? [configForm.heroImageUrl] : []);
-                      const updatedList = [...currentList, item.imageUrl];
+                      
+                      const updatedList = bannerReplaceMode
+                        ? [item.imageUrl]
+                        : (currentList.includes(item.imageUrl) ? currentList : [...currentList, item.imageUrl]);
+
                       const updatedConfig: StudioConfig = {
                         ...studioConfig,
                         ...configForm,
-                        heroImageUrl: updatedList[0],
+                        heroImageUrl: updatedList[0] || item.imageUrl,
                         heroImageUrls: updatedList,
                       };
                       setConfigForm(updatedConfig);
                       onUpdateStudioConfig(updatedConfig);
-                      setSelectedSlideIndex(updatedList.length - 1);
+                      setSelectedSlideIndex(bannerReplaceMode ? 0 : updatedList.length - 1);
                       setIsHeroPortfolioPickerOpen(false);
                       try {
                         await saveStudioConfigToFirestore(updatedConfig);
                       } catch (err) {
                         console.warn('Firestore save warning:', err);
                       }
-                      setHeroToast(`Berhasil menambahkan banner dari portofolio: ${item.title}`);
+                      setHeroToast(
+                        bannerReplaceMode
+                          ? `Banner diganti dengan foto portofolio: ${item.title}`
+                          : `Berhasil menambahkan banner dari portofolio: ${item.title} (Total: ${updatedList.length} slide)`
+                      );
                       setTimeout(() => setHeroToast(''), 3000);
                     }}
                     className={`group relative aspect-square bg-[#0A0A0A] border overflow-hidden cursor-pointer transition-all ${
