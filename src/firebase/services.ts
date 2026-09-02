@@ -39,6 +39,9 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   whatsapp: STUDIO_INFO.whatsapp,
   email: STUDIO_INFO.email,
   instagram: STUDIO_INFO.instagram,
+  instagramUrl: (STUDIO_INFO as any).instagramUrl || 'https://www.instagram.com/dimensi_id_?igsh=YWtmMWF0aWVhemUy',
+  tiktok: (STUDIO_INFO as any).tiktok || '@dimensi.id',
+  tiktokUrl: (STUDIO_INFO as any).tiktokUrl || 'https://www.tiktok.com/@dimensi.id?_t=ZS-8xf3ifhaDn5&_r=1',
   address: STUDIO_INFO.address,
   operatingHours: STUDIO_INFO.operatingHours,
   bankBCA: 'BCA 8720-1928-33 a/n Dimensi Fotografi Studio',
@@ -360,6 +363,10 @@ export function subscribeToBookings(
           paymentProofNote: data.paymentProofNote || undefined,
           paymentProofType: data.paymentProofType || undefined,
           paymentProofBank: data.paymentProofBank || undefined,
+          rating: data.rating || undefined,
+          review: data.review || undefined,
+          reviewedAt: data.reviewedAt || undefined,
+          showInTestimonials: data.showInTestimonials !== undefined ? data.showInTestimonials : undefined,
         });
       });
 

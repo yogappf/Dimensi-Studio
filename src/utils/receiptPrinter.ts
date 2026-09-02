@@ -332,10 +332,21 @@ export function generateReceiptHTML(order: BookingOrder, studioConfig?: StudioCo
           <td colspan="3" style="text-align: right; text-transform: uppercase; font-size: 9px;">TOTAL BIAYA:</td>
           <td style="text-align: right; font-size: 11px; font-weight: 800; font-family: monospace; color: #09090b;">${formatRupiah(order.totalPrice)}</td>
         </tr>
+        ${order.status?.toLowerCase() === 'selesai' ? `
+        <tr style="background: #fafafa; font-size: 8px; border-top: 1px solid #d4d4d8;">
+          <td colspan="3" style="text-align: right; color: #52525b;">Telah Dibayar (DP Awal - ${order.paymentPreference}):</td>
+          <td style="text-align: right; font-weight: bold; font-family: monospace; color: #18181b;">- ${formatRupiah(dpAmount)}</td>
+        </tr>
+        <tr style="background: #e4e4e7; font-size: 9px; font-weight: bold; border-top: 1.5px solid #18181b;">
+          <td colspan="3" style="text-align: right; text-transform: uppercase; color: #09090b;">Sisa Tagihan Pelunasan (Selesai):</td>
+          <td style="text-align: right; font-size: 11px; font-weight: 800; font-family: monospace; color: #09090b;">${formatRupiah(isLunas ? 0 : Math.max(0, order.totalPrice - dpAmount))}</td>
+        </tr>
+        ` : `
         <tr style="background: #fafafa; font-size: 8px;">
           <td colspan="3" style="text-align: right; color: #52525b;">${dpLabel}</td>
           <td style="text-align: right; font-weight: bold; font-family: monospace; color: #18181b;">${formatRupiah(dpAmount)}</td>
         </tr>
+        `}
       </tfoot>
     </table>
 
@@ -456,21 +467,30 @@ export function printOrDownloadReceipt(
 }
 
 /**
- * Downloads receipt as standalone HTML file that can be opened or converted to PDF anywhere
+ * Downloads receipt as PDF file
  */
-export function downloadReceiptHTMLFile(
+export async function downloadReceiptPDFFile(
   order: BookingOrder,
   studioConfig?: StudioConfig,
   selectedBankId?: string
-): void {
+): Promise<void> {
   const htmlContent = generateReceiptHTML(order, studioConfig, selectedBankId);
-  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `Nota_Reservasi_${order.id}_${order.clientName.replace(/\s+/g, '_')}.html`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = htmlContent;
+
+  try {
+    // @ts-ignore
+    const html2pdf = (await import('html2pdf.js')).default;
+    const opt = {
+      margin:       0,
+      filename:     `Nota_Reservasi_${order.id}_${order.clientName.replace(/\s+/g, '_')}.pdf`,
+      image:        { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas:  { scale: 2 },
+      jsPDF:        { unit: 'in' as const, format: 'a5' as const, orientation: 'portrait' as const }
+    };
+    html2pdf().set(opt).from(tempDiv).save();
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    alert("Gagal mengunduh PDF.");
+  }
 }

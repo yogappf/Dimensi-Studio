@@ -1,32 +1,23 @@
 import React, { useState } from 'react';
 import { Star, ChevronDown, ChevronUp, HelpCircle, Heart, ShieldCheck, Camera, Sparkles } from 'lucide-react';
+import { BookingOrder } from '../types';
 
-export const TestimonialsFAQ: React.FC = () => {
+interface TestimonialsFAQProps {
+  orders?: BookingOrder[];
+}
+
+export const TestimonialsFAQ: React.FC<TestimonialsFAQProps> = ({ orders = [] }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const testimonials = [
-    {
-      name: 'Rian & Clarissa',
-      role: 'Klien Wedding Royal Eternity',
-      rating: 5,
-      comment: 'Hasil fotonya bener-bener mewah dan cinematic banget! Tone warnanya khas Dimensi Studio, gak norak dan tahan zaman. Album fisik kolasenya juga sangat tebal & premium. Terima kasih Mas Fotografer!',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-    },
-    {
-      name: 'Dr. Hendra Gunawan',
-      role: 'Klien Foto Keluarga & Anak',
-      rating: 5,
-      comment: 'Studionya nyaman banget, adem dan ramah anak balita. Fotografernya sabar ngarahin gaya anak-anak yang aktif. File Google Drive dikirim cepat dan kualitas cetak kanvasnya luar biasa.',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-    },
-    {
-      name: 'Siti Nurhaliza, S.Kom',
-      role: 'Klien Foto Wisuda UI',
-      rating: 5,
-      comment: 'Puas banget foto wisuda di sini. Retouch wajahnya halus natural tanpa keliatan palsu. Admin WhatsApp-nya responsif dan ramah. Recommended buat yang mau wisuda bareng keluarga!',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-    },
-  ];
+  const testimonials = orders
+    .filter((o) => (o.review || o.rating) && o.showInTestimonials !== false)
+    .map((o) => ({
+      name: o.clientName,
+      role: `Klien ${o.packageName}`,
+      rating: o.rating || 5,
+      comment: o.review || 'Sangat puas dengan layanan fotografi dari Dimensi Studio!',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+    }));
 
   const faqs = [
     {

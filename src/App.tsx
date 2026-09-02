@@ -930,7 +930,7 @@ export default function App() {
             />
 
             {/* Testimonials & FAQs */}
-            <TestimonialsFAQ />
+            <TestimonialsFAQ orders={orders} />
           </>
         )}
 

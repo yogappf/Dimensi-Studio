@@ -4,7 +4,7 @@ import { BookingOrder, OrderStatus, StudioConfig } from '../types';
 import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, normalizeWhatsAppNumber } from '../utils/formatters';
 import { STUDIO_INFO } from '../data/mockData';
 import { PrintableReceipt } from './PrintableReceipt';
-import { printOrDownloadReceipt, downloadReceiptHTMLFile } from '../utils/receiptPrinter';
+import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receiptPrinter';
 import { getResolvedBankAccounts } from '../utils/bankOptions';
 import { compressImage } from '../utils/imageCompressor';
 import {
@@ -35,6 +35,7 @@ import {
   Eye,
   FileCheck,
   CreditCard,
+  Star,
 } from 'lucide-react';
 
 interface CustomerPortalProps {
@@ -68,6 +69,37 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   // Image viewer modal for proof
   const [viewingProofUrl, setViewingProofUrl] = useState<string | null>(null);
+
+  // Review / Satisfaction rating modal state
+  const [reviewOrder, setReviewOrder] = useState<BookingOrder | null>(null);
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewSuccessMessage, setReviewSuccessMessage] = useState(false);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewOrder || !onUpdateOrder) return;
+    setIsSubmittingReview(true);
+    try {
+      const updates: Partial<BookingOrder> = {
+        rating: reviewRating,
+        review: reviewComment.trim(),
+        reviewedAt: new Date().toISOString(),
+      };
+      await onUpdateOrder(reviewOrder.id, updates);
+      setReviewSuccessMessage(true);
+      setTimeout(() => {
+        setReviewSuccessMessage(false);
+        setReviewOrder(null);
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to submit review:', err);
+      alert('Terjadi kesalahan saat menyimpan ulasan. Silakan coba lagi.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   const adminWhatsApp = normalizeWhatsAppNumber(
     studioConfig?.whatsapp || studioConfig?.phone || studioConfig?.masterPhone || STUDIO_INFO.whatsapp
@@ -279,6 +311,34 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
         <p className="text-sm text-gray-400 mt-2">
           Pantau progres jadwal pemotretan, proses editing foto, dan unduh bukti reservasi Anda secara transparan.
         </p>
+
+        {/* Social Media Links Bar */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mt-5">
+          <a
+            href="https://www.instagram.com/dimensi_id_?igsh=YWtmMWF0aWVhemUy"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-gradient-to-r from-purple-950/50 via-pink-950/40 to-black border border-pink-500/30 hover:border-pink-500/60 text-xs font-mono text-pink-300 transition-all cursor-pointer shadow-md"
+            title="Kunjungi Instagram Resmi Dimensi"
+          >
+            <Camera className="w-3.5 h-3.5 text-pink-400" />
+            <span>Instagram: @dimensi_id_</span>
+            <ExternalLink className="w-2.5 h-2.5 text-gray-400 ml-0.5" />
+          </a>
+          <a
+            href="https://www.tiktok.com/@dimensi.id?_t=ZS-8xf3ifhaDn5&_r=1"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-[#141414] border border-white/15 hover:border-[#D4AF37]/50 text-xs font-mono text-gray-200 transition-all cursor-pointer shadow-md"
+            title="Kunjungi TikTok Resmi Dimensi"
+          >
+            <svg className="w-3.5 h-3.5 text-white fill-current" viewBox="0 0 24 24">
+              <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+            </svg>
+            <span>TikTok: @dimensi.id</span>
+            <ExternalLink className="w-2.5 h-2.5 text-gray-400 ml-0.5" />
+          </a>
+        </div>
       </div>
 
       {/* Search Bar / Order Lookup Box */}
@@ -495,10 +555,59 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                     </div>
                   </div>
 
+                  {/* Customer Review / Satisfaction Section */}
+                  {order.rating ? (
+                    <div className="mt-3 p-3 bg-[#D4AF37]/10 border border-[#D4AF37]/30 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-mono uppercase font-bold text-[#D4AF37] flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Ulasan & Kepuasan Anda Terkirim</span>
+                        </span>
+                        <div className="flex items-center gap-1">
+                          {[...Array(order.rating)].map((_, i) => (
+                            <Star key={i} className="w-3 h-3 fill-[#D4AF37] text-[#D4AF37]" />
+                          ))}
+                        </div>
+                      </div>
+                      {order.review && (
+                        <p className="text-xs text-gray-300 italic">"{order.review}"</p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewOrder(order);
+                          setReviewRating(order.rating || 5);
+                          setReviewComment(order.review || '');
+                        }}
+                        className="text-[10px] text-[#D4AF37] hover:underline font-mono uppercase tracking-wider mt-1 block cursor-pointer"
+                      >
+                        Ubah Ulasan
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-3 p-3 bg-white/[0.03] border border-white/10 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                        <span className="text-xs text-gray-300">Bagaimana kepuasan Anda terhadap layanan sesi foto ini?</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setReviewOrder(order);
+                          setReviewRating(5);
+                          setReviewComment('');
+                        }}
+                        className="px-3 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[11px] uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        Beri Ulasan
+                      </button>
+                    </div>
+                  )}
+
                   {/* Actions Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
-                    {order.status === 'Menunggu Konfirmasi' ? (
-                      /* KETIKA MENUNGGU KONFIRMASI: Tombol Cetak Dihapus, Tampilkan Tombol Upload Bukti Transfer DP/Pelunasan */
+                    {order.status === 'Menunggu Konfirmasi' && (
+                      /* KETIKA MENUNGGU KONFIRMASI: Tampilkan Tombol Upload Bukti Transfer DP/Pelunasan */
                       <button
                         type="button"
                         onClick={() => handleOpenUploadModal(order)}
@@ -508,8 +617,10 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                         <Upload className="w-3.5 h-3.5" />
                         <span>{order.paymentProofUrl ? 'Ganti Bukti Transfer' : 'Upload Bukti Transfer DP/Pelunasan'}</span>
                       </button>
-                    ) : (
-                      /* KETIKA STATUS SUDAH TERKONFIRMASI: Tombol Berubah Menjadi Cetak Bukti */
+                    )}
+                    
+                    {order.status === 'Selesai' && (
+                      /* KETIKA STATUS SELESAI: Tampilkan Tombol Cetak Bukti */
                       <button
                         type="button"
                         onClick={() => printReceipt(order)}
@@ -1033,7 +1144,7 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
               </button>
               <button
                 type="button"
-                onClick={() => selectedOrder && downloadReceiptHTMLFile(selectedOrder, studioConfig)}
+                onClick={() => selectedOrder && downloadReceiptPDFFile(selectedOrder, studioConfig)}
                 className="px-3.5 py-2.5 bg-[#0A0A0A] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                 id="btn-download-receipt-action"
                 title="Unduh file nota digital"
@@ -1066,6 +1177,104 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
             studioConfig={studioConfig}
             className="hidden print:block"
           />
+        </div>
+      )}
+
+      {/* MODAL BERI ULASAN & KEPUASAN PELANGGAN */}
+      {reviewOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md bg-[#141414] border border-[#D4AF37]/60 p-6 sm:p-7 shadow-2xl text-[#E0E0E0]">
+            <button
+              onClick={() => setReviewOrder(null)}
+              className="absolute top-4 right-4 p-2 bg-black/60 border border-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="p-2.5 bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37]">
+                <Star className="w-5 h-5 fill-[#D4AF37]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white uppercase font-display tracking-wide">
+                  Ulasan & Kepuasan Pelanggan
+                </h3>
+                <p className="text-xs text-[#D4AF37] font-mono">
+                  {reviewOrder.packageName} • ID: {reviewOrder.id}
+                </p>
+              </div>
+            </div>
+
+            {reviewSuccessMessage ? (
+              <div className="py-8 text-center space-y-3">
+                <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
+                <h4 className="font-bold text-white text-base">Ulasan Berhasil Disimpan!</h4>
+                <p className="text-xs text-gray-300">
+                  Terima kasih atas penilaian dan ulasan berharga Anda. Ulasan Anda membantu kami meningkatkan kualitas layanan fotografi studio.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitReview} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-2">
+                    Rating Kepuasan (1 sampai 5 Bintang)
+                  </label>
+                  <div className="flex items-center gap-2 py-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewRating(star)}
+                        className="p-1 cursor-pointer focus:outline-none transition-transform hover:scale-110"
+                      >
+                        <Star
+                          className={`w-7 h-7 ${
+                            star <= reviewRating
+                              ? 'fill-[#D4AF37] text-[#D4AF37]'
+                              : 'text-gray-600'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                    <span className="ml-2 font-mono text-sm font-bold text-[#D4AF37]">
+                      {reviewRating} / 5 Bintang
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-2">
+                    Komentar / Kesan & Pesan Layanan Studio
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Ceritakan pengalaman Anda selama sesi foto bersama Dimensi Fotografi..."
+                    className="w-full px-3 py-2.5 bg-black/60 border border-white/15 focus:border-[#D4AF37] text-white text-xs outline-none resize-none transition-colors"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setReviewOrder(null)}
+                    className="px-4 py-2 bg-black border border-white/15 text-gray-300 text-xs uppercase tracking-wider font-semibold cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingReview}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider cursor-pointer transition-colors disabled:opacity-50"
+                  >
+                    {isSubmittingReview && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Simpan Ulasan</span>
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
       )}
     </section>

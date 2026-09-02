@@ -55,6 +55,10 @@ export interface BookingOrder {
   paymentProofNote?: string;
   paymentProofType?: 'DP' | 'Pelunasan' | 'DP / Pelunasan';
   paymentProofBank?: string;
+  rating?: number; // 1 to 5
+  review?: string;
+  reviewedAt?: string;
+  showInTestimonials?: boolean; // Admin moderation flag for public testimonial display
 }
 
 export interface PortfolioItem {
@@ -115,6 +119,9 @@ export interface StudioConfig {
   whatsapp: string;
   email: string;
   instagram: string;
+  instagramUrl?: string;
+  tiktok?: string;
+  tiktokUrl?: string;
   address: string;
   operatingHours: string;
   bankBCA: string;

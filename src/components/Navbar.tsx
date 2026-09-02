@@ -242,11 +242,37 @@ export const Navbar: React.FC<NavbarProps> = ({
               href={`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent('Halo Dimensi Fotografi, saya ingin tanya info paket dan booking foto.')}`}
               target="_blank"
               rel="noreferrer"
-              className="p-2 sm:p-2.5 bg-[#141414] text-gray-300 border border-white/10 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors"
+              className="p-2 sm:p-2.5 bg-[#141414] text-gray-300 border border-white/10 hover:text-emerald-400 hover:border-emerald-500/50 transition-colors"
               title="Chat WhatsApp Studio"
               id="header-wa-btn"
             >
               <MessageCircle className="w-4 h-4" />
+            </a>
+
+            {/* Instagram Navbar Link */}
+            <a
+              href="https://www.instagram.com/dimensi_id_?igsh=YWtmMWF0aWVhemUy"
+              target="_blank"
+              rel="noreferrer"
+              className="p-2 sm:p-2.5 bg-[#141414] text-gray-300 border border-white/10 hover:text-pink-400 hover:border-pink-500/50 transition-colors hidden sm:block"
+              title="Instagram @dimensi_id_"
+              id="header-instagram-btn"
+            >
+              <Camera className="w-4 h-4" />
+            </a>
+
+            {/* TikTok Navbar Link */}
+            <a
+              href="https://www.tiktok.com/@dimensi.id?_t=ZS-8xf3ifhaDn5&_r=1"
+              target="_blank"
+              rel="noreferrer"
+              className="p-2 sm:p-2.5 bg-[#141414] text-gray-300 border border-white/10 hover:text-white hover:border-[#D4AF37] transition-colors hidden sm:flex items-center justify-center"
+              title="TikTok @dimensi.id"
+              id="header-tiktok-btn"
+            >
+              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+              </svg>
             </a>
           </div>
         </div>

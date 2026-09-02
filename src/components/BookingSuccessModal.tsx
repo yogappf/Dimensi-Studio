@@ -5,11 +5,9 @@ import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, normalizeWhat
 import { getResolvedBankAccounts, getBankPreset } from '../utils/bankOptions';
 import { DEFAULT_STUDIO_CONFIG } from '../firebase/services';
 import { PrintableReceipt } from './PrintableReceipt';
-import { printOrDownloadReceipt, downloadReceiptHTMLFile } from '../utils/receiptPrinter';
 import {
   CheckCircle,
   MessageCircle,
-  Printer,
   X,
   CreditCard,
   Copy,
@@ -23,7 +21,6 @@ import {
   ArrowRight,
   ShieldCheck,
   DollarSign,
-  Download,
   ExternalLink
 } from 'lucide-react';
 
@@ -87,16 +84,6 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
       transferProofNote: paymentSenderName ? `Pengirim Rekening: ${paymentSenderName}` : undefined,
     }
   );
-
-  const handlePrint = () => {
-    if (!order) return;
-    printOrDownloadReceipt(order, activeConfig, selectedBankKey);
-  };
-
-  const handleDownload = () => {
-    if (!order) return;
-    downloadReceiptHTMLFile(order, activeConfig, selectedBankKey);
-  };
 
   return (
     <div
@@ -379,30 +366,10 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
             <span>Kirim Rincian Pemesanan & Konfirmasi WhatsApp</span>
           </a>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <button
-              onClick={handlePrint}
-              className="py-2.5 px-3 bg-[#D4AF37] hover:bg-white text-black text-xs uppercase tracking-wider font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-              id="modal-print-btn"
-              title="Cetak nota atau simpan sebagai PDF (Ukuran A5 / Setengah A4)"
-            >
-              <Printer className="w-4 h-4" />
-              <span>Cetak (A5)</span>
-            </button>
-
-            <button
-              onClick={handleDownload}
-              className="py-2.5 px-3 bg-[#0A0A0A] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/30 text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-              id="modal-download-btn"
-              title="Unduh nota digital sebagai file HTML/PDF (Ukuran A5 / Setengah A4)"
-            >
-              <Download className="w-4 h-4" />
-              <span>Unduh Nota</span>
-            </button>
-
+          <div className="grid grid-cols-1 gap-2">
             <button
               onClick={onClose}
-              className="py-2.5 px-3 bg-[#0A0A0A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              className="py-3 px-3 bg-[#0A0A0A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
               id="modal-done-btn"
             >
               <span>Selesai</span>

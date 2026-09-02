@@ -191,14 +191,35 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({
                 {formatRupiah(order.totalPrice)}
               </td>
             </tr>
-            <tr className="bg-gray-50 text-[7.5px] border-t border-gray-300">
-              <td colSpan={3} className="p-0.5 border-r border-black text-right text-gray-700">
-                {dpLabel}
-              </td>
-              <td className="p-0.5 text-right font-mono font-bold text-black">
-                {formatRupiah(dpAmount)}
-              </td>
-            </tr>
+            {order.status?.toLowerCase() === 'selesai' ? (
+              <>
+                <tr className="bg-gray-50 text-[7.5px] border-t border-gray-300">
+                  <td colSpan={3} className="p-0.5 border-r border-black text-right text-gray-700">
+                    Telah Dibayar (DP Awal - {order.paymentPreference}):
+                  </td>
+                  <td className="p-0.5 text-right font-mono font-bold text-black">
+                    - {formatRupiah(dpAmount)}
+                  </td>
+                </tr>
+                <tr className="bg-gray-200 text-[8px] border-t border-black font-bold">
+                  <td colSpan={3} className="p-1 border-r border-black text-right text-black uppercase font-mono">
+                    Sisa Tagihan Pelunasan (Status: SELESAI):
+                  </td>
+                  <td className="p-1 text-right font-mono text-[10.5px] font-extrabold text-black">
+                    {formatRupiah(isLunas ? 0 : Math.max(0, order.totalPrice - dpAmount))}
+                  </td>
+                </tr>
+              </>
+            ) : (
+              <tr className="bg-gray-50 text-[7.5px] border-t border-gray-300">
+                <td colSpan={3} className="p-0.5 border-r border-black text-right text-gray-700">
+                  {dpLabel}
+                </td>
+                <td className="p-0.5 text-right font-mono font-bold text-black">
+                  {formatRupiah(dpAmount)}
+                </td>
+              </tr>
+            )}
           </tfoot>
         </table>
       </div>

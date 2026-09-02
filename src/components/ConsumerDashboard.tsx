@@ -19,7 +19,7 @@ import { PortfolioManager } from './PortfolioManager';
 import { DriveManager } from './DriveManager';
 import { MasterAdminManager } from './MasterAdminManager';
 import { PrintableReceipt } from './PrintableReceipt';
-import { printOrDownloadReceipt, downloadReceiptHTMLFile } from '../utils/receiptPrinter';
+import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receiptPrinter';
 import {
   FileSpreadsheet,
   Download,
@@ -57,6 +57,8 @@ import {
   ExternalLink,
   Crown,
   Printer,
+  Instagram,
+  Star,
 } from 'lucide-react';
 
 interface ConsumerDashboardProps {
@@ -149,7 +151,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   auditLogs = [],
   onRestoreAllData = async () => {},
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'packages' | 'addons' | 'portfolios' | 'drive' | 'master'>('orders');
+  const [activeSubTab, setActiveSubTab] = useState<'orders' | 'packages' | 'addons' | 'portfolios' | 'drive' | 'master' | 'reviews'>('orders');
   const [isMasterUnlocked, setIsMasterUnlocked] = useState(false);
   const [isMasterUnlockModalOpen, setIsMasterUnlockModalOpen] = useState(false);
   const [masterPinInput, setMasterPinInput] = useState('');
@@ -200,6 +202,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [packageFilter, setPackageFilter] = useState<string>('all');
+  const [reviewFilter, setReviewFilter] = useState<'all' | 'displayed' | 'hidden'>('all');
   
   // Modals state
   const [detailOrder, setDetailOrder] = useState<BookingOrder | null>(null);
@@ -357,6 +360,32 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
           <p className="text-xs sm:text-sm text-gray-400 mt-1">
             Kelola data pemesanan pemotretan pelanggan, pantau status pengerjaan, dan ekspor data langsung ke file Microsoft Excel (.xlsx).
           </p>
+          <div className="flex items-center gap-3 mt-3">
+            <a
+              href={`https://instagram.com/${(studioConfig?.instagram || '@dimensi.idphoto').replace('@', '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-purple-950/40 via-pink-950/30 to-black border border-pink-500/30 hover:border-pink-500/60 text-[11px] font-mono text-pink-300 transition-colors cursor-pointer"
+              title="Kunjungi Instagram Resmi Studio"
+            >
+              <Instagram className="w-3.5 h-3.5 text-pink-400" />
+              <span>{studioConfig?.instagram || '@dimensi.idphoto'}</span>
+              <ExternalLink className="w-2.5 h-2.5 text-gray-400 ml-0.5" />
+            </a>
+            <a
+              href={`https://tiktok.com/@${(studioConfig?.tiktok || 'dimensifotografi').replace('@', '')}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#141414] border border-white/15 hover:border-[#D4AF37]/50 text-[11px] font-mono text-gray-200 transition-colors cursor-pointer"
+              title="Kunjungi TikTok Resmi Studio"
+            >
+              <svg className="w-3.5 h-3.5 text-white fill-current" viewBox="0 0 24 24">
+                <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+              </svg>
+              <span>@{studioConfig?.tiktok ? studioConfig.tiktok.replace('@', '') : 'dimensifotografi'}</span>
+              <ExternalLink className="w-2.5 h-2.5 text-gray-400 ml-0.5" />
+            </a>
+          </div>
         </div>
 
         {/* Action Buttons: Excel Export & Manual Add */}
@@ -424,7 +453,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       <div className="space-y-3">
         {/* Navigation Bar Container */}
         <div className="bg-[#101010] p-2 border border-white/10 shadow-2xl">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2">
             {/* 1. Data Konsumen */}
             <button
               onClick={() => setActiveSubTab('orders')}
@@ -540,7 +569,30 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               </span>
             </button>
 
-            {/* 6. Master Admin & Profil */}
+            {/* 6. Manajemen Ulasan Klien */}
+            <button
+              onClick={() => setActiveSubTab('reviews')}
+              className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
+                activeSubTab === 'reviews'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-lg ring-1 ring-[#D4AF37]'
+                  : 'bg-[#161616] text-gray-300 border-white/10 hover:border-[#D4AF37]/50 hover:text-white hover:bg-[#1f1f1f]'
+              }`}
+              id="tab-reviews-view"
+            >
+              <div className="flex items-center gap-2.5 truncate">
+                <Star className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'reviews' ? 'text-black' : 'text-[#D4AF37]'}`} />
+                <span className="truncate">Ulasan Klien</span>
+              </div>
+              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                activeSubTab === 'reviews'
+                  ? 'bg-black/20 text-black border-black/30'
+                  : 'bg-black/40 text-gray-400 border-white/10'
+              }`}>
+                {orders.filter((o) => o.review || o.rating).length}
+              </span>
+            </button>
+
+            {/* 7. Master Admin & Profil */}
             <button
               onClick={handleMasterTabClick}
               className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
@@ -647,6 +699,174 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {activeSubTab === 'reviews' && (
+        <div className="bg-[#121212] border border-white/10 p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest text-[#D4AF37] mb-1 font-mono">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Moderasi & Kontrol Testimoni Publik</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-white uppercase font-display">
+                Manajemen Ulasan & Kepuasan Pelanggan
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1">
+                Pilih ulasan mana yang ingin ditampilkan atau disembunyikan dari bagian Testimoni di Halaman Utama website studio.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-mono bg-[#1a1a1a] border border-white/10 px-3 py-2 text-gray-300">
+                Total Ulasan Masuk: <strong className="text-[#D4AF37]">{orders.filter(o => o.review || o.rating).length}</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-mono text-gray-400 uppercase mr-2">Filter Tampilan:</span>
+            <button
+              onClick={() => setReviewFilter('all')}
+              className={`px-3 py-1.5 text-xs font-mono uppercase border transition-all cursor-pointer ${
+                reviewFilter === 'all'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold'
+                  : 'bg-[#181818] text-gray-300 border-white/10 hover:border-[#D4AF37]/50'
+              }`}
+            >
+              Semua ({orders.filter(o => o.review || o.rating).length})
+            </button>
+            <button
+              onClick={() => setReviewFilter('displayed')}
+              className={`px-3 py-1.5 text-xs font-mono uppercase border transition-all cursor-pointer ${
+                reviewFilter === 'displayed'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold'
+                  : 'bg-[#181818] text-gray-300 border-white/10 hover:border-[#D4AF37]/50'
+              }`}
+            >
+              Ditampilkan Publik ({orders.filter(o => (o.review || o.rating) && o.showInTestimonials !== false).length})
+            </button>
+            <button
+              onClick={() => setReviewFilter('hidden')}
+              className={`px-3 py-1.5 text-xs font-mono uppercase border transition-all cursor-pointer ${
+                reviewFilter === 'hidden'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold'
+                  : 'bg-[#181818] text-gray-300 border-white/10 hover:border-[#D4AF37]/50'
+              }`}
+            >
+              Disembunyikan ({orders.filter(o => (o.review || o.rating) && o.showInTestimonials === false).length})
+            </button>
+          </div>
+
+          {/* Reviews List */}
+          {orders.filter(o => o.review || o.rating).length === 0 ? (
+            <div className="py-16 text-center bg-black/40 border border-white/10 space-y-3">
+              <Star className="w-10 h-10 text-gray-600 mx-auto" />
+              <h3 className="text-white font-bold text-sm">Belum Ada Ulasan Klien</h3>
+              <p className="text-xs text-gray-400 max-w-md mx-auto">
+                Klien dapat memberikan ulasan dan rating kepuasan langsung melalui Portal Pelanggan setelah pesanan selesai atau diproses.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {orders
+                .filter((o) => o.review || o.rating)
+                .filter((o) => {
+                  if (reviewFilter === 'displayed') return o.showInTestimonials !== false;
+                  if (reviewFilter === 'hidden') return o.showInTestimonials === false;
+                  return true;
+                })
+                .map((order) => {
+                  const isVisible = order.showInTestimonials !== false;
+                  return (
+                    <div
+                      key={order.id}
+                      className={`p-5 border transition-all flex flex-col justify-between space-y-4 ${
+                        isVisible
+                          ? 'bg-[#161616] border-white/15 hover:border-[#D4AF37]/50'
+                          : 'bg-black/60 border-white/10 opacity-70'
+                      }`}
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1 text-[#D4AF37]">
+                            {[...Array(order.rating || 5)].map((_, i) => (
+                              <Star key={i} className="w-4 h-4 fill-[#D4AF37]" />
+                            ))}
+                            <span className="ml-1 text-xs font-mono font-bold text-white">
+                              {order.rating || 5}.0
+                            </span>
+                          </div>
+                          <span
+                            className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-bold border ${
+                              isVisible
+                                ? 'bg-emerald-950/40 text-emerald-300 border-emerald-500/40'
+                                : 'bg-amber-950/40 text-amber-300 border-amber-500/40'
+                            }`}
+                          >
+                            {isVisible ? '● Ditampilkan Publik' : '○ Disembunyikan'}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="font-bold text-sm text-white">{order.clientName}</h4>
+                          <p className="text-[11px] text-[#D4AF37] font-mono">
+                            {order.packageName} • ID: {order.id}
+                          </p>
+                        </div>
+
+                        <p className="text-xs text-gray-300 italic bg-black/40 p-3 border border-white/5 leading-relaxed">
+                          "{order.review || 'Tanpa komentar teks.'}"
+                        </p>
+
+                        <div className="text-[10px] text-gray-500 font-mono">
+                          Diupload pada: {order.reviewedAt ? new Date(order.reviewedAt).toLocaleString('id-ID') : 'Tanggal tidak tercatat'}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-white/10 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (onUpdateOrder) {
+                              onUpdateOrder(order.id, { showInTestimonials: !isVisible });
+                            }
+                          }}
+                          className={`flex-1 py-2 text-xs uppercase font-bold tracking-wider transition-colors cursor-pointer border ${
+                            isVisible
+                              ? 'bg-amber-950/30 border-amber-500/40 text-amber-300 hover:bg-amber-500/20'
+                              : 'bg-emerald-950/30 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/20'
+                          }`}
+                        >
+                          {isVisible ? 'Sembunyikan dari Testimoni' : 'Tampilkan di Testimoni'}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(`Hapus ulasan dari ${order.clientName}?`)) {
+                              if (onUpdateOrder) {
+                                onUpdateOrder(order.id, {
+                                  rating: undefined,
+                                  review: undefined,
+                                  reviewedAt: undefined,
+                                  showInTestimonials: undefined,
+                                });
+                              }
+                            }
+                          }}
+                          className="px-3 py-2 bg-red-950/30 border border-red-500/40 text-red-300 hover:bg-red-500/20 text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                          title="Hapus Ulasan"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
 
@@ -966,7 +1186,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                         <select
                           value={order.status}
                           onChange={(e) => onUpdateOrderStatus(order.id, e.target.value as OrderStatus)}
-                          className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-bold border focus:outline-none cursor-pointer ${getStatusBadgeClass(
+                          disabled={!order.paymentProofUrl}
+                          title={!order.paymentProofUrl ? "Menunggu Bukti Transfer dari Klien" : ""}
+                          className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-bold border focus:outline-none ${!order.paymentProofUrl ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${getStatusBadgeClass(
                             order.status
                           )} bg-[#0A0A0A]`}
                           id={`status-select-${order.id}`}
@@ -1091,7 +1313,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                       completedAt: newStatus === 'Selesai' ? (detailOrder.completedAt || new Date().toISOString()) : undefined,
                     });
                   }}
-                  className={`px-2.5 py-1 text-xs font-mono font-bold border focus:outline-none cursor-pointer ${getStatusBadgeClass(detailOrder.status)} bg-[#0A0A0A]`}
+                  disabled={!detailOrder.paymentProofUrl}
+                  title={!detailOrder.paymentProofUrl ? "Menunggu Bukti Transfer dari Klien" : ""}
+                  className={`px-2.5 py-1 text-xs font-mono font-bold border focus:outline-none ${!detailOrder.paymentProofUrl ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${getStatusBadgeClass(detailOrder.status)} bg-[#0A0A0A]`}
                   id={`modal-status-select-${detailOrder.id}`}
                 >
                   <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
@@ -1154,6 +1378,25 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   <span className="text-white">Total Biaya ({detailOrder.paymentPreference}):</span>
                   <span className="text-base font-serif text-[#D4AF37]">{formatRupiah(detailOrder.totalPrice)}</span>
                 </div>
+                {detailOrder.status?.toLowerCase() === 'selesai' && (() => {
+                  const isLunasPref = detailOrder.paymentPreference === 'Lunas';
+                  const isDP30Pref = detailOrder.paymentPreference === 'DP 30%';
+                  const dpRatioPref = isLunasPref ? 1.0 : (isDP30Pref ? 0.3 : 0.5);
+                  const dpAmtPref = Math.round(detailOrder.totalPrice * dpRatioPref);
+                  const remainingPref = isLunasPref ? 0 : Math.max(0, detailOrder.totalPrice - dpAmtPref);
+                  return (
+                    <div className="pt-2 mt-2 border-t border-white/10 space-y-1.5 text-xs font-mono">
+                      <div className="flex justify-between items-center text-gray-400">
+                        <span>Telah Dibayar (DP Awal - {detailOrder.paymentPreference}):</span>
+                        <span className="text-gray-200">- {formatRupiah(dpAmtPref)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-emerald-400 font-bold p-2 bg-emerald-950/30 border border-emerald-500/30">
+                        <span>Sisa Tagihan Pelunasan:</span>
+                        <span className="font-serif text-sm">{formatRupiah(remainingPref)}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="p-3.5 bg-[#0A0A0A] border border-white/10 space-y-1.5">
@@ -1357,7 +1600,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               </button>
               <button
                 type="button"
-                onClick={() => downloadReceiptHTMLFile(detailOrder, studioConfig)}
+                onClick={() => downloadReceiptPDFFile(detailOrder, studioConfig)}
                 className="px-3.5 py-2.5 bg-[#0A0A0A] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/30 text-xs uppercase tracking-wider font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
                 id={`modal-btn-download-order-${detailOrder.id}`}
                 title="Unduh nota digital sebagai file HTML/PDF"

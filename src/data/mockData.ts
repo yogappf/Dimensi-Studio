@@ -471,7 +471,10 @@ export const STUDIO_INFO = {
   phone: '0821-2345-6789',
   whatsapp: '6282123456789',
   email: 'dimensi.idphoto@gmail.com',
-  instagram: '@dimensi.idphoto',
+  instagram: '@dimensi_id_',
+  instagramUrl: 'https://www.instagram.com/dimensi_id_?igsh=YWtmMWF0aWVhemUy',
+  tiktok: '@dimensi.id',
+  tiktokUrl: 'https://www.tiktok.com/@dimensi.id?_t=ZS-8xf3ifhaDn5&_r=1',
   address: 'Jl. Melati Indah No. 45, Studio Dimensi Visual, Kebayoran Baru, Jakarta Selatan',
   operatingHours: 'Setiap Hari: 08:30 - 20:00 WIB (Reservasi Diperlukan)',
 };
