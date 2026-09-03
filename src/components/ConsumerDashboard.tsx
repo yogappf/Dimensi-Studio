@@ -221,6 +221,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isCopiedReminder, setIsCopiedReminder] = useState(false);
   const [deleteNotice, setDeleteNotice] = useState('');
+  const [viewingProofUrl, setViewingProofUrl] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState('');
 
@@ -1459,11 +1460,10 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   )}
 
                   <div className="pt-1">
-                    <a
-                      href={detailOrder.paymentProofUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block group relative overflow-hidden border border-white/10 bg-black max-h-48 cursor-pointer"
+                    <button
+                      type="button"
+                      onClick={() => setViewingProofUrl(detailOrder.paymentProofUrl || null)}
+                      className="block w-full group relative overflow-hidden border border-white/10 bg-black max-h-48 cursor-pointer"
                     >
                       <img
                         src={detailOrder.paymentProofUrl}
@@ -1473,7 +1473,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                       <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-mono text-white transition-opacity">
                         Klik untuk Buka Ukuran Penuh
                       </div>
-                    </a>
+                    </button>
                   </div>
                 </div>
               ) : (
@@ -1665,7 +1665,43 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       )}
 
       
-      {/* Modal: Reminder Message */}
+      
+      {/* FULLSCREEN IMAGE VIEWER MODAL */}
+      {viewingProofUrl && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fadeIn">
+          <div className="relative max-w-4xl w-full bg-[#141414] border border-[#D4AF37]/50 p-4 space-y-3 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
+              <span className="text-xs font-mono font-bold uppercase text-[#D4AF37] flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5" />
+                <span>Pratinjau Bukti Transfer</span>
+              </span>
+              <button
+                onClick={() => setViewingProofUrl(null)}
+                className="p-1 text-gray-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-black flex items-center justify-center max-h-[80vh] overflow-auto">
+              <img
+                src={viewingProofUrl}
+                alt="Bukti Transfer Pembayaran"
+                className="max-h-[75vh] max-w-full object-contain"
+              />
+            </div>
+            <div className="text-right pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setViewingProofUrl(null)}
+                className="px-4 py-1.5 bg-[#1A1A1A] hover:bg-white/10 text-white text-xs uppercase font-mono cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+\n      {/* Modal: Reminder Message */}
       {isReminderModalOpen && reminderOrder && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
           <div className="relative w-full max-w-lg bg-[#141414] border border-[#D4AF37]/60 p-6 shadow-2xl text-[#E0E0E0]">
