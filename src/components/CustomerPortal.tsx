@@ -6,6 +6,7 @@ import { STUDIO_INFO } from '../data/mockData';
 import { PrintableReceipt } from './PrintableReceipt';
 import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receiptPrinter';
 import { getResolvedBankAccounts } from '../utils/bankOptions';
+import { saveReviewToFirestore } from "../firebase/services";
 import { compressImage } from '../utils/imageCompressor';
 import {
   Search,
@@ -87,6 +88,18 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         review: reviewComment.trim(),
         reviewedAt: new Date().toISOString(),
       };
+      
+      // Simpan juga ke koleksi khusus ulasan agar tidak terhapus saat pesanan dibersihkan
+      await saveReviewToFirestore({
+        id: reviewOrder.id,
+        clientName: reviewOrder.clientName,
+        packageName: reviewOrder.packageName,
+        rating: reviewRating,
+        review: reviewComment.trim(),
+        reviewedAt: updates.reviewedAt as string,
+        showInTestimonials: true
+      });
+
       await onUpdateOrder(reviewOrder.id, updates);
       setReviewSuccessMessage(true);
       setTimeout(() => {

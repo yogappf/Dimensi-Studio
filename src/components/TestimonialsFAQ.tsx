@@ -1,22 +1,29 @@
 import React, { useState } from 'react';
-import { Star, ChevronDown, ChevronUp, HelpCircle, Heart, ShieldCheck, Camera, Sparkles } from 'lucide-react';
-import { BookingOrder } from '../types';
+import { Star, ChevronDown, ChevronUp, HelpCircle, Heart, ShieldCheck, Camera, Sparkles, UserRound } from 'lucide-react';
+import { BookingOrder, ReviewItem } from '../types';
 
 interface TestimonialsFAQProps {
   orders?: BookingOrder[];
+  reviews?: ReviewItem[];
 }
 
-export const TestimonialsFAQ: React.FC<TestimonialsFAQProps> = ({ orders = [] }) => {
+export const TestimonialsFAQ: React.FC<TestimonialsFAQProps> = ({ orders = [], reviews = [] }) => {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
 
-  const testimonials = orders
-    .filter((o) => (o.review || o.rating) && o.showInTestimonials !== false)
-    .map((o) => ({
-      name: o.clientName,
-      role: `Klien ${o.packageName}`,
-      rating: o.rating || 5,
-      comment: o.review || 'Sangat puas dengan layanan fotografi dari Dimensi Studio!',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+  // Gabungkan ulasan dari pesanan (backward compatibility) dengan ulasan dari koleksi khusus
+  const mergedReviews = [
+    ...orders.filter(o => (o.review || o.rating) && !reviews.some(r => r.id === o.id)),
+    ...reviews
+  ];
+  
+  const sourceData = mergedReviews.filter(r => r.showInTestimonials !== false);
+
+  const testimonials = sourceData
+    .map((r) => ({
+      name: r.clientName,
+      role: `Klien ${r.packageName}`,
+      rating: r.rating || 5,
+      comment: r.review || 'Sangat puas dengan layanan fotografi dari Dimensi Studio!',
     }));
 
   const faqs = [
@@ -79,12 +86,9 @@ export const TestimonialsFAQ: React.FC<TestimonialsFAQProps> = ({ orders = [] })
                 </div>
 
                 <div className="flex items-center gap-3 pt-4 border-t border-white/10">
-                  <img
-                    src={testi.avatar}
-                    alt={testi.name}
-                    referrerPolicy="no-referrer"
-                    className="w-10 h-10 object-cover border border-[#D4AF37]/50"
-                  />
+                  <div className="w-10 h-10 flex items-center justify-center border border-[#D4AF37]/50 bg-[#0A0A0A] text-[#D4AF37]">
+                    <UserRound className="w-5 h-5" />
+                  </div>
                   <div>
                     <h4 className="font-bold text-xs text-white">{testi.name}</h4>
                     <span className="text-[10px] text-[#D4AF37] font-mono uppercase tracking-wider">{testi.role}</span>

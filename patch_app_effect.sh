@@ -1,0 +1,1 @@
+sed -i '/\/\/ Listen to Realtime Audit Logs/i \  \/\/ Listen to Realtime Reviews\n  useEffect(() => {\n    const unsubscribe = subscribeToReviews((data) => {\n      if (data) {\n        setReviews(data);\n      }\n    });\n    return () => unsubscribe();\n  }, []);\n' src/App.tsx

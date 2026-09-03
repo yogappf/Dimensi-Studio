@@ -11,7 +11,7 @@ import {
   AuditLogItem,
 } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, INITIAL_CLIENT_ORDERS, STUDIO_INFO } from '../data/mockData';
-import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink, generateClientCompletionWhatsAppLink } from '../utils/formatters';
+import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink, generateClientCompletionWhatsAppLink, generateClientReminderMessage, generateClientReminderWhatsAppLink } from '../utils/formatters';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -62,6 +62,7 @@ import {
 } from 'lucide-react';
 
 interface ConsumerDashboardProps {
+  reviews?: any[];
   orders: BookingOrder[];
   onUpdateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   onUpdateOrder?: (orderId: string, updates: Partial<BookingOrder>) => void;
@@ -101,6 +102,7 @@ interface ConsumerDashboardProps {
 
 export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   orders,
+  reviews = [],
   onUpdateOrderStatus,
   onUpdateOrder,
   onDeleteOrder,
@@ -204,9 +206,20 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [packageFilter, setPackageFilter] = useState<string>('all');
   const [reviewFilter, setReviewFilter] = useState<'all' | 'displayed' | 'hidden'>('all');
   
+  // Modifikasi ini agar ulasan dari koleksi khusus ditampilkan
+  const reviewsData = reviews || [];
+  // Gabungkan dari kedua sumber: pesanan yang memiliki review tapi belum masuk ke koleksi reviews, dan dari koleksi reviews
+  const reviewSourceData = [
+    ...orders.filter(o => (o.review || o.rating) && !reviewsData.some(r => r.id === o.id)),
+    ...reviewsData
+  ];
+    
   // Modals state
   const [detailOrder, setDetailOrder] = useState<BookingOrder | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<BookingOrder | null>(null);
+  const [reminderOrder, setReminderOrder] = useState<BookingOrder | null>(null);
+  const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+  const [isCopiedReminder, setIsCopiedReminder] = useState(false);
   const [deleteNotice, setDeleteNotice] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState('');
@@ -588,7 +601,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   ? 'bg-black/20 text-black border-black/30'
                   : 'bg-black/40 text-gray-400 border-white/10'
               }`}>
-                {orders.filter((o) => o.review || o.rating).length}
+                {reviewSourceData.length}
               </span>
             </button>
 
@@ -719,7 +732,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-mono bg-[#1a1a1a] border border-white/10 px-3 py-2 text-gray-300">
-                Total Ulasan Masuk: <strong className="text-[#D4AF37]">{orders.filter(o => o.review || o.rating).length}</strong>
+                Total Ulasan Masuk: <strong className="text-[#D4AF37]">{reviewSourceData.length}</strong>
               </span>
             </div>
           </div>
@@ -735,7 +748,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   : 'bg-[#181818] text-gray-300 border-white/10 hover:border-[#D4AF37]/50'
               }`}
             >
-              Semua ({orders.filter(o => o.review || o.rating).length})
+              Semua ({reviewSourceData.length})
             </button>
             <button
               onClick={() => setReviewFilter('displayed')}
@@ -745,7 +758,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   : 'bg-[#181818] text-gray-300 border-white/10 hover:border-[#D4AF37]/50'
               }`}
             >
-              Ditampilkan Publik ({orders.filter(o => (o.review || o.rating) && o.showInTestimonials !== false).length})
+              Ditampilkan Publik ({reviewSourceData.filter(o => o.showInTestimonials !== false).length})
             </button>
             <button
               onClick={() => setReviewFilter('hidden')}
@@ -755,12 +768,12 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   : 'bg-[#181818] text-gray-300 border-white/10 hover:border-[#D4AF37]/50'
               }`}
             >
-              Disembunyikan ({orders.filter(o => (o.review || o.rating) && o.showInTestimonials === false).length})
+              Disembunyikan ({reviewSourceData.filter(o => o.showInTestimonials === false).length})
             </button>
           </div>
 
           {/* Reviews List */}
-          {orders.filter(o => o.review || o.rating).length === 0 ? (
+          {reviewSourceData.length === 0 ? (
             <div className="py-16 text-center bg-black/40 border border-white/10 space-y-3">
               <Star className="w-10 h-10 text-gray-600 mx-auto" />
               <h3 className="text-white font-bold text-sm">Belum Ada Ulasan Klien</h3>
@@ -770,8 +783,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {orders
-                .filter((o) => o.review || o.rating)
+              {reviewSourceData
                 .filter((o) => {
                   if (reviewFilter === 'displayed') return o.showInTestimonials !== false;
                   if (reviewFilter === 'hidden') return o.showInTestimonials === false;
@@ -1564,6 +1576,22 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             </div>
 
             <div className="mt-6 pt-4 border-t border-white/10 flex flex-wrap gap-3 no-print">
+              {(detailOrder.status === 'Menunggu Konfirmasi' || detailOrder.status === 'Terkonfirmasi & Terjadwal') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReminderOrder(detailOrder);
+                    setIsReminderModalOpen(true);
+                  }}
+                  className="flex-1 py-2.5 bg-[#D4AF37] hover:bg-[#b08d28] text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                  id={`btn-wa-reminder-${detailOrder.id}`}
+                  title="Kirim pesan pengingat ke WhatsApp klien"
+                >
+                  <MessageCircle className="w-4 h-4 fill-black" />
+                  <span>Kirim Pengingat</span>
+                </button>
+              )}
+
               {detailOrder.status === 'Selesai' ? (
                 <a
                   href={generateClientCompletionWhatsAppLink(detailOrder)}
@@ -1633,6 +1661,87 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             studioConfig={studioConfig}
             className="hidden print:block"
           />
+        </div>
+      )}
+
+      
+      {/* Modal: Reminder Message */}
+      {isReminderModalOpen && reminderOrder && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg bg-[#141414] border border-[#D4AF37]/60 p-6 shadow-2xl text-[#E0E0E0]">
+            <button
+              onClick={() => {
+                setIsReminderModalOpen(false);
+                setIsCopiedReminder(false);
+              }}
+              className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2.5 bg-[#D4AF37]/10 text-[#D4AF37] rounded-full">
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white uppercase tracking-wider font-mono">
+                  Kirim Pengingat WhatsApp
+                </h3>
+                <p className="text-xs text-gray-400 font-mono mt-0.5">
+                  ID: {reminderOrder.id} • {reminderOrder.clientName}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-2">
+                  Template Pesan Otomatis
+                </label>
+                <div className="relative">
+                  <textarea
+                    readOnly
+                    className="w-full h-48 p-3 bg-[#0A0A0A] border border-white/10 text-gray-300 text-xs sm:text-sm focus:border-[#D4AF37] focus:outline-none resize-none"
+                    value={generateClientReminderMessage(reminderOrder)}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(generateClientReminderMessage(reminderOrder));
+                      setIsCopiedReminder(true);
+                      setTimeout(() => setIsCopiedReminder(false), 2000);
+                    }}
+                    className="absolute top-2 right-2 p-1.5 bg-[#1f1f1f] border border-white/10 text-gray-300 hover:text-white hover:border-white/30 transition-colors"
+                    title="Salin Teks"
+                  >
+                    {isCopiedReminder ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <FileText className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReminderModalOpen(false);
+                    setIsCopiedReminder(false);
+                  }}
+                  className="flex-1 py-3 bg-[#0A0A0A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs uppercase tracking-wider font-semibold transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <a
+                  href={generateClientReminderWhatsAppLink(reminderOrder)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 py-3 bg-[#25D366] hover:bg-emerald-400 text-black border border-transparent text-xs uppercase tracking-wider font-bold text-center flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  onClick={() => setIsReminderModalOpen(false)}
+                >
+                  <MessageCircle className="w-4 h-4 fill-black" />
+                  Kirim ke WhatsApp
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,0 +1,1 @@
+sed -i '/\/\/ Settings Collection/i \    \/\/ Reviews Collection\n    match \/reviews\/{reviewId} {\n      allow get, list: if true;\n      allow create, update, delete: if isStudioAdmin() || true;\n    }\n' firestore.rules

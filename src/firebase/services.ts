@@ -19,7 +19,7 @@ import {
 } from 'firebase/auth';
 import { db, auth, googleProvider } from './config';
 import { handleFirestoreError, OperationType } from './errors';
-import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem, AdminStaff, StudioConfig, AuditLogItem } from '../types';
+import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem, AdminStaff, StudioConfig, AuditLogItem, ReviewItem } from '../types';
 import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, STUDIO_INFO } from '../data/mockData';
 import { DEFAULT_INITIAL_BANK_ACCOUNTS } from '../utils/bankOptions';
 
@@ -30,6 +30,8 @@ const PORTFOLIOS_COLLECTION = 'portfolios';
 const SETTINGS_COLLECTION = 'settings';
 const ADMIN_STAFF_COLLECTION = 'admin_staff';
 const AUDIT_LOGS_COLLECTION = 'audit_logs';
+const REVIEWS_COLLECTION = 'reviews';
+const REVIEWS_STORAGE_KEY = 'dimensi_reviews_v1';
 
 export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   studioName: STUDIO_INFO.name,
@@ -1238,3 +1240,86 @@ export function subscribeToAuditLogs(
   );
 }
 
+
+// --- REVIEWS MANAGEMENT ---
+
+export function subscribeToReviews(
+  onData: (reviews: ReviewItem[]) => void,
+  onError?: (error: Error) => void
+): Unsubscribe {
+  const q = query(collection(db, REVIEWS_COLLECTION), orderBy('reviewedAt', 'desc'));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const reviews: ReviewItem[] = [];
+      snapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        reviews.push({
+          id: data.id || docSnapshot.id,
+          clientName: data.clientName || 'Konsumen',
+          packageName: data.packageName || 'Layanan Studio',
+          rating: data.rating || 5,
+          review: data.review || '',
+          reviewedAt: data.reviewedAt || new Date().toISOString(),
+          showInTestimonials: data.showInTestimonials !== undefined ? data.showInTestimonials : true,
+        });
+      });
+
+      try {
+        localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(reviews));
+      } catch {
+        // ignore
+      }
+
+      onData(reviews);
+    },
+    (error) => {
+      console.error('Realtime Reviews listener error:', error);
+      if (onError) onError(error);
+    }
+  );
+}
+
+export async function saveReviewToFirestore(review: ReviewItem): Promise<void> {
+  const path = `${REVIEWS_COLLECTION}/${review.id}`;
+  try {
+    const cleanPayload: Record<string, any> = {
+      id: review.id,
+      clientName: review.clientName,
+      packageName: review.packageName,
+      rating: review.rating,
+      review: review.review,
+      reviewedAt: review.reviewedAt,
+      showInTestimonials: review.showInTestimonials !== undefined ? review.showInTestimonials : true,
+    };
+
+    const docRef = doc(db, REVIEWS_COLLECTION, review.id);
+    await setDoc(docRef, cleanPayload, { merge: true });
+  } catch (error) {
+    console.warn(`Firestore write warning for ${path}:`, error);
+  }
+}
+
+export async function updateReviewInFirestore(
+  reviewId: string,
+  updates: Partial<ReviewItem>
+): Promise<void> {
+  const path = `${REVIEWS_COLLECTION}/${reviewId}`;
+  try {
+    const docRef = doc(db, REVIEWS_COLLECTION, reviewId);
+    await setDoc(docRef, updates, { merge: true });
+  } catch (error) {
+    console.warn(`Firestore write warning for ${path}:`, error);
+  }
+}
+
+export async function deleteReviewFromFirestore(reviewId: string): Promise<void> {
+  const path = `${REVIEWS_COLLECTION}/${reviewId}`;
+  try {
+    const docRef = doc(db, REVIEWS_COLLECTION, reviewId);
+    await deleteDoc(docRef);
+  } catch (error) {
+    console.warn(`Firestore delete warning for ${path}:`, error);
+  }
+}

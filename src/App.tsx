@@ -10,6 +10,7 @@ import {
   AdminStaff,
   StudioConfig,
   AuditLogItem,
+  ReviewItem,
 } from './types';
 import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, STUDIO_INFO } from './data/mockData';
 import { Navbar } from './components/Navbar';
@@ -34,6 +35,8 @@ import {
   subscribeToStaff,
   subscribeToAuditLogs,
   subscribeToAuth,
+  subscribeToReviews,
+  updateReviewInFirestore,
   checkAndCleanupExpiredCompletedOrders,
   saveBookingToFirestore,
   updateBookingInFirestore,
@@ -144,6 +147,7 @@ export default function App() {
 
   const [staffList, setStaffList] = useState<AdminStaff[]>(INITIAL_ADMIN_STAFF);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdminSession, setIsAdminSession] = useState<boolean>(() => {
@@ -325,6 +329,16 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Listen to Realtime Reviews
+  useEffect(() => {
+    const unsubscribe = subscribeToReviews((data) => {
+      if (data) {
+        setReviews(data);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Listen to Realtime Audit Logs
   useEffect(() => {
     const unsubscribe = subscribeToAuditLogs((logs) => {
@@ -492,6 +506,9 @@ export default function App() {
 
     try {
       await updateBookingInFirestore(orderId, updates);
+      if (updates.showInTestimonials !== undefined || updates.rating !== undefined || updates.review !== undefined) {
+        await updateReviewInFirestore(orderId, updates as any);
+      }
     } catch (err) {
       console.error('Error updating order in Firestore:', err);
     }
@@ -949,6 +966,7 @@ export default function App() {
           /* Admin View: Guarded by AdminGate if not authenticated */
           isAdminAuthenticated ? (
             <ConsumerDashboard
+              reviews={reviews}
               orders={orders}
               onUpdateOrderStatus={handleUpdateOrderStatus}
               onUpdateOrder={handleUpdateOrder}

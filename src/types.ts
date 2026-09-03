@@ -165,3 +165,13 @@ export interface AuditLogItem {
   category: 'booking' | 'order' | 'package' | 'addon' | 'portfolio' | 'security' | 'staff' | 'system';
 }
 
+
+export interface ReviewItem {
+  id: string; // usually the orderId
+  clientName: string;
+  packageName: string;
+  rating: number;
+  review: string;
+  reviewedAt: string;
+  showInTestimonials?: boolean;
+}
