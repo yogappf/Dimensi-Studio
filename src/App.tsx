@@ -36,7 +36,10 @@ import {
   subscribeToAuditLogs,
   subscribeToAuth,
   subscribeToReviews,
+  saveReviewToFirestore,
   updateReviewInFirestore,
+  deleteReviewFromFirestore,
+  REVIEWS_STORAGE_KEY,
   checkAndCleanupExpiredCompletedOrders,
   saveBookingToFirestore,
   updateBookingInFirestore,
@@ -147,7 +150,18 @@ export default function App() {
 
   const [staffList, setStaffList] = useState<AdminStaff[]>(INITIAL_ADMIN_STAFF);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
-  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [reviews, setReviews] = useState<ReviewItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
 
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdminSession, setIsAdminSession] = useState<boolean>(() => {
@@ -498,11 +512,43 @@ export default function App() {
     }
   };
 
-  // Admin order generic update (e.g., Drive folder URL, dates, notes)
+  // Admin order generic update (e.g., Drive folder URL, dates, notes, testimonial visibility)
   const handleUpdateOrder = async (orderId: string, updates: Partial<BookingOrder>) => {
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? { ...ord, ...updates } : ord))
     );
+
+    if (updates.showInTestimonials !== undefined || updates.rating !== undefined || updates.review !== undefined) {
+      setReviews((prev) => {
+        const exists = prev.some((r) => r.id === orderId);
+        let updatedList: ReviewItem[];
+        if (exists) {
+          updatedList = prev.map((r) => (r.id === orderId ? { ...r, ...updates } : r));
+        } else {
+          const ord = orders.find((o) => o.id === orderId);
+          if (ord) {
+            const newRev: ReviewItem = {
+              id: ord.id,
+              clientName: ord.clientName,
+              packageName: ord.packageName,
+              rating: updates.rating !== undefined ? updates.rating : (ord.rating || 5),
+              review: updates.review !== undefined ? updates.review : (ord.review || ''),
+              reviewedAt: updates.reviewedAt || ord.reviewedAt || new Date().toISOString(),
+              showInTestimonials: updates.showInTestimonials !== undefined ? updates.showInTestimonials : (ord.showInTestimonials !== false),
+            };
+            updatedList = [...prev, newRev];
+          } else {
+            updatedList = prev;
+          }
+        }
+        try {
+          localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedList));
+        } catch {
+          // ignore
+        }
+        return updatedList;
+      });
+    }
 
     try {
       await updateBookingInFirestore(orderId, updates);
@@ -514,8 +560,40 @@ export default function App() {
     }
   };
 
-  // Admin delete order
+  // Admin delete order (Data konsumen dihapus dari pesanan, ulasan tetap dipertahankan untuk publik)
   const handleDeleteOrder = async (orderId: string) => {
+    // 1. Pastikan ulasan konsumen tersimpan aman di koleksi ulasan sebelum data pesanan dihapus
+    const targetOrder = orders.find((o) => o.id === orderId);
+    if (targetOrder && (targetOrder.review || targetOrder.rating)) {
+      const preservedReview: ReviewItem = {
+        id: targetOrder.id,
+        clientName: targetOrder.clientName,
+        packageName: targetOrder.packageName,
+        rating: targetOrder.rating || 5,
+        review: targetOrder.review || '',
+        reviewedAt: targetOrder.reviewedAt || new Date().toISOString(),
+        showInTestimonials: targetOrder.showInTestimonials !== false,
+      };
+
+      setReviews((prev) => {
+        const exists = prev.some((r) => r.id === orderId);
+        if (!exists) {
+          const updated = [...prev, preservedReview];
+          try {
+            localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updated));
+          } catch {
+            // ignore
+          }
+          return updated;
+        }
+        return prev;
+      });
+
+      // Simpan ke Firestore reviews agar ulasan publik abadi
+      saveReviewToFirestore(preservedReview).catch(() => {});
+    }
+
+    // 2. Hapus pesanan dari state lokal
     setOrders((prev) => {
       const updated = prev.filter((ord) => ord.id !== orderId);
       try {
@@ -525,11 +603,86 @@ export default function App() {
       }
       return updated;
     });
+
+    // 3. Hapus pesanan dari Firestore bookings (TETAP MENYIMPAN ULASAN DI KOLEKSI REVIEWS)
     try {
       await deleteBookingFromFirestore(orderId);
-      await logAuditEvent(currentUser?.email || 'Admin', 'Hapus Pesanan', `Pesanan ${orderId} telah dihapus.`, 'order');
+      await logAuditEvent(
+        currentUser?.email || 'Admin',
+        'Hapus Pesanan',
+        `Pesanan ${orderId} (${targetOrder?.clientName || 'Klien'}) telah dihapus. Ulasan testimoni tetap dipertahankan di publik.`,
+        'order'
+      );
     } catch (err) {
       console.error('Error deleting order in Firestore:', err);
+    }
+  };
+
+  const handleDeleteReview = async (orderId: string) => {
+    // 1. Immediately remove from reviews state
+    setReviews((prev) => prev.filter((r) => r.id !== orderId));
+
+    // 2. Immediately remove review fields from local orders state
+    setOrders((prev) => {
+      const updated = prev.map((ord) =>
+        ord.id === orderId
+          ? {
+              ...ord,
+              review: undefined,
+              rating: undefined,
+              showInTestimonials: undefined,
+              reviewedAt: undefined,
+            }
+          : ord
+      );
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+
+    // 3. Update localStorage for reviews
+    try {
+      const savedReviews = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (savedReviews) {
+        const list = JSON.parse(savedReviews);
+        localStorage.setItem(
+          REVIEWS_STORAGE_KEY,
+          JSON.stringify(list.filter((r: any) => r.id !== orderId))
+        );
+      }
+    } catch {
+      // ignore
+    }
+
+    // 4. Delete from Firestore reviews collection
+    try {
+      await deleteReviewFromFirestore(orderId);
+      await logAuditEvent(
+        currentUser?.email || 'Admin',
+        'Hapus Ulasan',
+        `Ulasan untuk pesanan/klien ID ${orderId} telah dihapus.`,
+        'order'
+      );
+    } catch (err) {
+      console.error('Error deleting from reviews collection:', err);
+    }
+
+    // 5. Clean up review fields in Firebase bookings document
+    try {
+      const { doc, updateDoc, deleteField } = await import('firebase/firestore');
+      const { db } = await import('./firebase/config');
+      const docRef = doc(db, 'bookings', orderId);
+      await updateDoc(docRef, {
+        review: deleteField(),
+        rating: deleteField(),
+        showInTestimonials: deleteField(),
+        reviewedAt: deleteField(),
+      }).catch(() => {});
+    } catch (err) {
+      console.error('Error deleting review fields from bookings:', err);
     }
   };
 
@@ -947,7 +1100,7 @@ export default function App() {
             />
 
             {/* Testimonials & FAQs */}
-            <TestimonialsFAQ orders={orders} />
+            <TestimonialsFAQ orders={orders} reviews={reviews} />
           </>
         )}
 
@@ -970,6 +1123,7 @@ export default function App() {
               orders={orders}
               onUpdateOrderStatus={handleUpdateOrderStatus}
               onUpdateOrder={handleUpdateOrder}
+              onDeleteReview={handleDeleteReview}
               onDeleteOrder={handleDeleteOrder}
               onAddManualOrder={handleAddManualOrder}
               onResetData={handleResetData}

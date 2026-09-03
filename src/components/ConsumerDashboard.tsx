@@ -66,6 +66,7 @@ interface ConsumerDashboardProps {
   orders: BookingOrder[];
   onUpdateOrderStatus: (orderId: string, newStatus: OrderStatus) => void;
   onUpdateOrder?: (orderId: string, updates: Partial<BookingOrder>) => void;
+  onDeleteReview?: (orderId: string) => void;
   onDeleteOrder: (orderId: string) => void;
   onAddManualOrder: (newOrder: BookingOrder) => void;
   onResetData: () => void;
@@ -105,6 +106,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   reviews = [],
   onUpdateOrderStatus,
   onUpdateOrder,
+  onDeleteReview,
   onDeleteOrder,
   onAddManualOrder,
   onResetData,
@@ -217,6 +219,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   // Modals state
   const [detailOrder, setDetailOrder] = useState<BookingOrder | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<BookingOrder | null>(null);
+  const [reviewToDelete, setReviewToDelete] = useState<any | null>(null);
   const [reminderOrder, setReminderOrder] = useState<BookingOrder | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [isCopiedReminder, setIsCopiedReminder] = useState(false);
@@ -235,6 +238,26 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       }
       setOrderToDelete(null);
       setDeleteNotice(`Data konsumen "${deletedName}" (${deletedId}) berhasil dihapus.`);
+      setTimeout(() => setDeleteNotice(''), 4000);
+    }
+  };
+
+  const confirmDeleteReview = () => {
+    if (reviewToDelete) {
+      const deletedName = reviewToDelete.clientName;
+      const reviewId = reviewToDelete.id;
+      if (onDeleteReview) {
+        onDeleteReview(reviewId);
+      } else if (onUpdateOrder) {
+        onUpdateOrder(reviewId, {
+          rating: undefined,
+          review: undefined,
+          reviewedAt: undefined,
+          showInTestimonials: undefined,
+        });
+      }
+      setReviewToDelete(null);
+      setDeleteNotice(`Ulasan dari "${deletedName}" berhasil dihapus.`);
       setTimeout(() => setDeleteNotice(''), 4000);
     }
   };
@@ -858,21 +881,13 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                         <button
                           type="button"
                           onClick={() => {
-                            if (window.confirm(`Hapus ulasan dari ${order.clientName}?`)) {
-                              if (onUpdateOrder) {
-                                onUpdateOrder(order.id, {
-                                  rating: undefined,
-                                  review: undefined,
-                                  reviewedAt: undefined,
-                                  showInTestimonials: undefined,
-                                });
-                              }
-                            }
+                            setReviewToDelete(order);
                           }}
-                          className="px-3 py-2 bg-red-950/30 border border-red-500/40 text-red-300 hover:bg-red-500/20 text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                          className="px-3 py-2 bg-red-950/30 border border-red-500/40 text-red-300 hover:bg-red-500/20 text-xs uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1.5"
                           title="Hapus Ulasan"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
+                          <span className="hidden sm:inline">Hapus</span>
                         </button>
                       </div>
                     </div>
@@ -1701,7 +1716,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
           </div>
         </div>
       )}
-\n      {/* Modal: Reminder Message */}
+      {/* Modal: Reminder Message */}
       {isReminderModalOpen && reminderOrder && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
           <div className="relative w-full max-w-lg bg-[#141414] border border-[#D4AF37]/60 p-6 shadow-2xl text-[#E0E0E0]">
@@ -2041,6 +2056,65 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Ya, Hapus Data</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Delete Confirmation for Review */}
+      {reviewToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-[#141414] border border-rose-500/40 w-full max-w-md p-6 text-center shadow-2xl relative text-[#E0E0E0]">
+            <div className="w-12 h-12 rounded-full bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mx-auto mb-4 text-rose-400">
+              <Trash2 className="w-6 h-6 stroke-[2.2]" />
+            </div>
+
+            <h4 className="text-lg font-serif font-bold text-white mb-2">
+              Hapus Ulasan Klien?
+            </h4>
+
+            <p className="text-xs text-gray-300 mb-4 leading-relaxed">
+              Apakah Anda yakin ingin menghapus ulasan dari konsumen berikut secara permanen?
+            </p>
+
+            <div className="p-3.5 bg-[#0A0A0A] border border-white/10 text-left space-y-1.5 mb-6 text-xs font-mono">
+              <div className="flex justify-between text-gray-400">
+                <span>Nama Klien:</span>
+                <span className="font-bold text-white">{reviewToDelete.clientName}</span>
+              </div>
+              <div className="flex justify-between text-gray-300">
+                <span className="text-gray-400">Paket:</span>
+                <span className="text-white truncate max-w-[200px]">{reviewToDelete.packageName}</span>
+              </div>
+              <div className="flex justify-between text-gray-300">
+                <span className="text-gray-400">Rating:</span>
+                <span className="text-[#D4AF37] font-bold">★ {reviewToDelete.rating || 5}.0</span>
+              </div>
+              <div className="pt-1.5 border-t border-white/10 text-gray-400">
+                <span className="block mb-1">Isi Ulasan:</span>
+                <span className="text-gray-200 italic font-sans block bg-black/50 p-2 border border-white/5 line-clamp-3">
+                  "{reviewToDelete.review || 'Tanpa komentar teks.'}"
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => setReviewToDelete(null)}
+                className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-white/10 text-gray-300 border border-white/15 text-xs font-mono uppercase tracking-wider font-semibold transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteReview}
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-mono uppercase tracking-wider font-bold transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-rose-950/50"
+                id="btn-confirm-delete-review"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Ya, Hapus Ulasan</span>
               </button>
             </div>
           </div>

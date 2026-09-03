@@ -30,8 +30,8 @@ const PORTFOLIOS_COLLECTION = 'portfolios';
 const SETTINGS_COLLECTION = 'settings';
 const ADMIN_STAFF_COLLECTION = 'admin_staff';
 const AUDIT_LOGS_COLLECTION = 'audit_logs';
-const REVIEWS_COLLECTION = 'reviews';
-const REVIEWS_STORAGE_KEY = 'dimensi_reviews_v1';
+export const REVIEWS_COLLECTION = 'reviews';
+export const REVIEWS_STORAGE_KEY = 'dimensi_reviews_v1';
 
 export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   studioName: STUDIO_INFO.name,
@@ -1284,6 +1284,20 @@ export function subscribeToReviews(
 export async function saveReviewToFirestore(review: ReviewItem): Promise<void> {
   const path = `${REVIEWS_COLLECTION}/${review.id}`;
   try {
+    try {
+      const saved = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      const list: ReviewItem[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((r) => r.id === review.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...review };
+      } else {
+        list.push(review);
+      }
+      localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore
+    }
+
     const cleanPayload: Record<string, any> = {
       id: review.id,
       clientName: review.clientName,
@@ -1307,6 +1321,20 @@ export async function updateReviewInFirestore(
 ): Promise<void> {
   const path = `${REVIEWS_COLLECTION}/${reviewId}`;
   try {
+    try {
+      const saved = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (saved) {
+        const list: ReviewItem[] = JSON.parse(saved);
+        const idx = list.findIndex((r) => r.id === reviewId);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...updates };
+          localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(list));
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, REVIEWS_COLLECTION, reviewId);
     await setDoc(docRef, updates, { merge: true });
   } catch (error) {
@@ -1317,6 +1345,17 @@ export async function updateReviewInFirestore(
 export async function deleteReviewFromFirestore(reviewId: string): Promise<void> {
   const path = `${REVIEWS_COLLECTION}/${reviewId}`;
   try {
+    try {
+      const saved = localStorage.getItem(REVIEWS_STORAGE_KEY);
+      if (saved) {
+        const list: ReviewItem[] = JSON.parse(saved);
+        const filtered = list.filter((r) => r.id !== reviewId);
+        localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
     const docRef = doc(db, REVIEWS_COLLECTION, reviewId);
     await deleteDoc(docRef);
   } catch (error) {
