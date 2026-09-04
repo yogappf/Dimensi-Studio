@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PhotoPackage, AddOnItem, BookingOrder } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES } from '../data/mockData';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
+import { AnimatedClockPicker } from './AnimatedClockPicker';
 import confetti from 'canvas-confetti';
 import { Calendar, Clock, MapPin, User, Phone, Mail, FileText, CheckCircle2, ShieldCheck, Sparkles, AlertCircle } from 'lucide-react';
 
@@ -92,6 +93,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
 
+    if (!sessionTime.trim()) {
+      setFormError('Silakan atur waktu sesi pemotretan.');
+      return;
+    }
+
     if (!locationAddress.trim()) {
       setFormError('Silakan isi detail alamat lokasi pemotretan.');
       return;
@@ -116,7 +122,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       addOnsTotal: addonsTotal,
       totalPrice: totalPrice,
       sessionDate: sessionDate,
-      sessionTime: sessionTime,
+      sessionTime: sessionTime.trim(),
       locationType: locationType,
       locationAddress: locationAddress.trim(),
       notes: notes.trim(),
@@ -333,23 +339,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
 
                 <div>
                   <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Pilihan Waktu / Slot <span className="text-[#D4AF37]">*</span>
+                    Waktu / Jam Sesi Acara <span className="text-[#D4AF37]">*</span>
                   </label>
-                  <div className="relative">
-                    <Clock className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <select
-                      value={sessionTime}
-                      onChange={(e) => setSessionTime(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none cursor-pointer"
-                      id="select-session-time"
-                    >
-                      <option value="08:30 WIB (Pagi)">08:30 WIB (Pagi Segar)</option>
-                      <option value="10:00 WIB (Pagi)">10:00 WIB</option>
-                      <option value="13:30 WIB (Siang)">13:30 WIB</option>
-                      <option value="15:30 WIB (Golden Hour)">15:30 WIB (Golden Hour Senja)</option>
-                      <option value="18:30 WIB (Malam)">18:30 WIB (Studio Malam)</option>
-                    </select>
-                  </div>
+                  <AnimatedClockPicker
+                    value={sessionTime}
+                    onChange={(newTime) => setSessionTime(newTime)}
+                  />
                 </div>
 
                 <div className="sm:col-span-2">

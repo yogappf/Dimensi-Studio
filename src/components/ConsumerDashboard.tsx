@@ -19,6 +19,7 @@ import { PortfolioManager } from './PortfolioManager';
 import { DriveManager } from './DriveManager';
 import { MasterAdminManager } from './MasterAdminManager';
 import { PrintableReceipt } from './PrintableReceipt';
+import { AnimatedClockPicker } from './AnimatedClockPicker';
 import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receiptPrinter';
 import {
   FileSpreadsheet,
@@ -1926,13 +1927,10 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Waktu Sesi</label>
-                  <input
-                    type="text"
-                    placeholder="10:00 WIB"
+                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Waktu Sesi / Jam Acara</label>
+                  <AnimatedClockPicker
                     value={manualTime}
-                    onChange={(e) => setManualTime(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none"
+                    onChange={(t) => setManualTime(t)}
                   />
                 </div>
 

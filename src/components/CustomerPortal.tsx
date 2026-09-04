@@ -521,13 +521,25 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                               </span>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => setViewingProofUrl(order.paymentProofUrl || null)}
-                            className="px-2.5 py-1 bg-black/80 hover:bg-black text-[#D4AF37] hover:text-white border border-[#D4AF37]/40 text-[10px] uppercase font-mono tracking-wider font-semibold whitespace-nowrap cursor-pointer transition-colors"
-                          >
-                            Lihat Bukti
-                          </button>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setViewingProofUrl(order.paymentProofUrl || null)}
+                              className="px-2.5 py-1 bg-black/80 hover:bg-black text-[#D4AF37] hover:text-white border border-[#D4AF37]/40 text-[10px] uppercase font-mono tracking-wider font-semibold whitespace-nowrap cursor-pointer transition-colors"
+                            >
+                              Lihat Bukti
+                            </button>
+                            {order.status === 'Menunggu Konfirmasi' && (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenUploadModal(order)}
+                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/20 text-[10px] uppercase font-mono tracking-wider font-semibold whitespace-nowrap cursor-pointer transition-colors"
+                                title="Unggah ulang / ganti foto bukti transfer"
+                              >
+                                Ganti
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         order.status === 'Menunggu Konfirmasi' && (
@@ -641,38 +653,27 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
 
                   {/* Actions Bar */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
-                    {order.status === 'Menunggu Konfirmasi' && (
-                      /* KETIKA MENUNGGU KONFIRMASI: Tampilkan Tombol Upload Bukti Transfer DP/Pelunasan */
-                      <button
-                        type="button"
-                        onClick={() => handleOpenUploadModal(order)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#D4AF37] hover:bg-white text-black text-xs font-bold uppercase tracking-wider cursor-pointer shadow-md transition-all"
-                        id={`btn-upload-proof-${order.id}`}
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>{order.paymentProofUrl ? 'Ganti Bukti Transfer' : 'Upload Bukti Transfer DP/Pelunasan'}</span>
-                      </button>
-                    )}
-                    
-                    {order.status === 'Selesai' && (
-                      /* KETIKA STATUS SELESAI: Tampilkan Tombol Cetak Bukti */
-                      <button
-                        type="button"
-                        onClick={() => printReceipt(order)}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/15 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
-                        id={`print-receipt-${order.id}`}
-                        title="Cetak nota atau simpan bukti reservasi"
-                      >
-                        <Receipt className="w-3.5 h-3.5 text-[#D4AF37]" />
-                        <span>Cetak Bukti</span>
-                      </button>
-                    )}
+                    <div>
+                      {order.status === 'Selesai' && (
+                        /* KETIKA STATUS SELESAI: Tampilkan Tombol Cetak Bukti */
+                        <button
+                          type="button"
+                          onClick={() => printReceipt(order)}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/15 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
+                          id={`print-receipt-${order.id}`}
+                          title="Cetak nota atau simpan bukti reservasi"
+                        >
+                          <Receipt className="w-3.5 h-3.5 text-[#D4AF37]" />
+                          <span>Cetak Bukti</span>
+                        </button>
+                      )}
+                    </div>
 
                     <a
                       href={waLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider cursor-pointer shadow-md transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider cursor-pointer shadow-md transition-colors ml-auto"
                       id={`chat-wa-order-${order.id}`}
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
