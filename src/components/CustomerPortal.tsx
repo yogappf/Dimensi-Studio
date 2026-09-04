@@ -504,8 +504,8 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                         </div>
                       )}
 
-                      {/* Payment Proof Status Banner if already uploaded */}
-                      {order.paymentProofUrl && (
+                      {/* Payment Proof Status Banner or Warning Banner */}
+                      {order.paymentProofUrl ? (
                         <div className="p-3 bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
                             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -529,6 +529,28 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                             Lihat Bukti
                           </button>
                         </div>
+                      ) : (
+                        order.status === 'Menunggu Konfirmasi' && (
+                          <div className="p-3 bg-amber-950/30 border border-amber-500/40 space-y-2">
+                            <div className="flex items-start gap-2">
+                              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-xs font-bold text-amber-300 block">Menunggu Upload Bukti Pembayaran (DP / Lunas)</span>
+                                <span className="text-[11px] text-gray-300 block mt-0.5">
+                                  Jadwal sesi foto akan <strong>diverifikasi & diaktifkan</strong> oleh tim admin setelah Anda mengunggah foto struk/bukti transfer rekening.
+                                </span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenUploadModal(order)}
+                              className="w-full py-2 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md"
+                            >
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Upload Bukti Transfer Sekarang</span>
+                            </button>
+                          </div>
+                        )
                       )}
 
                       {/* Google Drive Photo Deliverables Link */}

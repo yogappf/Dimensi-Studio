@@ -1214,11 +1214,13 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                         <select
                           value={order.status}
                           onChange={(e) => onUpdateOrderStatus(order.id, e.target.value as OrderStatus)}
-                          disabled={!order.paymentProofUrl}
-                          title={!order.paymentProofUrl ? "Menunggu Bukti Transfer dari Klien" : ""}
-                          className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-bold border focus:outline-none ${!order.paymentProofUrl ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${getStatusBadgeClass(
-                            order.status
-                          )} bg-[#0A0A0A]`}
+                          disabled={!order.paymentProofUrl && order.status === 'Menunggu Konfirmasi'}
+                          title={!order.paymentProofUrl && order.status === 'Menunggu Konfirmasi' ? "Menunggu Bukti Transfer dari Klien" : "Ubah status pesanan konsumen"}
+                          className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-bold border focus:outline-none ${
+                            !order.paymentProofUrl && order.status === 'Menunggu Konfirmasi'
+                              ? 'opacity-50 cursor-not-allowed'
+                              : 'cursor-pointer'
+                          } ${getStatusBadgeClass(order.status)} bg-[#0A0A0A]`}
                           id={`status-select-${order.id}`}
                         >
                           <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
@@ -1341,9 +1343,13 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                       completedAt: newStatus === 'Selesai' ? (detailOrder.completedAt || new Date().toISOString()) : undefined,
                     });
                   }}
-                  disabled={!detailOrder.paymentProofUrl}
-                  title={!detailOrder.paymentProofUrl ? "Menunggu Bukti Transfer dari Klien" : ""}
-                  className={`px-2.5 py-1 text-xs font-mono font-bold border focus:outline-none ${!detailOrder.paymentProofUrl ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${getStatusBadgeClass(detailOrder.status)} bg-[#0A0A0A]`}
+                  disabled={!detailOrder.paymentProofUrl && detailOrder.status === 'Menunggu Konfirmasi'}
+                  title={!detailOrder.paymentProofUrl && detailOrder.status === 'Menunggu Konfirmasi' ? "Menunggu Bukti Transfer dari Klien" : "Ubah status pesanan"}
+                  className={`px-2.5 py-1 text-xs font-mono font-bold border focus:outline-none ${
+                    !detailOrder.paymentProofUrl && detailOrder.status === 'Menunggu Konfirmasi'
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'cursor-pointer'
+                  } ${getStatusBadgeClass(detailOrder.status)} bg-[#0A0A0A]`}
                   id={`modal-status-select-${detailOrder.id}`}
                 >
                   <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
@@ -1965,6 +1971,15 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                     <option value="DP 50%">DP 50%</option>
                     <option value="Lunas">Lunas</option>
                   </select>
+                </div>
+
+                <div className="sm:col-span-2 p-2.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[11px] text-[#D4AF37] flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                  <span>
+                    {manualStatus === 'Terkonfirmasi & Terjadwal'
+                      ? 'Pesanan dengan status "Terkonfirmasi & Terjadwal" akan langsung aktif di data konsumen tanpa memerlukan upload bukti transfer.'
+                      : `Status "${manualStatus}" dapat langsung dikelola dan aktif di data konsumen.`}
+                  </span>
                 </div>
 
                 <div className="sm:col-span-2">
