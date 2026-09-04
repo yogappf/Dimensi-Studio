@@ -1097,6 +1097,7 @@ export default function App() {
               onOrderCreated={handleOrderCreated}
               packages={packages}
               addons={addons}
+              existingOrders={orders}
             />
 
             {/* Testimonials & FAQs */}

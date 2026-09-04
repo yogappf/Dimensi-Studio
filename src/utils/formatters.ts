@@ -207,3 +207,91 @@ export function generateClientReminderWhatsAppLink(order: BookingOrder): string 
   const message = generateClientReminderMessage(order);
   return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 }
+
+/**
+ * Normalizes date string to YYYY-MM-DD
+ */
+export function normalizeDate(dateStr?: string): string {
+  if (!dateStr) return '';
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const d = new Date(trimmed);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch {
+    // fallback
+  }
+  return trimmed;
+}
+
+/**
+ * Normalizes time string to HH:MM format
+ */
+export function normalizeTime(timeStr?: string): string {
+  if (!timeStr) return '';
+  const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (match) {
+    const h = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  return timeStr.trim().toLowerCase();
+}
+
+/**
+ * Checks if a requested date and time slot conflicts with existing orders
+ */
+export function checkScheduleSlotConflict(
+  requestedDate: string,
+  requestedTime: string,
+  existingOrders: BookingOrder[],
+  excludeOrderId?: string
+): BookingOrder | null {
+  if (!requestedDate || !requestedTime || !Array.isArray(existingOrders)) return null;
+
+  const targetDate = normalizeDate(requestedDate);
+  const targetTime = normalizeTime(requestedTime);
+
+  if (!targetDate || !targetTime) return null;
+
+  for (const order of existingOrders) {
+    if (excludeOrderId && order.id === excludeOrderId) continue;
+    // Don't count cancelled orders as occupying slots
+    if (order.status === 'Dibatalkan' || (order.status as string) === 'Batal') continue;
+
+    const orderDate = normalizeDate(order.sessionDate);
+    const orderTime = normalizeTime(order.sessionTime);
+
+    if (orderDate && orderDate === targetDate && orderTime && orderTime === targetTime) {
+      return order;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Returns all booked slots for a specific date
+ */
+export function getBookedSlotsForDate(
+  dateStr: string,
+  existingOrders: BookingOrder[],
+  excludeOrderId?: string
+): BookingOrder[] {
+  if (!dateStr || !Array.isArray(existingOrders)) return [];
+  const targetDate = normalizeDate(dateStr);
+  if (!targetDate) return [];
+
+  return existingOrders.filter((ord) => {
+    if (excludeOrderId && ord.id === excludeOrderId) return false;
+    if (ord.status === 'Dibatalkan' || (ord.status as string) === 'Batal') return false;
+    return normalizeDate(ord.sessionDate) === targetDate;
+  });
+}

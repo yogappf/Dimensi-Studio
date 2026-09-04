@@ -11,7 +11,7 @@ import {
   AuditLogItem,
 } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, INITIAL_CLIENT_ORDERS, STUDIO_INFO } from '../data/mockData';
-import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink, generateClientCompletionWhatsAppLink, generateClientReminderMessage, generateClientReminderWhatsAppLink } from '../utils/formatters';
+import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink, generateClientCompletionWhatsAppLink, generateClientReminderMessage, generateClientReminderWhatsAppLink, checkScheduleSlotConflict, getBookedSlotsForDate } from '../utils/formatters';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -321,15 +321,25 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       return;
     }
 
-    const pkg = packages.find((p) => p.id === manualPkgId) || packages[0] || PHOTO_PACKAGES[0];
-    const selectedAddons = addons.filter((a) => manualAddonIds.includes(a.id));
-    const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
-
     const today = new Date();
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     const todayStr = `${year}-${month}-${day}`;
+    const targetDate = manualDate || todayStr;
+
+    // Check conflict
+    const conflict = checkScheduleSlotConflict(targetDate, manualTime, orders);
+    if (conflict) {
+      const confirmOverride = confirm(
+        `⚠️ PERINGATAN KUOTA JADWAL:\n\nSlot pada tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} SUDAH TERISI oleh klien:\n• Nama: ${conflict.clientName}\n• ID Booking: ${conflict.id}\n• Paket: ${conflict.packageName}\n\nApakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+      );
+      if (!confirmOverride) return;
+    }
+
+    const pkg = packages.find((p) => p.id === manualPkgId) || packages[0] || PHOTO_PACKAGES[0];
+    const selectedAddons = addons.filter((a) => manualAddonIds.includes(a.id));
+    const addonsTotal = selectedAddons.reduce((sum, a) => sum + a.price, 0);
 
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const newOrder: BookingOrder = {
@@ -345,7 +355,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       addOnsText: selectedAddons.length > 0 ? selectedAddons.map((a) => a.name).join(', ') : 'Tidak ada',
       addOnsTotal: addonsTotal,
       totalPrice: pkg.price + addonsTotal,
-      sessionDate: manualDate || todayStr,
+      sessionDate: targetDate,
       sessionTime: manualTime,
       locationType: 'studio',
       locationAddress: manualLocation,
@@ -357,12 +367,18 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
     onAddManualOrder(newOrder);
     setIsAddModalOpen(false);
-    // Reset fields
+    // Reset all form fields
     setManualName('');
     setManualPhone('');
     setManualEmail('');
     setManualNotes('');
     setManualAddonIds([]);
+    setManualDate('');
+    setManualTime('10:00 WIB');
+    setManualLocation('Studio Dimensi');
+    setManualPkgId(packages[0]?.id || PHOTO_PACKAGES[0].id);
+    setManualStatus('Terkonfirmasi & Terjadwal');
+    setManualPayment('DP 50%');
   };
 
   const getStatusBadgeClass = (status: OrderStatus) => {
@@ -1931,6 +1947,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   <AnimatedClockPicker
                     value={manualTime}
                     onChange={(t) => setManualTime(t)}
+                    isSlotUnavailable={Boolean(checkScheduleSlotConflict(manualDate || new Date().toISOString().split('T')[0], manualTime, orders))}
+                    bookedTimes={getBookedSlotsForDate(manualDate || new Date().toISOString().split('T')[0], orders).map(o => o.sessionTime)}
                   />
                 </div>
 

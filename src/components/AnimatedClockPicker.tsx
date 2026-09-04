@@ -4,11 +4,15 @@ import { Clock, Check, X, RotateCcw, Sparkles } from 'lucide-react';
 interface AnimatedClockPickerProps {
   value: string;
   onChange: (timeString: string) => void;
+  isSlotUnavailable?: boolean;
+  bookedTimes?: string[];
 }
 
 export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
   value,
   onChange,
+  isSlotUnavailable = false,
+  bookedTimes = [],
 }) => {
   // Parse existing string (e.g. "10:30 WIB" or "14:15")
   const parseInitialTime = () => {
@@ -133,26 +137,63 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={`flex-1 flex items-center justify-between px-3.5 py-2.5 bg-[#0A0A0A] border text-xs transition-all cursor-pointer ${
-            isOpen ? 'border-[#D4AF37] ring-1 ring-[#D4AF37]/50 shadow-lg' : 'border-white/15 hover:border-white/30'
+            isSlotUnavailable
+              ? 'border-red-500/80 bg-red-950/20 ring-1 ring-red-500/50'
+              : isOpen
+              ? 'border-[#D4AF37] ring-1 ring-[#D4AF37]/50 shadow-lg'
+              : 'border-white/15 hover:border-white/30'
           }`}
           id="btn-clock-picker-trigger"
         >
           <div className="flex items-center gap-2.5 text-white font-mono">
-            <Clock className="w-4 h-4 text-[#D4AF37] shrink-0" />
-            <span className="text-sm font-bold tracking-wider text-[#D4AF37]">
+            <Clock className={`w-4 h-4 shrink-0 ${isSlotUnavailable ? 'text-red-400' : 'text-[#D4AF37]'}`} />
+            <span className={`text-sm font-bold tracking-wider ${isSlotUnavailable ? 'text-red-400' : 'text-[#D4AF37]'}`}>
               {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')} WIB
             </span>
           </div>
-          <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-2 py-0.5 border border-white/10 uppercase">
-            {isOpen ? 'Tutup Jam' : 'Putar Jarum Jam'}
-          </span>
+          {isSlotUnavailable ? (
+            <span className="text-[10px] font-mono text-red-300 bg-red-900/60 px-2 py-0.5 border border-red-500/40 uppercase font-semibold">
+              ⛔ Kuota Penuh
+            </span>
+          ) : (
+            <span className="text-[10px] font-mono text-gray-400 bg-white/5 px-2 py-0.5 border border-white/10 uppercase">
+              {isOpen ? 'Tutup Jam' : 'Putar Jarum Jam'}
+            </span>
+          )}
         </button>
       </div>
 
       {/* Interactive Animated Dial Card */}
       {isOpen && (
-        <div className="p-4 bg-[#121212] border border-[#D4AF37]/50 shadow-2xl rounded-none space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className={`p-4 bg-[#121212] border shadow-2xl rounded-none space-y-4 animate-in fade-in zoom-in-95 duration-200 ${
+          isSlotUnavailable ? 'border-red-500/80 ring-1 ring-red-500/30' : 'border-[#D4AF37]/50'
+        }`}>
           
+          {/* Quota Full Alert inside picker */}
+          {isSlotUnavailable && (
+            <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-200 text-xs font-mono flex items-start gap-2">
+              <span className="text-base">⛔</span>
+              <div>
+                <strong className="text-white block font-sans">Kuota Jam Ini Sudah Penuh!</strong>
+                <span>Pukul {formatTimeString(hour, minute)} sudah terisi oleh pesanan lain di sistem. Silakan geser jarum jam ke waktu yang berbeda.</span>
+              </div>
+            </div>
+          )}
+
+          {/* List of booked times on that day */}
+          {bookedTimes.length > 0 && (
+            <div className="px-3 py-2 bg-white/5 border border-white/10 text-[10px] font-mono text-gray-400 space-y-1">
+              <span className="text-gray-300 block uppercase font-semibold">Jam yang sudah terisi di tanggal ini:</span>
+              <div className="flex flex-wrap gap-1">
+                {bookedTimes.map((bt, idx) => (
+                  <span key={idx} className="px-1.5 py-0.5 bg-red-900/30 border border-red-500/30 text-red-300">
+                    {bt}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Header & Digital Display Switcher */}
           <div className="flex items-center justify-between pb-3 border-b border-white/10">
             <div>
@@ -165,31 +206,31 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                   onClick={() => setMode('hour')}
                   className={`px-3 py-1 text-base font-mono font-bold transition-all cursor-pointer ${
                     mode === 'hour'
-                      ? 'bg-[#D4AF37] text-black shadow-md'
+                      ? isSlotUnavailable ? 'bg-red-500 text-white shadow-md' : 'bg-[#D4AF37] text-black shadow-md'
                       : 'bg-white/5 text-gray-300 hover:bg-white/10'
                   }`}
                 >
                   {String(hour).padStart(2, '0')}
                 </button>
-                <span className="text-[#D4AF37] font-bold text-lg font-mono animate-pulse">:</span>
+                <span className={`${isSlotUnavailable ? 'text-red-400' : 'text-[#D4AF37]'} font-bold text-lg font-mono animate-pulse`}>:</span>
                 <button
                   type="button"
                   onClick={() => setMode('minute')}
                   className={`px-3 py-1 text-base font-mono font-bold transition-all cursor-pointer ${
                     mode === 'minute'
-                      ? 'bg-[#D4AF37] text-black shadow-md'
+                      ? isSlotUnavailable ? 'bg-red-500 text-white shadow-md' : 'bg-[#D4AF37] text-black shadow-md'
                       : 'bg-white/5 text-gray-300 hover:bg-white/10'
                   }`}
                 >
                   {String(minute).padStart(2, '0')}
                 </button>
-                <span className="text-xs text-[#D4AF37] font-mono ml-1 font-semibold">WIB</span>
+                <span className={`text-xs font-mono ml-1 font-semibold ${isSlotUnavailable ? 'text-red-400' : 'text-[#D4AF37]'}`}>WIB</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-1 items-end">
               <span className="text-[10px] font-mono text-gray-400">
-                Mode: <strong className="text-[#D4AF37]">{mode === 'hour' ? 'Atur Jam (00-23)' : 'Atur Menit (00-59)'}</strong>
+                Mode: <strong className={isSlotUnavailable ? 'text-red-400' : 'text-[#D4AF37]'}>{mode === 'hour' ? 'Atur Jam (00-23)' : 'Atur Menit (00-59)'}</strong>
               </span>
               <div className="flex gap-1">
                 <button
