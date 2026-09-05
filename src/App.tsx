@@ -25,6 +25,7 @@ import { CustomerPortal } from './components/CustomerPortal';
 import { AdminGate } from './components/AdminGate';
 import { TestimonialsFAQ } from './components/TestimonialsFAQ';
 import { Footer } from './components/Footer';
+import { useToast } from './context/ToastContext';
 import { testConnection } from './firebase/config';
 import {
   subscribeToBookings,
@@ -74,6 +75,7 @@ const MASTER_SESSION_KEY = 'dimensi_master_session_v1';
 const STUDIO_ADMIN_EMAIL = 'dimensi.idphoto@gmail.com';
 
 export default function App() {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'showcase' | 'admin' | 'customer-portal'>('showcase');
   
   const [orders, setOrders] = useState<BookingOrder[]>(() => {
@@ -404,8 +406,10 @@ export default function App() {
     try {
       await saveBookingToFirestore(newOrder);
       await logAuditEvent(newOrder.clientName, 'Pemesanan Baru', `Booking paket ${newOrder.packageName} dibuat.`, 'order');
+      toast.success('Data pesanan berhasil disimpan!', `Paket: ${newOrder.packageName} (${newOrder.clientName})`);
     } catch (err) {
       console.error('Error saving order to Firestore:', err);
+      toast.error('Gagal menyimpan pesanan ke database cloud');
     }
   };
 
@@ -469,6 +473,7 @@ export default function App() {
     } catch {
       // ignore
     }
+    toast.success(isMaster ? 'Login Master Admin Berhasil' : 'Login Admin Berhasil', 'Selamat datang di Panel Manajemen Studio');
   };
 
   // Exit Admin session back to customer mode
@@ -482,11 +487,13 @@ export default function App() {
       // ignore
     }
     setActiveTab('showcase');
+    toast.info('Keluar dari Panel Admin');
   };
 
   // Admin order status update
   const handleUpdateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
     const nowIso = new Date().toISOString();
+    const targetOrder = orders.find((o) => o.id === orderId);
     setOrders((prev) =>
       prev.map((ord) => (ord.id === orderId ? {
         ...ord,
@@ -507,8 +514,10 @@ export default function App() {
         `Pesanan ${orderId} diubah menjadi: ${newStatus}${newStatus === 'Selesai' ? ' (Otomatis akan dihapus sistem setelah 30 hari/1 bulan)' : ''}`,
         'order'
       );
+      toast.success('Update status sukses', `${targetOrder ? targetOrder.clientName : 'Pesanan'} diubah menjadi "${newStatus}"`);
     } catch (err) {
       console.error('Error updating order status in Firestore:', err);
+      toast.error('Gagal memperbarui status di cloud');
     }
   };
 
@@ -555,8 +564,10 @@ export default function App() {
       if (updates.showInTestimonials !== undefined || updates.rating !== undefined || updates.review !== undefined) {
         await updateReviewInFirestore(orderId, updates as any);
       }
+      toast.success('Data pesanan berhasil disimpan');
     } catch (err) {
       console.error('Error updating order in Firestore:', err);
+      toast.error('Gagal menyimpan perubahan ke Firestore');
     }
   };
 
@@ -613,8 +624,10 @@ export default function App() {
         `Pesanan ${orderId} (${targetOrder?.clientName || 'Klien'}) telah dihapus. Ulasan testimoni tetap dipertahankan di publik.`,
         'order'
       );
+      toast.info('Pesanan berhasil dihapus');
     } catch (err) {
       console.error('Error deleting order in Firestore:', err);
+      toast.error('Gagal menghapus pesanan dari database');
     }
   };
 
@@ -666,6 +679,7 @@ export default function App() {
         `Ulasan untuk pesanan/klien ID ${orderId} telah dihapus.`,
         'order'
       );
+      toast.info('Ulasan testimoni berhasil dihapus');
     } catch (err) {
       console.error('Error deleting from reviews collection:', err);
     }
@@ -697,8 +711,10 @@ export default function App() {
         `Pesanan ${newOrder.clientName} (${newOrder.packageName}) ditambahkan manual.`,
         'order'
       );
+      toast.success('Data pesanan berhasil disimpan!', `Klien: ${newOrder.clientName}`);
     } catch (err) {
       console.error('Error adding manual order to Firestore:', err);
+      toast.error('Gagal menyimpan pesanan manual ke cloud');
     }
   };
 
@@ -715,6 +731,7 @@ export default function App() {
         }
       }
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Reset Data Pesanan', 'Seluruh data pesanan direset ke default.', 'system');
+      toast.info('Data pesanan direset ke default bawaan');
     }
   };
 
@@ -732,8 +749,10 @@ export default function App() {
     try {
       await savePackageToFirestore(newPkg);
       await logAuditEvent(currentUser?.email || 'Admin', 'Tambah Paket Foto', `Paket "${newPkg.name}" ditambahkan.`, 'package');
+      toast.success('Paket foto berhasil ditambahkan', newPkg.name);
     } catch (err) {
       console.warn('Error adding package to Firestore:', err);
+      toast.error('Gagal menyimpan paket ke database cloud');
     }
   };
 
@@ -750,8 +769,10 @@ export default function App() {
     try {
       await updatePackageInFirestore(pkgId, updatedPkg);
       await logAuditEvent(currentUser?.email || 'Admin', 'Update Paket Foto', `Paket ID ${pkgId} diperbarui.`, 'package');
+      toast.success('Paket foto berhasil diperbarui');
     } catch (err) {
       console.warn('Error updating package in Firestore:', err);
+      toast.error('Gagal memperbarui paket');
     }
   };
 
@@ -768,8 +789,10 @@ export default function App() {
     try {
       await deletePackageFromFirestore(pkgId);
       await logAuditEvent(currentUser?.email || 'Admin', 'Hapus Paket Foto', `Paket ID ${pkgId} dihapus.`, 'package');
+      toast.info('Paket foto berhasil dihapus');
     } catch (err) {
       console.warn('Error deleting package in Firestore:', err);
+      toast.error('Gagal menghapus paket dari cloud');
     }
   };
 
@@ -784,6 +807,7 @@ export default function App() {
           // ignore
         }
       }
+      toast.info('Katalog paket dikembalikan ke default');
     }
   };
 
@@ -800,8 +824,10 @@ export default function App() {
     });
     try {
       await saveAddonToFirestore(newAddon);
+      toast.success('Layanan add-on berhasil ditambahkan', newAddon.name);
     } catch (err) {
       console.warn('Error adding addon to Firestore:', err);
+      toast.error('Gagal menyimpan add-on ke database cloud');
     }
   };
 
@@ -817,8 +843,10 @@ export default function App() {
     });
     try {
       await updateAddonInFirestore(addonId, updated);
+      toast.success('Layanan add-on berhasil diperbarui');
     } catch (err) {
       console.warn('Error updating addon in Firestore:', err);
+      toast.error('Gagal memperbarui add-on');
     }
   };
 
@@ -834,8 +862,10 @@ export default function App() {
     });
     try {
       await deleteAddonFromFirestore(addonId);
+      toast.info('Layanan add-on berhasil dihapus');
     } catch (err) {
       console.warn('Error deleting addon in Firestore:', err);
+      toast.error('Gagal menghapus add-on');
     }
   };
 
@@ -850,6 +880,7 @@ export default function App() {
           // ignore
         }
       }
+      toast.info('Layanan add-on dikembalikan ke default');
     }
   };
 
@@ -866,14 +897,23 @@ export default function App() {
     });
     try {
       await savePortfolioToFirestore(newItem);
+      toast.success('Karya portofolio berhasil ditambahkan', newItem.title);
     } catch (err) {
       console.warn('Error adding portfolio to Firestore:', err);
+      toast.error('Gagal menyimpan portofolio ke database cloud');
     }
   };
 
   const handleUpdatePortfolio = async (id: string, updated: Partial<PortfolioItem>) => {
+    let targetItem: PortfolioItem | undefined;
     setPortfolios((prev) => {
-      const next = prev.map((item) => (item.id === id ? { ...item, ...updated } : item));
+      const next = prev.map((item) => {
+        if (item.id === id) {
+          targetItem = { ...item, ...updated };
+          return targetItem;
+        }
+        return item;
+      });
       try {
         localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(next));
       } catch {
@@ -882,9 +922,15 @@ export default function App() {
       return next;
     });
     try {
-      await updatePortfolioInFirestore(id, updated);
+      if (targetItem) {
+        await savePortfolioToFirestore(targetItem);
+      } else {
+        await updatePortfolioInFirestore(id, updated);
+      }
+      toast.success('Karya portofolio berhasil diperbarui');
     } catch (err) {
       console.warn('Error updating portfolio in Firestore:', err);
+      toast.error('Gagal memperbarui portofolio di cloud');
     }
   };
 
@@ -900,8 +946,10 @@ export default function App() {
     });
     try {
       await deletePortfolioFromFirestore(id);
+      toast.info('Karya portofolio berhasil dihapus');
     } catch (err) {
       console.warn('Error deleting portfolio in Firestore:', err);
+      toast.error('Gagal menghapus karya portofolio');
     }
   };
 
@@ -916,6 +964,7 @@ export default function App() {
           // ignore
         }
       }
+      toast.info('Galeri portofolio dikembalikan ke default');
     }
   };
 
@@ -926,8 +975,10 @@ export default function App() {
       localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
       await saveStudioConfigToFirestore(config);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Update Pengaturan Studio', 'Profil, nomor kontak, atau keamanan studio diperbarui.', 'security');
+      toast.success('Pengaturan studio berhasil disimpan!');
     } catch (err) {
       console.error('Error saving studio config:', err);
+      toast.error('Gagal menyimpan konfigurasi studio');
     }
   };
 
@@ -937,8 +988,10 @@ export default function App() {
     try {
       await saveStaffToFirestore(staff);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Tambah Staf Admin', `Staf baru ${staff.name} (${staff.role}) didaftarkan.`, 'staff');
+      toast.success('Staf admin berhasil ditambahkan', staff.name);
     } catch (err) {
       console.error('Error adding staff:', err);
+      toast.error('Gagal mendaftarkan staf admin');
     }
   };
 
@@ -947,8 +1000,10 @@ export default function App() {
     try {
       await updateStaffInFirestore(id, updates);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Update Data Staf', `Data staf ID ${id} diperbarui.`, 'staff');
+      toast.success('Data staf berhasil diperbarui');
     } catch (err) {
       console.error('Error updating staff:', err);
+      toast.error('Gagal memperbarui staf');
     }
   };
 
@@ -957,8 +1012,10 @@ export default function App() {
     try {
       await deleteStaffFromFirestore(id);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Hapus Staf Admin', `Staf ID ${id} telah dinonaktifkan/dihapus.`, 'staff');
+      toast.info('Staf admin berhasil dinonaktifkan/dihapus');
     } catch (err) {
       console.error('Error deleting staff:', err);
+      toast.error('Gagal menghapus staf');
     }
   };
 
@@ -1003,6 +1060,7 @@ export default function App() {
       } catch {}
     }
     await logAuditEvent(currentUser?.email || 'Master Admin', 'Restore Database', 'Database sistem dipulihkan dari file backup.', 'system');
+    toast.success('Database berhasil dipulihkan dari file backup!');
   };
 
   const handleGoogleSignIn = async () => {

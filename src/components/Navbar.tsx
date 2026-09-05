@@ -51,13 +51,33 @@ export const Navbar: React.FC<NavbarProps> = ({
   );
 
   const handleNavClick = (sectionId: string) => {
-    setActiveTab('showcase');
-    setTimeout(() => {
-      const el = document.getElementById(sectionId);
+    if (activeTab !== 'showcase') {
+      setActiveTab('showcase');
+    }
+    
+    const scrollToTarget = () => {
+      const el =
+        document.getElementById(sectionId) ||
+        document.getElementById(`${sectionId}-section`) ||
+        document.getElementById(`section-${sectionId}`) ||
+        (sectionId === 'portofolio' ? document.getElementById('portfolio') : null) ||
+        (sectionId === 'portfolio' ? document.getElementById('portofolio') : null);
+
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth' });
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return true;
       }
-    }, 60);
+      return false;
+    };
+
+    // Try immediately
+    if (!scrollToTarget()) {
+      setTimeout(() => {
+        if (!scrollToTarget()) {
+          setTimeout(scrollToTarget, 150);
+        }
+      }, 50);
+    }
   };
 
   return (

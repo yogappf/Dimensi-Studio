@@ -90,8 +90,8 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
     }
 
     try {
-      setImageToast('Mengompresi gambar...');
-      const compressed = await compressImage(file, 900, 900, 0.75);
+      setImageToast('Mengompresi gambar HD...');
+      const compressed = await compressImage(file, 1440, 1440, 0.80);
       setImageUrl(compressed);
       setImageToast('Foto berhasil diunggah dan dioptimalkan!');
       setTimeout(() => setImageToast(''), 3500);

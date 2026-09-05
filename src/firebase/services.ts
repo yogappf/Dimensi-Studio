@@ -22,6 +22,7 @@ import { handleFirestoreError, OperationType } from './errors';
 import { BookingOrder, OrderStatus, PhotoPackage, AddOnItem, PortfolioItem, AdminStaff, StudioConfig, AuditLogItem, ReviewItem } from '../types';
 import { INITIAL_CLIENT_ORDERS, PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, STUDIO_INFO } from '../data/mockData';
 import { DEFAULT_INITIAL_BANK_ACCOUNTS } from '../utils/bankOptions';
+import { sanitizePayloadForFirestore } from '../utils/imageCompressor';
 
 const BOOKINGS_COLLECTION = 'bookings';
 const PACKAGES_COLLECTION = 'packages';
@@ -778,36 +779,44 @@ export async function seedInitialAddons(): Promise<void> {
 export async function savePortfolioToFirestore(item: PortfolioItem): Promise<void> {
   const path = `${PORTFOLIOS_COLLECTION}/${item.id}`;
   try {
-    try {
-      const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
-      const list: PortfolioItem[] = saved ? JSON.parse(saved) : [];
-      const idx = list.findIndex((p) => p.id === item.id);
-      if (idx >= 0) {
-        list[idx] = { ...list[idx], ...item };
-      } else {
-        list.unshift(item);
-      }
-      localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
-    } catch {
-      // ignore
-    }
+    const finalImageUrls = Array.isArray(item.imageUrls) && item.imageUrls.length > 0
+      ? item.imageUrls
+      : (item.imageUrl ? [item.imageUrl] : []);
 
-    const cleanPayload: Record<string, any> = {
+    let cleanPayload: Record<string, any> = {
       id: item.id,
       title: item.title || '',
       category: item.category || 'wedding',
       categoryName: item.categoryName || '',
       location: item.location || '',
-      imageUrl: item.imageUrl || '',
-      imageUrls: Array.isArray(item.imageUrls) ? item.imageUrls : (item.imageUrl ? [item.imageUrl] : []),
+      imageUrl: item.imageUrl || finalImageUrls[0] || '',
+      imageUrls: finalImageUrls,
       description: item.description || '',
       updatedAt: new Date().toISOString(),
     };
 
+    // Protect document size against Firestore 1MB quota
+    cleanPayload = await sanitizePayloadForFirestore(cleanPayload, 600000);
+
+    try {
+      const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
+      const list: PortfolioItem[] = saved ? JSON.parse(saved) : [];
+      const idx = list.findIndex((p) => p.id === item.id);
+      if (idx >= 0) {
+        list[idx] = { ...list[idx], ...cleanPayload };
+      } else {
+        list.unshift(item);
+      }
+      localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
+    } catch {
+      // ignore localstorage quota limits
+    }
+
     const docRef = doc(db, PORTFOLIOS_COLLECTION, item.id);
     await setDoc(docRef, cleanPayload, { merge: true });
   } catch (error) {
-    console.warn(`Firestore write warning for ${path}:`, error);
+    console.error(`Firestore write error for ${path}:`, error);
+    throw error;
   }
 }
 
@@ -832,11 +841,11 @@ export async function updatePortfolioInFirestore(
       }
       localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(list));
     } catch {
-      // ignore
+      // ignore localstorage quota limits
     }
 
     const docRef = doc(db, PORTFOLIOS_COLLECTION, portfolioId);
-    const sanitizedUpdates: Record<string, any> = {
+    let sanitizedUpdates: Record<string, any> = {
       updatedAt: new Date().toISOString(),
     };
     for (const [key, value] of Object.entries(updates)) {
@@ -844,9 +853,20 @@ export async function updatePortfolioInFirestore(
         sanitizedUpdates[key] = value;
       }
     }
+    // Make sure imageUrls and imageUrl stay in sync
+    if (sanitizedUpdates.imageUrls && Array.isArray(sanitizedUpdates.imageUrls)) {
+      if (!sanitizedUpdates.imageUrl && sanitizedUpdates.imageUrls.length > 0) {
+        sanitizedUpdates.imageUrl = sanitizedUpdates.imageUrls[0];
+      }
+    }
+
+    // Protect document size against Firestore 1MB quota
+    sanitizedUpdates = await sanitizePayloadForFirestore(sanitizedUpdates, 600000);
+
     await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
-    console.warn(`Firestore update warning for ${path}:`, error);
+    console.error(`Firestore update error for ${path}:`, error);
+    throw error;
   }
 }
 
@@ -868,7 +888,8 @@ export async function deletePortfolioFromFirestore(portfolioId: string): Promise
     const docRef = doc(db, PORTFOLIOS_COLLECTION, portfolioId);
     await deleteDoc(docRef);
   } catch (error) {
-    console.warn(`Firestore delete warning for ${path}:`, error);
+    console.error(`Firestore delete error for ${path}:`, error);
+    throw error;
   }
 }
 
@@ -885,14 +906,18 @@ export function subscribeToPortfolios(
       const portfolioList: PortfolioItem[] = [];
       snapshot.forEach((docSnapshot) => {
         const data = docSnapshot.data();
+        const rawUrls: string[] = Array.isArray(data.imageUrls) ? data.imageUrls : [];
+        const mainUrl: string = data.imageUrl || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80';
+        const finalUrls = rawUrls.length > 0 ? rawUrls : [mainUrl];
+
         portfolioList.push({
           id: data.id || docSnapshot.id,
           title: data.title || 'Karya Fotografi',
           category: data.category || 'all',
           categoryName: data.categoryName || 'Koleksi',
           location: data.location || '',
-          imageUrl: data.imageUrl || 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80',
-          imageUrls: data.imageUrls || [],
+          imageUrl: mainUrl,
+          imageUrls: finalUrls,
           description: data.description || '',
         });
       });
@@ -960,8 +985,9 @@ export async function saveStudioConfigToFirestore(config: StudioConfig): Promise
       // ignore
     }
     const docRef = doc(db, SETTINGS_COLLECTION, 'studio_config');
-    // Filter undefined values
-    const cleanConfig = JSON.parse(JSON.stringify(config));
+    // Filter undefined values and protect against 1MB Firestore limit
+    let cleanConfig = JSON.parse(JSON.stringify(config));
+    cleanConfig = await sanitizePayloadForFirestore(cleanConfig, 600000);
     await setDoc(docRef, cleanConfig, { merge: true });
   } catch (error) {
     console.warn(`Firestore write warning for ${path}:`, error);

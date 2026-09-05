@@ -21,6 +21,7 @@ import { MasterAdminManager } from './MasterAdminManager';
 import { PrintableReceipt } from './PrintableReceipt';
 import { AnimatedClockPicker } from './AnimatedClockPicker';
 import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receiptPrinter';
+import { useToast } from '../context/ToastContext';
 import {
   FileSpreadsheet,
   Download,
@@ -156,6 +157,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   auditLogs = [],
   onRestoreAllData = async () => {},
 }) => {
+  const toast = useToast();
   const [activeSubTab, setActiveSubTab] = useState<'orders' | 'packages' | 'addons' | 'portfolios' | 'drive' | 'master' | 'reviews'>('orders');
   const [isMasterUnlocked, setIsMasterUnlocked] = useState(false);
   const [isMasterUnlockModalOpen, setIsMasterUnlockModalOpen] = useState(false);
@@ -302,7 +304,10 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     const success = exportOrdersToExcel(filteredOrders);
     if (success) {
       setExportSuccessMsg(`Berhasil mengekspor ${filteredOrders.length} data konsumen ke file Excel (.xlsx)`);
+      toast.success('Ekspor Excel Berhasil!', `${filteredOrders.length} data konsumen berhasil diunduh ke file .xlsx`);
       setTimeout(() => setExportSuccessMsg(''), 4000);
+    } else {
+      toast.error('Gagal mengekspor data ke Excel');
     }
   };
 
@@ -310,7 +315,10 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     const success = exportOrdersToCSV(filteredOrders);
     if (success) {
       setExportSuccessMsg(`Berhasil mengekspor ${filteredOrders.length} data konsumen ke file CSV`);
+      toast.success('Ekspor CSV Berhasil!', `${filteredOrders.length} data konsumen berhasil diunduh ke file .csv`);
       setTimeout(() => setExportSuccessMsg(''), 4000);
+    } else {
+      toast.error('Gagal mengekspor data ke CSV');
     }
   };
 

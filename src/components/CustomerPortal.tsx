@@ -8,6 +8,7 @@ import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receipt
 import { getResolvedBankAccounts } from '../utils/bankOptions';
 import { saveReviewToFirestore } from "../firebase/services";
 import { compressImage } from '../utils/imageCompressor';
+import { useToast } from '../context/ToastContext';
 import {
   Search,
   Calendar,
@@ -54,6 +55,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   studioConfig,
   onUpdateOrder,
 }) => {
+  const toast = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<BookingOrder | null>(null);
 
@@ -102,13 +104,14 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
       await onUpdateOrder(reviewOrder.id, updates);
       setReviewSuccessMessage(true);
+      toast.success('Terima kasih! Ulasan berhasil dikirim', 'Ulasan dan bintang kepuasan Anda telah dicatat.');
       setTimeout(() => {
         setReviewSuccessMessage(false);
         setReviewOrder(null);
       }, 2000);
     } catch (err) {
       console.error('Failed to submit review:', err);
-      alert('Terjadi kesalahan saat menyimpan ulasan. Silakan coba lagi.');
+      toast.error('Gagal menyimpan ulasan');
     } finally {
       setIsSubmittingReview(false);
     }
@@ -242,6 +245,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const handleCopyAccountNumber = (accNumber: string, id: string) => {
     navigator.clipboard.writeText(accNumber.replace(/[^0-9]/g, '') || accNumber);
     setCopiedBankId(id);
+    toast.info('Nomor rekening disalin ke clipboard');
     setTimeout(() => setCopiedBankId(null), 2500);
   };
 
@@ -249,7 +253,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
   const handleSubmitProof = async () => {
     if (!uploadProofOrder) return;
     if (!proofPreview && !proofFile) {
-      alert('Silakan pilih file foto bukti transfer terlebih dahulu.');
+      toast.warning('Silakan pilih file foto bukti transfer terlebih dahulu');
       return;
     }
 
@@ -280,9 +284,10 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
       const updatedOrderObj = { ...uploadProofOrder, ...updates };
       setUploadProofOrder(null);
       setUploadSuccessOrder(updatedOrderObj);
+      toast.success('Bukti pembayaran berhasil diunggah!', 'Admin studio akan segera memverifikasi pesanan Anda.');
     } catch (err) {
       console.error('Failed to upload payment proof:', err);
-      alert('Terjadi kesalahan saat memproses bukti transfer. Silakan coba lagi.');
+      toast.error('Gagal memproses bukti transfer');
     } finally {
       setIsUploading(false);
     }
