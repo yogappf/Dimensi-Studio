@@ -63,13 +63,13 @@ export interface BookingOrder {
 
 export interface PortfolioItem {
   id: string;
-  title: string;
+  title?: string;
   category: CategoryType;
   categoryName: string;
-  location: string;
+  location?: string;
   imageUrl: string;
   imageUrls?: string[];
-  description: string;
+  description?: string;
 }
 
 export interface DriveFileItem {

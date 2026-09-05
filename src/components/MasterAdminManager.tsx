@@ -2579,8 +2579,8 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                       }
                       setHeroToast(
                         bannerReplaceMode
-                          ? `Banner diganti dengan foto portofolio: ${item.title}`
-                          : `Berhasil menambahkan banner dari portofolio: ${item.title} (Total: ${updatedList.length} slide)`
+                          ? `Banner diganti dengan foto portofolio: ${item.categoryName || item.category}`
+                          : `Berhasil menambahkan banner dari portofolio: ${item.categoryName || item.category} (Total: ${updatedList.length} slide)`
                       );
                       setTimeout(() => setHeroToast(''), 3000);
                     }}
@@ -2592,12 +2592,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                   >
                     <img
                       src={item.imageUrl}
-                      alt={item.title}
+                      alt={item.categoryName || item.title || 'Foto Portofolio'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
-                      <p className="text-[11px] font-bold text-white truncate">{item.title}</p>
+                      <p className="text-[11px] font-bold text-white truncate">{item.categoryName || item.category}</p>
                       <span className="text-[9px] text-[#D4AF37] uppercase">{item.category}</span>
                     </div>
                     {configForm.heroImageUrl === item.imageUrl && (

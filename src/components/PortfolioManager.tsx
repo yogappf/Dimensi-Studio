@@ -143,10 +143,10 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const handleOpenAdd = () => {
     const defaultCat = categoryOptions[0] || PACKAGE_CATEGORIES[0];
     setFormData({
-      title: '',
+      title: defaultCat.name,
       category: defaultCat.id,
       categoryName: defaultCat.name,
-      location: 'Dimensi Studio Jakarta',
+      location: '',
       imageUrl: '',
       imageUrls: [],
       description: '',
@@ -159,33 +159,30 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const handleOpenEdit = (item: PortfolioItem) => {
     setEditingItem(item);
     setFormData({
-      title: item.title,
+      title: item.title || item.categoryName,
       category: item.category,
       categoryName: item.categoryName,
-      location: item.location,
+      location: item.location || '',
       imageUrl: item.imageUrl,
       imageUrls: item.imageUrls || (item.imageUrl ? [item.imageUrl] : []),
-      description: item.description,
+      description: item.description || '',
     });
     setReplaceMode(true);
   };
 
   const handleCategorySelect = (selectedSlug: string) => {
     const matched = categoryOptions.find((c) => c.id === selectedSlug);
+    const catName = matched ? matched.name : selectedSlug;
     setFormData((prev) => ({
       ...prev,
       category: selectedSlug,
-      categoryName: matched ? matched.name : selectedSlug,
+      categoryName: catName,
+      title: catName,
     }));
   };
 
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const title = formData.title?.trim();
-    if (!title) {
-      alert('Judul karya portofolio wajib diisi.');
-      return;
-    }
 
     const finalImageUrls = (formData.imageUrls && formData.imageUrls.length > 0)
       ? formData.imageUrls.filter((url) => Boolean(url && url.trim()))
@@ -201,7 +198,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     const category = formData.category || 'wedding';
     const matchedCategory = categoryOptions.find((c) => c.id === category);
     const categoryName = formData.categoryName || matchedCategory?.name || category;
-    const location = formData.location?.trim() || 'Dimensi Studio Jakarta';
+    const title = categoryName;
     const description = formData.description?.trim() || '';
 
     const payloadImageUrls = finalImageUrls.length > 0 ? finalImageUrls : [finalImageUrl];
@@ -211,12 +208,11 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         title,
         category,
         categoryName,
-        location,
         imageUrl: finalImageUrl,
         imageUrls: payloadImageUrls,
         description,
       });
-      showToast(`Karya "${title}" berhasil diperbarui.`);
+      showToast(`Karya kategori "${categoryName}" berhasil diperbarui.`);
       setEditingItem(null);
       setIsAddModalOpen(false);
     } else {
@@ -226,13 +222,12 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
         title,
         category,
         categoryName,
-        location,
         imageUrl: finalImageUrl,
         imageUrls: payloadImageUrls,
         description,
       };
       onAddPortfolio(newItem);
-      showToast(`Karya portofolio baru "${newItem.title}" berhasil disimpan.`);
+      showToast(`Karya portofolio kategori "${categoryName}" berhasil disimpan.`);
       setIsAddModalOpen(false);
       setEditingItem(null);
     }
@@ -242,16 +237,16 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     const target = portfolios.find((p) => p.id === id);
     onDeletePortfolio(id);
     setDeleteConfirmId(null);
-    showToast(`Karya "${target?.title || 'Portofolio'}" berhasil dihapus.`);
+    showToast(`Karya kategori "${target?.categoryName || 'Portofolio'}" berhasil dihapus.`);
   };
 
   const filteredPortfolios = portfolios.filter((item) => {
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const q = searchTerm.toLowerCase();
     const matchesSearch =
-      item.title.toLowerCase().includes(q) ||
-      item.location.toLowerCase().includes(q) ||
-      item.description.toLowerCase().includes(q);
+      (item.categoryName || '').toLowerCase().includes(q) ||
+      (item.title || '').toLowerCase().includes(q) ||
+      (item.description || '').toLowerCase().includes(q);
     return matchesCategory && matchesSearch;
   });
 
@@ -401,21 +396,24 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                   <Eye className="w-3.5 h-3.5" />
                 </button>
 
-                {/* Location on image footer */}
-                <div className="absolute bottom-3 left-3 right-3 flex items-center gap-1.5 text-gray-300 text-xs font-mono">
-                  <MapPin className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0" />
-                  <span className="truncate">{item.location || 'Dimensi Studio'}</span>
-                </div>
+                {/* Photo Count badge on bottom */}
+                {(item.imageUrls && item.imageUrls.length > 1) && (
+                  <div className="absolute bottom-3 left-3 px-2 py-0.5 bg-black/80 border border-white/10 text-[10px] font-mono text-gray-300">
+                    {item.imageUrls.length} Foto Slide
+                  </div>
+                )}
               </div>
 
               {/* Text Info */}
               <div className="p-4 sm:p-5">
-                <h4 className="text-sm font-bold text-white mb-1.5 group-hover:text-[#D4AF37] transition-colors leading-snug">
-                  {item.title}
+                <h4 className="text-sm font-bold text-white mb-1.5 group-hover:text-[#D4AF37] transition-colors leading-snug font-serif">
+                  Kategori: {item.categoryName || item.category}
                 </h4>
-                <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">
-                  {item.description || 'Koleksi dokumentasi visual Dimensi Fotografi.'}
-                </p>
+                {item.description && (
+                  <p className="text-xs text-gray-400 leading-relaxed line-clamp-2">
+                    {item.description}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -477,61 +475,30 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
               </h3>
             </div>
             <p className="text-xs text-gray-400 mb-6">
-              Karya ini akan langsung dipublikasikan pada Galeri Portofolio di halaman utama beranda konsumen.
+              Foto portofolio ini akan dipublikasikan pada Galeri Portofolio sesuai dengan kategori layanan pemotretan.
             </p>
 
             <form onSubmit={handleSaveSubmit} noValidate className="space-y-4">
               <div>
                 <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                  Judul Karya / Sesi Foto *
+                  Kategori Portofolio (Kategori Layanan Pemotretan) *
                 </label>
-                <input
-                  type="text"
+                <select
                   required
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Contoh: The Royal Heritage Wedding of Reza & Dinda"
-                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
-                  id="portfolio-form-title"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                    Kategori Sesi (Kategori Layanan Paket) *
-                  </label>
-                  <select
-                    required
-                    value={formData.category || 'wedding'}
-                    onChange={(e) => handleCategorySelect(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none cursor-pointer"
-                    id="portfolio-form-category"
-                  >
-                    {categoryOptions.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.label} ({cat.name})
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-[10px] text-gray-500 mt-1 block">
-                    Kategori otomatis mengambil daftar dari paket layanan fotografi.
-                  </span>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-gray-300 mb-1.5">
-                    Lokasi Pemotretan
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.location || ''}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    placeholder="Contoh: Dharmawangsa Jakarta"
-                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs placeholder:text-gray-600 focus:border-[#D4AF37] focus:outline-none"
-                    id="portfolio-form-location"
-                  />
-                </div>
+                  value={formData.category || 'wedding'}
+                  onChange={(e) => handleCategorySelect(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none cursor-pointer"
+                  id="portfolio-form-category"
+                >
+                  {categoryOptions.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.label} ({cat.name})
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[10px] text-gray-500 mt-1 block">
+                  Kategori otomatis terhubung dengan daftar paket layanan fotografi studio.
+                </span>
               </div>
 
               <div>
