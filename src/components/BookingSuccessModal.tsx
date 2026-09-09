@@ -297,25 +297,50 @@ export const BookingSuccessModal: React.FC<BookingSuccessModalProps> = ({
                   <span className="text-gray-300">{order.email}</span>
                 </div>
               )}
-            </div>
-
-            <div className="space-y-1.5">
-              <div>
-                <span className="text-gray-500 text-[10px] uppercase font-mono block">Jadwal Sesi Foto:</span>
-                <span className="font-semibold text-white">
-                  {formatDateIndonesian(order.sessionDate)} ({order.sessionTime})
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-500 text-[10px] uppercase font-mono block">Lokasi Sesi:</span>
-                <span className="text-gray-300">{order.locationAddress}</span>
-              </div>
               <div>
                 <span className="text-gray-500 text-[10px] uppercase font-mono block">Status:</span>
                 <span className="inline-block px-2 py-0.5 bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-mono font-bold uppercase">
                   {order.status}
                 </span>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="p-2 bg-[#121212] border border-white/5 space-y-1">
+                <span className="text-[#D4AF37] text-[10px] uppercase font-mono font-bold block">
+                  {order.hasSecondSession ? '📌 Acara Pertama (Sesi 1):' : 'Jadwal & Lokasi Sesi:'}
+                </span>
+                <div className="font-semibold text-white text-[11px]">
+                  {formatDateIndonesian(order.sessionDate)} ({order.sessionTime})
+                </div>
+                <div className="text-gray-400 text-[10px]">
+                  {order.locationType?.toUpperCase()}: {order.locationAddress}
+                </div>
+                {order.notes && (
+                  <div className="text-gray-400 text-[10px] italic pt-0.5 border-t border-white/5">
+                    Konsep: {order.notes}
+                  </div>
+                )}
+              </div>
+
+              {order.hasSecondSession && order.sessionDate2 && (
+                <div className="p-2 bg-[#121212] border border-cyan-500/30 space-y-1">
+                  <span className="text-cyan-400 text-[10px] uppercase font-mono font-bold block">
+                    📌 Acara Kedua (Sesi 2):
+                  </span>
+                  <div className="font-semibold text-white text-[11px]">
+                    {formatDateIndonesian(order.sessionDate2)} ({order.sessionTime2 || '-'})
+                  </div>
+                  <div className="text-gray-400 text-[10px]">
+                    {order.locationType2?.toUpperCase()}: {order.locationAddress2 || '-'}
+                  </div>
+                  {order.notes2 && (
+                    <div className="text-gray-400 text-[10px] italic pt-0.5 border-t border-white/5">
+                      Konsep: {order.notes2}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

@@ -482,26 +482,59 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <div className="flex items-center gap-2 text-gray-300 p-2.5 bg-black/40 border border-white/5">
-                          <Calendar className="w-4 h-4 text-[#D4AF37]" />
-                          <span>{formatDateIndonesian(order.sessionDate)}</span>
+                      {/* Sesi 1 */}
+                      <div className="p-2.5 bg-black/40 border border-white/5 space-y-2">
+                        <div className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase">
+                          {order.hasSecondSession ? 'Acara Pertama (Sesi 1):' : 'Jadwal & Lokasi Sesi:'}
                         </div>
-                        <div className="flex items-center gap-2 text-gray-300 p-2.5 bg-black/40 border border-white/5">
-                          <Clock className="w-4 h-4 text-[#D4AF37]" />
-                          <span>{order.sessionTime}</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                          <div className="flex items-center gap-2 text-gray-300">
+                            <Calendar className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span>{formatDateIndonesian(order.sessionDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-300">
+                            <Clock className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span>{order.sessionTime}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2 text-xs text-gray-300 pt-1 border-t border-white/5">
+                          <MapPin className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold text-white uppercase text-[10px]">
+                              {order.locationType}:
+                            </span>{' '}
+                            <span className="text-gray-400">{order.locationAddress}</span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="flex items-start gap-2 text-xs text-gray-300 p-2.5 bg-black/40 border border-white/5">
-                        <MapPin className="w-4 h-4 text-[#D4AF37] flex-shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-semibold text-white uppercase text-[11px]">
-                            Lokasi ({order.locationType}):
-                          </span>{' '}
-                          <span className="text-gray-400">{order.locationAddress}</span>
+                      {/* Sesi 2 if exists */}
+                      {order.hasSecondSession && order.sessionDate2 && (
+                        <div className="p-2.5 bg-black/40 border border-cyan-500/30 space-y-2">
+                          <div className="text-[10px] font-mono font-bold text-cyan-400 uppercase">
+                            Acara Kedua (Sesi 2):
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <div className="flex items-center gap-2 text-gray-300">
+                              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{formatDateIndonesian(order.sessionDate2)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-300">
+                              <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                              <span>{order.sessionTime2 || '-'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-2 text-xs text-gray-300 pt-1 border-t border-white/5">
+                            <MapPin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <span className="font-semibold text-white uppercase text-[10px]">
+                                {order.locationType2 || 'venue'}:
+                              </span>{' '}
+                              <span className="text-gray-400">{order.locationAddress2 || '-'}</span>
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {order.addOnsText && order.addOnsText !== 'Tidak ada' && (
                         <div className="text-xs text-gray-400 p-2 bg-white/5">

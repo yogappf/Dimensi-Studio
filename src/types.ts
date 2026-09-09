@@ -39,11 +39,19 @@ export interface BookingOrder {
   addOnsText: string;
   addOnsTotal: number;
   totalPrice: number;
+  // Acara Pertama (Sesi 1)
   sessionDate: string;
   sessionTime: string;
   locationType: 'studio' | 'outdoor' | 'venue';
   locationAddress: string;
   notes?: string;
+  // Acara Kedua (Sesi 2 - Opsional untuk Multi-Event / Wedding)
+  hasSecondSession?: boolean;
+  sessionDate2?: string;
+  sessionTime2?: string;
+  locationType2?: 'studio' | 'outdoor' | 'venue';
+  locationAddress2?: string;
+  notes2?: string;
   status: OrderStatus;
   paymentPreference: 'DP 30%' | 'DP 50%' | 'Lunas';
   driveFolderId?: string;

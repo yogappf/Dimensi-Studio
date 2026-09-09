@@ -86,11 +86,22 @@ Saya ingin mengonfirmasi pendaftaran / order jasa foto dengan rincian berikut:
 *Total Biaya*: ${formatRupiah(order.totalPrice)}
 ${dpLabelText}
 
-*Jadwal Sesi*: ${formatDateIndonesian(order.sessionDate)}
-*Waktu Sesi*: ${order.sessionTime}
-*Lokasi*: ${order.locationAddress} (${(order.locationType || 'studio').toUpperCase()})
+*JADWAL & LOKASI PEMOTRETAN*:
+📌 *Acara Pertama (Sesi 1)*:
+- Tanggal: ${formatDateIndonesian(order.sessionDate)}
+- Waktu: ${order.sessionTime}
+- Tipe Tempat: ${(order.locationType || 'studio').toUpperCase()}
+- Alamat: ${order.locationAddress}
+- Catatan: ${order.notes || '-'}`;
 
-*Catatan / Konsep*: ${order.notes || '-'}`;
+  if (order.hasSecondSession && order.sessionDate2) {
+    message += `\n\n📌 *Acara Kedua (Sesi 2)*:
+- Tanggal: ${formatDateIndonesian(order.sessionDate2)}
+- Waktu: ${order.sessionTime2 || '-'}
+- Tipe Tempat: ${(order.locationType2 || 'venue').toUpperCase()}
+- Alamat: ${order.locationAddress2 || '-'}
+- Catatan: ${order.notes2 || '-'}`;
+  }
 
   if (paymentInfo?.selectedBank) {
     message += `\n\n*Rekening Tujuan Transfer*: ${paymentInfo.selectedBank}`;
@@ -266,11 +277,20 @@ export function checkScheduleSlotConflict(
     // Don't count cancelled orders as occupying slots
     if (order.status === 'Dibatalkan' || (order.status as string) === 'Batal') continue;
 
-    const orderDate = normalizeDate(order.sessionDate);
-    const orderTime = normalizeTime(order.sessionTime);
-
-    if (orderDate && orderDate === targetDate && orderTime && orderTime === targetTime) {
+    // Check Sesi 1
+    const orderDate1 = normalizeDate(order.sessionDate);
+    const orderTime1 = normalizeTime(order.sessionTime);
+    if (orderDate1 && orderDate1 === targetDate && orderTime1 && orderTime1 === targetTime) {
       return order;
+    }
+
+    // Check Sesi 2 if exists
+    if (order.hasSecondSession && order.sessionDate2 && order.sessionTime2) {
+      const orderDate2 = normalizeDate(order.sessionDate2);
+      const orderTime2 = normalizeTime(order.sessionTime2);
+      if (orderDate2 && orderDate2 === targetDate && orderTime2 && orderTime2 === targetTime) {
+        return order;
+      }
     }
   }
 
@@ -292,6 +312,8 @@ export function getBookedSlotsForDate(
   return existingOrders.filter((ord) => {
     if (excludeOrderId && ord.id === excludeOrderId) return false;
     if (ord.status === 'Dibatalkan' || (ord.status as string) === 'Batal') return false;
-    return normalizeDate(ord.sessionDate) === targetDate;
+    const match1 = normalizeDate(ord.sessionDate) === targetDate;
+    const match2 = ord.hasSecondSession && ord.sessionDate2 && normalizeDate(ord.sessionDate2) === targetDate;
+    return match1 || match2;
   });
 }

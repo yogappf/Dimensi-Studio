@@ -271,12 +271,46 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [manualEmail, setManualEmail] = useState('');
   const [manualPkgId, setManualPkgId] = useState(packages[0]?.id || PHOTO_PACKAGES[0].id);
   const [manualAddonIds, setManualAddonIds] = useState<string[]>([]);
+  
+  // Sesi 1 State
   const [manualDate, setManualDate] = useState('');
   const [manualTime, setManualTime] = useState('10:00 WIB');
-  const [manualLocation, setManualLocation] = useState('Studio Dimensi');
+  const [manualLocationType, setManualLocationType] = useState<'studio' | 'outdoor' | 'venue'>('studio');
+  const [manualLocation, setManualLocation] = useState('Dimensi Photo Studio (Studio 1 Utama)');
   const [manualNotes, setManualNotes] = useState('');
+
+  // Sesi 2 State (Opsional / 2 Acara)
+  const [manualHasSecondSession, setManualHasSecondSession] = useState(false);
+  const [manualDate2, setManualDate2] = useState('');
+  const [manualTime2, setManualTime2] = useState('18:30 WIB');
+  const [manualLocationType2, setManualLocationType2] = useState<'studio' | 'outdoor' | 'venue'>('venue');
+  const [manualLocation2, setManualLocation2] = useState('');
+  const [manualNotes2, setManualNotes2] = useState('');
+
   const [manualStatus, setManualStatus] = useState<OrderStatus>('Terkonfirmasi & Terjadwal');
   const [manualPayment, setManualPayment] = useState<'DP 30%' | 'DP 50%' | 'Lunas'>('DP 50%');
+
+  const handleManualLocationTypeChange = (type: 'studio' | 'outdoor' | 'venue') => {
+    setManualLocationType(type);
+    if (type === 'studio') {
+      setManualLocation('Dimensi Photo Studio (Studio 1 Utama)');
+    } else if (type === 'outdoor') {
+      setManualLocation('Lokasi Outdoor / Alam Pilihan Klien');
+    } else {
+      setManualLocation('');
+    }
+  };
+
+  const handleManualLocationType2Change = (type: 'studio' | 'outdoor' | 'venue') => {
+    setManualLocationType2(type);
+    if (type === 'studio') {
+      setManualLocation2('Dimensi Photo Studio (Studio 1 Utama)');
+    } else if (type === 'outdoor') {
+      setManualLocation2('Lokasi Outdoor / Alam Pilihan Klien');
+    } else {
+      setManualLocation2('');
+    }
+  };
 
   // Filtered orders
   const filteredOrders = orders.filter((order) => {
@@ -336,13 +370,28 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     const todayStr = `${year}-${month}-${day}`;
     const targetDate = manualDate || todayStr;
 
-    // Check conflict
-    const conflict = checkScheduleSlotConflict(targetDate, manualTime, orders);
-    if (conflict) {
-      const confirmOverride = confirm(
-        `⚠️ PERINGATAN KUOTA JADWAL:\n\nSlot pada tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} SUDAH TERISI oleh klien:\n• Nama: ${conflict.clientName}\n• ID Booking: ${conflict.id}\n• Paket: ${conflict.packageName}\n\nApakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+    // Check conflict for Sesi 1
+    const conflict1 = checkScheduleSlotConflict(targetDate, manualTime, orders);
+    if (conflict1) {
+      const confirmOverride1 = confirm(
+        `⚠️ PERINGATAN KUOTA JADWAL ACARA 1:\n\nSlot pada tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} SUDAH TERISI oleh klien:\n• Nama: ${conflict1.clientName}\n• ID Booking: ${conflict1.id}\n• Paket: ${conflict1.packageName}\n\nApakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
       );
-      if (!confirmOverride) return;
+      if (!confirmOverride1) return;
+    }
+
+    // Check conflict for Sesi 2 if enabled
+    let targetDate2 = manualDate2;
+    if (manualHasSecondSession) {
+      if (!targetDate2) {
+        targetDate2 = targetDate;
+      }
+      const conflict2 = checkScheduleSlotConflict(targetDate2, manualTime2, orders);
+      if (conflict2) {
+        const confirmOverride2 = confirm(
+          `⚠️ PERINGATAN KUOTA JADWAL ACARA 2:\n\nSlot pada tanggal ${formatDateIndonesian(targetDate2)} pukul ${manualTime2} SUDAH TERISI oleh klien:\n• Nama: ${conflict2.clientName}\n• ID Booking: ${conflict2.id}\n• Paket: ${conflict2.packageName}\n\nApakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+        );
+        if (!confirmOverride2) return;
+      }
     }
 
     const pkg = packages.find((p) => p.id === manualPkgId) || packages[0] || PHOTO_PACKAGES[0];
@@ -363,11 +412,19 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       addOnsText: selectedAddons.length > 0 ? selectedAddons.map((a) => a.name).join(', ') : 'Tidak ada',
       addOnsTotal: addonsTotal,
       totalPrice: pkg.price + addonsTotal,
+      // Sesi 1
       sessionDate: targetDate,
       sessionTime: manualTime,
-      locationType: 'studio',
-      locationAddress: manualLocation,
+      locationType: manualLocationType,
+      locationAddress: manualLocation.trim() || (manualLocationType === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 1'),
       notes: manualNotes.trim(),
+      // Sesi 2
+      hasSecondSession: manualHasSecondSession,
+      sessionDate2: manualHasSecondSession ? targetDate2 : undefined,
+      sessionTime2: manualHasSecondSession ? manualTime2 : undefined,
+      locationType2: manualHasSecondSession ? manualLocationType2 : undefined,
+      locationAddress2: manualHasSecondSession ? (manualLocation2.trim() || (manualLocationType2 === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 2')) : undefined,
+      notes2: manualHasSecondSession ? manualNotes2.trim() : undefined,
       status: manualStatus,
       completedAt: manualStatus === 'Selesai' ? new Date().toISOString() : undefined,
       paymentPreference: manualPayment,
@@ -383,7 +440,14 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     setManualAddonIds([]);
     setManualDate('');
     setManualTime('10:00 WIB');
-    setManualLocation('Studio Dimensi');
+    setManualLocationType('studio');
+    setManualLocation('Dimensi Photo Studio (Studio 1 Utama)');
+    setManualHasSecondSession(false);
+    setManualDate2('');
+    setManualTime2('18:30 WIB');
+    setManualLocationType2('venue');
+    setManualLocation2('');
+    setManualNotes2('');
     setManualPkgId(packages[0]?.id || PHOTO_PACKAGES[0].id);
     setManualStatus('Terkonfirmasi & Terjadwal');
     setManualPayment('DP 50%');
@@ -1206,13 +1270,42 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
                       {/* Schedule & Location */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-200 flex items-center gap-1 font-mono">
-                          <CalendarCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
-                          <span>{order.sessionDate}</span>
-                        </div>
-                        <div className="text-[10px] text-gray-500 mt-0.5 truncate max-w-[170px]">
-                          {order.sessionTime} • {order.locationAddress}
-                        </div>
+                        {order.hasSecondSession && order.sessionDate2 ? (
+                          <div className="space-y-1.5">
+                            <div>
+                              <div className="flex items-center gap-1.5 font-mono">
+                                <span className="px-1.5 py-0.2 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 text-[9px] font-mono font-bold uppercase">
+                                  Sesi 1
+                                </span>
+                                <span className="text-xs text-white font-medium">{order.sessionDate}</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-mono pl-0.5 mt-0.5 truncate max-w-[190px]">
+                                {order.sessionTime} • {order.locationAddress}
+                              </div>
+                            </div>
+                            <div className="pt-1 border-t border-white/10">
+                              <div className="flex items-center gap-1.5 font-mono">
+                                <span className="px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 text-[9px] font-mono font-bold uppercase">
+                                  Sesi 2
+                                </span>
+                                <span className="text-xs text-cyan-200 font-medium">{order.sessionDate2}</span>
+                              </div>
+                              <div className="text-[10px] text-gray-400 font-mono pl-0.5 mt-0.5 truncate max-w-[190px]">
+                                {order.sessionTime2 || '-'} • {order.locationAddress2 || '-'}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-medium text-gray-200 flex items-center gap-1 font-mono">
+                              <CalendarCheck className="w-3.5 h-3.5 text-[#D4AF37]" />
+                              <span>{order.sessionDate}</span>
+                            </div>
+                            <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[170px]">
+                              {order.sessionTime} • {order.locationAddress}
+                            </div>
+                          </div>
+                        )}
                       </td>
 
                       {/* Price */}
@@ -1458,18 +1551,32 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 })()}
               </div>
 
-              <div className="p-3.5 bg-[#0A0A0A] border border-white/10 space-y-1.5">
-                <div className="text-gray-400 font-mono text-[10px] uppercase">Jadwal & Lokasi:</div>
-                <div className="text-white font-medium">📅 {formatDateIndonesian(detailOrder.sessionDate)} ({detailOrder.sessionTime})</div>
-                <div className="text-gray-300">📍 {detailOrder.locationAddress}</div>
-              </div>
-
-              {detailOrder.notes && (
-                <div className="p-3 bg-[#0A0A0A] border border-white/10">
-                  <span className="text-gray-500 font-mono text-[10px] uppercase block mb-1">Catatan / Konsep Khusus:</span>
-                  <p className="text-gray-300">{detailOrder.notes}</p>
+              <div className="p-3.5 bg-[#0A0A0A] border border-white/10 space-y-2">
+                <div className="text-gray-400 font-mono text-[10px] uppercase">Jadwal & Lokasi Sesi:</div>
+                <div className="p-2 bg-[#141414] border border-white/5 space-y-1">
+                  <div className="text-xs font-bold text-[#D4AF37] font-mono">Acara Pertama (Sesi 1):</div>
+                  <div className="text-white font-medium">📅 {formatDateIndonesian(detailOrder.sessionDate)} ({detailOrder.sessionTime})</div>
+                  <div className="text-gray-300 text-[11px]">📍 {detailOrder.locationType?.toUpperCase()} - {detailOrder.locationAddress}</div>
+                  {detailOrder.notes && (
+                    <div className="text-gray-400 text-[11px] italic pt-1 border-t border-white/5">
+                      Catatan: {detailOrder.notes}
+                    </div>
+                  )}
                 </div>
-              )}
+
+                {detailOrder.hasSecondSession && detailOrder.sessionDate2 && (
+                  <div className="p-2 bg-[#141414] border border-cyan-500/30 space-y-1 mt-2">
+                    <div className="text-xs font-bold text-cyan-400 font-mono">Acara Kedua (Sesi 2):</div>
+                    <div className="text-white font-medium">📅 {formatDateIndonesian(detailOrder.sessionDate2)} ({detailOrder.sessionTime2})</div>
+                    <div className="text-gray-300 text-[11px]">📍 {detailOrder.locationType2?.toUpperCase()} - {detailOrder.locationAddress2}</div>
+                    {detailOrder.notes2 && (
+                      <div className="text-gray-400 text-[11px] italic pt-1 border-t border-white/5">
+                        Catatan: {detailOrder.notes2}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Payment Proof Verification Section */}
               {detailOrder.paymentProofUrl ? (
@@ -1830,7 +1937,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       {/* Modal: Add Manual Client / Booking */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-xl bg-[#141414] border border-[#D4AF37]/60 p-6 sm:p-7 shadow-2xl text-[#E0E0E0] max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-2xl bg-[#141414] border border-[#D4AF37]/60 p-6 sm:p-7 shadow-2xl text-[#E0E0E0] max-h-[90vh] overflow-y-auto">
             
             <button
               onClick={() => setIsAddModalOpen(false)}
@@ -1843,7 +1950,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               Tambah Data <span className="italic font-serif text-[#D4AF37]">Konsumen Manual</span>
             </h3>
             <p className="text-xs text-gray-400 mb-5">
-              Gunakan formulir ini untuk mencatat konsumen offline atau reservasi via telepon ke dalam database.
+              Gunakan formulir ini untuk mencatat konsumen offline atau reservasi via telepon ke dalam database. Mendukung pilihan 1 atau 2 acara.
             </p>
 
             <form onSubmit={handleManualAddSubmit} className="space-y-4 text-xs">
@@ -1940,34 +2047,236 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Tanggal Sesi</label>
-                  <input
-                    type="date"
-                    value={manualDate}
-                    onChange={(e) => setManualDate(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/10 text-white font-mono focus:border-[#D4AF37] focus:outline-none"
-                  />
-                </div>
+                {/* PILIHAN BERAPA ACARA / SESI */}
+                <div className="sm:col-span-2 p-3 bg-[#0D0D0D] border border-white/15 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-white font-mono block">
+                        Pilihan Jumlah Acara / Sesi:
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-mono">
+                        Sesuaikan untuk paket 1 sesi tunggal atau paket wedding 2 acara (beda hari/jam)
+                      </span>
+                    </div>
 
-                <div>
-                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Waktu Sesi / Jam Acara</label>
-                  <AnimatedClockPicker
-                    value={manualTime}
-                    onChange={(t) => setManualTime(t)}
-                    isSlotUnavailable={Boolean(checkScheduleSlotConflict(manualDate || new Date().toISOString().split('T')[0], manualTime, orders))}
-                    bookedTimes={getBookedSlotsForDate(manualDate || new Date().toISOString().split('T')[0], orders).map(o => o.sessionTime)}
-                  />
-                </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setManualHasSecondSession(false)}
+                        className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border transition-all cursor-pointer ${
+                          !manualHasSecondSession
+                            ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                            : 'bg-black/50 text-gray-400 border-white/10 hover:text-white'
+                        }`}
+                      >
+                        1 Acara (Sesi Tunggal)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setManualHasSecondSession(true);
+                          if (!manualDate2) {
+                            setManualDate2(manualDate || new Date().toISOString().split('T')[0]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border transition-all cursor-pointer ${
+                          manualHasSecondSession
+                            ? 'bg-cyan-500 text-black border-cyan-400'
+                            : 'bg-black/50 text-gray-400 border-white/10 hover:text-white'
+                        }`}
+                      >
+                        2 Acara (Beda Tanggal & Jam)
+                      </button>
+                    </div>
+                  </div>
 
-                <div className="sm:col-span-2">
-                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Lokasi / Venue</label>
-                  <input
-                    type="text"
-                    value={manualLocation}
-                    onChange={(e) => setManualLocation(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none"
-                  />
+                  {/* ================= ACARA PERTAMA (SESI 1) ================= */}
+                  <div className="p-3 bg-[#141414] border border-[#D4AF37]/30 space-y-3">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] font-mono flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-[#D4AF37]"></span>
+                        Acara Pertama (Sesi 1 Utama)
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.2 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/40 font-mono font-bold uppercase">
+                        Wajib
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                          Tanggal Rencana Sesi 1 *
+                        </label>
+                        <input
+                          type="date"
+                          required
+                          value={manualDate}
+                          onChange={(e) => setManualDate(e.target.value)}
+                          className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 text-white font-mono focus:border-[#D4AF37] focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                          Waktu Sesi 1 / Jam Acara *
+                        </label>
+                        <AnimatedClockPicker
+                          value={manualTime}
+                          onChange={(t) => setManualTime(t)}
+                          isSlotUnavailable={Boolean(checkScheduleSlotConflict(manualDate || new Date().toISOString().split('T')[0], manualTime, orders))}
+                          bookedTimes={getBookedSlotsForDate(manualDate || new Date().toISOString().split('T')[0], orders).map(o => o.sessionTime)}
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                          Tipe Tempat Pemotretan 1:
+                        </label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'studio', label: 'Studio Dimensi' },
+                            { id: 'outdoor', label: 'Outdoor / Alam' },
+                            { id: 'venue', label: 'Gedung / Klien' },
+                          ].map((loc) => (
+                            <button
+                              type="button"
+                              key={loc.id}
+                              onClick={() => handleManualLocationTypeChange(loc.id as any)}
+                              className={`py-1.5 px-2 text-[11px] uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
+                                manualLocationType === loc.id
+                                  ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                                  : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
+                              }`}
+                            >
+                              {loc.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                          Detail Alamat Lokasi Sesi 1 *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={manualLocation}
+                          onChange={(e) => setManualLocation(e.target.value)}
+                          placeholder="Contoh: Dimensi Photo Studio / Jl. Merdeka No. 12"
+                          className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                          Catatan Khusus / Konsep Foto Sesi 1
+                        </label>
+                        <textarea
+                          rows={2}
+                          placeholder="Catatan konsep, tema busana, prosesi..."
+                          value={manualNotes}
+                          onChange={(e) => setManualNotes(e.target.value)}
+                          className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ================= ACARA KEDUA (SESI 2) ================= */}
+                  {manualHasSecondSession && (
+                    <div className="p-3 bg-[#141414] border border-cyan-500/40 space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-white/10">
+                        <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 font-mono flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                          Acara Kedua (Sesi 2 - Beda Tanggal & Jam)
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.2 bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-mono font-bold uppercase">
+                          Sesi 2 Aktif
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                            Tanggal Rencana Sesi 2 *
+                          </label>
+                          <input
+                            type="date"
+                            required={manualHasSecondSession}
+                            value={manualDate2}
+                            onChange={(e) => setManualDate2(e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 text-white font-mono focus:border-cyan-400 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                            Waktu Sesi 2 / Jam Acara *
+                          </label>
+                          <AnimatedClockPicker
+                            value={manualTime2}
+                            onChange={(t) => setManualTime2(t)}
+                            isSlotUnavailable={Boolean(checkScheduleSlotConflict(manualDate2 || manualDate || new Date().toISOString().split('T')[0], manualTime2, orders))}
+                            bookedTimes={getBookedSlotsForDate(manualDate2 || manualDate || new Date().toISOString().split('T')[0], orders).map(o => o.sessionTime)}
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                            Tipe Tempat Pemotretan 2:
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'studio', label: 'Studio Dimensi' },
+                              { id: 'outdoor', label: 'Outdoor / Alam' },
+                              { id: 'venue', label: 'Gedung / Klien' },
+                            ].map((loc) => (
+                              <button
+                                type="button"
+                                key={loc.id}
+                                onClick={() => handleManualLocationType2Change(loc.id as any)}
+                                className={`py-1.5 px-2 text-[11px] uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
+                                  manualLocationType2 === loc.id
+                                    ? 'bg-cyan-500 text-black border-cyan-400'
+                                    : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
+                                }`}
+                              >
+                                {loc.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                            Detail Alamat Lokasi Sesi 2 *
+                          </label>
+                          <input
+                            type="text"
+                            required={manualHasSecondSession}
+                            value={manualLocation2}
+                            onChange={(e) => setManualLocation2(e.target.value)}
+                            placeholder="Contoh: Ballroom Hotel Grand Sahid / Gedung Resepsi"
+                            className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 text-white focus:border-cyan-400 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                            Catatan Khusus / Konsep Foto Sesi 2
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder="Catatan resepsi, tema busana kedua, dekorasi..."
+                            value={manualNotes2}
+                            onChange={(e) => setManualNotes2(e.target.value)}
+                            className="w-full px-3 py-2 bg-[#0A0A0A] border border-white/10 text-white focus:border-cyan-400 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -2004,17 +2313,6 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                       ? 'Pesanan dengan status "Terkonfirmasi & Terjadwal" akan langsung aktif di data konsumen tanpa memerlukan upload bukti transfer.'
                       : `Status "${manualStatus}" dapat langsung dikelola dan aktif di data konsumen.`}
                   </span>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Catatan Tambahan</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Catatan konsep / permintaan khusus..."
-                    value={manualNotes}
-                    onChange={(e) => setManualNotes(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none"
-                  />
                 </div>
               </div>
 

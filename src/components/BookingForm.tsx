@@ -27,6 +27,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>(initialAddOnIds);
 
   // Form Fields
+  // Acara Pertama Fields
   const [clientName, setClientName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -35,14 +36,26 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const [locationType, setLocationType] = useState<'studio' | 'outdoor' | 'venue'>('studio');
   const [locationAddress, setLocationAddress] = useState('Dimensi Photo Studio (Studio 1 Utama)');
   const [notes, setNotes] = useState('');
-  const [paymentPreference, setPaymentPreference] = useState<'DP 30%' | 'DP 50%' | 'Lunas'>('DP 30%');
 
+  // Acara Kedua Fields (Multi-Event / Wedding)
+  const [hasSecondSession, setHasSecondSession] = useState(false);
+  const [sessionDate2, setSessionDate2] = useState('');
+  const [sessionTime2, setSessionTime2] = useState('18:30 WIB');
+  const [locationType2, setLocationType2] = useState<'studio' | 'outdoor' | 'venue'>('venue');
+  const [locationAddress2, setLocationAddress2] = useState('');
+  const [notes2, setNotes2] = useState('');
+
+  const [paymentPreference, setPaymentPreference] = useState<'DP 30%' | 'DP 50%' | 'Lunas'>('DP 30%');
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check for quota / slot conflict against existing client orders
+  // Check for quota / slot conflict against existing client orders for Acara 1
   const slotConflict = sessionDate && sessionTime ? checkScheduleSlotConflict(sessionDate, sessionTime, existingOrders) : null;
   const bookedSlotsOnDate = sessionDate ? getBookedSlotsForDate(sessionDate, existingOrders) : [];
+
+  // Check for quota / slot conflict against existing client orders for Acara 2
+  const slotConflict2 = hasSecondSession && sessionDate2 && sessionTime2 ? checkScheduleSlotConflict(sessionDate2, sessionTime2, existingOrders) : null;
+  const bookedSlotsOnDate2 = hasSecondSession && sessionDate2 ? getBookedSlotsForDate(sessionDate2, existingOrders) : [];
 
   // Synchronize when parent props change
   useEffect(() => {
@@ -74,6 +87,18 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     }
   };
 
+  // Auto set default address when locationType2 changes
+  const handleLocationTypeChange2 = (type: 'studio' | 'outdoor' | 'venue') => {
+    setLocationType2(type);
+    if (type === 'studio') {
+      setLocationAddress2('Dimensi Photo Studio (Jl. Melati Indah No. 45, Studio Dimensi Visual)');
+    } else if (type === 'outdoor') {
+      setLocationAddress2('Lokasi Outdoor (Contoh: Hutan Kota GBK / PIK / Pantai)');
+    } else {
+      setLocationAddress2('');
+    }
+  };
+
   const handleToggleAddon = (addonId: string) => {
     setSelectedAddOns((prev) =>
       prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
@@ -94,13 +119,14 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
 
+    // Validation for Acara Pertama
     if (!sessionDate) {
-      setFormError('Silakan tentukan tanggal jadwal sesi pemotretan.');
+      setFormError('Silakan tentukan tanggal rencana sesi untuk Acara Pertama.');
       return;
     }
 
     if (!sessionTime.trim()) {
-      setFormError('Silakan atur waktu sesi pemotretan.');
+      setFormError('Silakan atur waktu sesi untuk Acara Pertama.');
       return;
     }
 
@@ -108,14 +134,37 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     const conflict = checkScheduleSlotConflict(sessionDate, sessionTime, existingOrders);
     if (conflict) {
       setFormError(
-        `⛔ PESANAN DITOLAK: Kuota pada hari dan tanggal ${formatDateIndonesian(sessionDate)} pukul ${sessionTime} sudah penuh! Jadwal ini telah terdaftar oleh pesanan lain di sistem. Silakan pilih jam atau tanggal yang berbeda.`
+        `⛔ PESANAN DITOLAK (Acara Pertama): Kuota pada hari dan tanggal ${formatDateIndonesian(sessionDate)} pukul ${sessionTime} sudah penuh! Jadwal ini telah terdaftar oleh pesanan lain di sistem. Silakan pilih jam atau tanggal yang berbeda.`
       );
       return;
     }
 
     if (!locationAddress.trim()) {
-      setFormError('Silakan isi detail alamat lokasi pemotretan.');
+      setFormError('Silakan isi detail alamat lokasi pemotretan untuk Acara Pertama.');
       return;
+    }
+
+    // Validation for Acara Kedua if enabled
+    if (hasSecondSession) {
+      if (!sessionDate2) {
+        setFormError('Silakan tentukan tanggal rencana sesi untuk Acara Kedua.');
+        return;
+      }
+      if (!sessionTime2.trim()) {
+        setFormError('Silakan atur waktu sesi untuk Acara Kedua.');
+        return;
+      }
+      const conflict2 = checkScheduleSlotConflict(sessionDate2, sessionTime2, existingOrders);
+      if (conflict2) {
+        setFormError(
+          `⛔ PESANAN DITOLAK (Acara Kedua): Kuota pada hari dan tanggal ${formatDateIndonesian(sessionDate2)} pukul ${sessionTime2} sudah penuh! Jadwal ini telah terdaftar oleh pesanan lain di sistem. Silakan pilih jam atau tanggal yang berbeda.`
+        );
+        return;
+      }
+      if (!locationAddress2.trim()) {
+        setFormError('Silakan isi detail alamat lokasi pemotretan untuk Acara Kedua.');
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -136,11 +185,19 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       addOnsText: selectedAddonsList.length > 0 ? selectedAddonsList.map((a) => a.name).join(', ') : 'Tidak ada',
       addOnsTotal: addonsTotal,
       totalPrice: totalPrice,
+      // Acara Pertama (Sesi 1)
       sessionDate: sessionDate,
       sessionTime: sessionTime.trim(),
       locationType: locationType,
       locationAddress: locationAddress.trim(),
       notes: notes.trim(),
+      // Acara Kedua (Sesi 2)
+      hasSecondSession: hasSecondSession,
+      sessionDate2: hasSecondSession ? sessionDate2 : undefined,
+      sessionTime2: hasSecondSession ? sessionTime2.trim() : undefined,
+      locationType2: hasSecondSession ? locationType2 : undefined,
+      locationAddress2: hasSecondSession ? locationAddress2.trim() : undefined,
+      notes2: hasSecondSession ? notes2.trim() : undefined,
       status: 'Menunggu Konfirmasi',
       paymentPreference: paymentPreference,
     };
@@ -165,10 +222,16 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       setPhone('');
       setEmail('');
       setNotes('');
+      setNotes2('');
       setSessionDate('');
+      setSessionDate2('');
+      setHasSecondSession(false);
       setSessionTime('10:00 WIB');
+      setSessionTime2('18:30 WIB');
       setLocationType('studio');
+      setLocationType2('venue');
       setLocationAddress('Dimensi Photo Studio (Studio 1 Utama)');
+      setLocationAddress2('');
       setSelectedAddOns([]);
       setFormError('');
     }, 400);
@@ -332,168 +395,347 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               </div>
             </div>
 
-            {/* Step 3: Schedule & Location */}
-            <div className="p-6 bg-[#141414] border border-white/10 space-y-4">
-              <h3 className="text-xs uppercase tracking-widest font-bold text-white flex items-center gap-2 pb-3 border-b border-white/10">
-                <span className="w-5 h-5 bg-[#D4AF37] text-black font-mono flex items-center justify-center text-[10px] font-black">3</span>
-                <span>Jadwal & Lokasi Sesi Pemotretan</span>
-              </h3>
+            {/* Step 3: Schedule & Location - 2 Sessions Support */}
+            <div className="p-6 bg-[#141414] border border-white/10 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-white/10 gap-2">
+                <h3 className="text-xs uppercase tracking-widest font-bold text-white flex items-center gap-2">
+                  <span className="w-5 h-5 bg-[#D4AF37] text-black font-mono flex items-center justify-center text-[10px] font-black">3</span>
+                  <span>Jadwal & Lokasi Sesi Pemotretan</span>
+                </h3>
+                <span className="text-[10px] font-mono text-gray-400">
+                  Mendukung hingga 2 sesi acara (beda tanggal & jam)
+                </span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Tanggal Rencana Sesi <span className="text-[#D4AF37]">*</span>
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="date"
-                      required
-                      min={minDateStr}
-                      value={sessionDate}
-                      onChange={(e) => setSessionDate(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none [color-scheme:dark]"
-                      id="input-session-date"
+              {/* ================= ACARA PERTAMA ================= */}
+              <div className="p-4 bg-[#0D0D0D] border border-white/10 space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] font-mono flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-[#D4AF37]"></span>
+                    Acara Pertama (Sesi 1 Utama)
+                  </span>
+                  <span className="text-[10px] px-2 py-0.5 bg-white/10 text-white font-mono uppercase">Wajib</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                      tanggal rencana sesi : <span className="text-[#D4AF37]">*</span>
+                    </label>
+                    <div className="relative">
+                      <Calendar className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="date"
+                        required
+                        min={minDateStr}
+                        value={sessionDate}
+                        onChange={(e) => setSessionDate(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none [color-scheme:dark]"
+                        id="input-session-date-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                      waktu : <span className="text-[#D4AF37]">*</span>
+                    </label>
+                    <AnimatedClockPicker
+                      value={sessionTime}
+                      onChange={(newTime) => setSessionTime(newTime)}
+                      isSlotUnavailable={Boolean(slotConflict)}
+                      bookedTimes={bookedSlotsOnDate.map((o) => o.sessionTime)}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Waktu / Jam Sesi Acara <span className="text-[#D4AF37]">*</span>
-                  </label>
-                  <AnimatedClockPicker
-                    value={sessionTime}
-                    onChange={(newTime) => setSessionTime(newTime)}
-                    isSlotUnavailable={Boolean(slotConflict)}
-                    bookedTimes={bookedSlotsOnDate.map((o) => o.sessionTime)}
-                  />
-                </div>
-
-                {/* Real-time Schedule Quota Availability Feedback */}
-                {sessionDate && (
-                  <div className="sm:col-span-2">
-                    {slotConflict ? (
-                      <div className="p-3.5 bg-rose-950/50 border-2 border-rose-500/70 text-rose-200 text-xs space-y-2 animate-in fade-in">
-                        <div className="flex items-center gap-2 font-bold text-rose-300 uppercase tracking-wider text-[11px] font-mono">
-                          <Ban className="w-4 h-4 shrink-0 text-rose-400 stroke-[2.5]" />
-                          <span>⛔ Kuota Penuh / Jadwal Sudah Terisi!</span>
-                        </div>
-                        <p className="text-[11px] leading-relaxed text-rose-100">
-                          Slot pada <strong>{formatDateIndonesian(sessionDate)}</strong> pukul <strong>{sessionTime}</strong> sudah terisi oleh pesanan konsumen lain di database studio. Pesanan <strong>akan otomatis ditolak</strong> karena kuota jadwal pada waktu ini sudah penuh.
-                        </p>
-                        {bookedSlotsOnDate.length > 0 && (
-                          <div className="pt-2 border-t border-rose-500/30 text-[10px] text-gray-300">
-                            <span className="font-semibold text-rose-300 uppercase font-mono">Jam yang sudah terisi di hari ini:</span>{' '}
-                            <span className="font-mono text-white font-semibold">
-                              {bookedSlotsOnDate.map((o) => o.sessionTime).join(' • ')}
-                            </span>
+                  {/* Quota Feedback for Acara Pertama */}
+                  {sessionDate && (
+                    <div className="sm:col-span-2">
+                      {slotConflict ? (
+                        <div className="p-3.5 bg-rose-950/50 border-2 border-rose-500/70 text-rose-200 text-xs space-y-2 animate-in fade-in">
+                          <div className="flex items-center gap-2 font-bold text-rose-300 uppercase tracking-wider text-[11px] font-mono">
+                            <Ban className="w-4 h-4 shrink-0 text-rose-400 stroke-[2.5]" />
+                            <span>⛔ Kuota Acara Pertama Penuh!</span>
                           </div>
-                        )}
-                        <span className="text-[10px] text-yellow-300 font-mono block">
-                          💡 Saran: Silakan putar jarum jam ke waktu yang lain atau pilih tanggal berbeda.
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center justify-between animate-in fade-in">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                          <span>✓ Kuota Tersedia: {formatDateIndonesian(sessionDate)} ({sessionTime}) siap dibooking.</span>
+                          <p className="text-[11px] leading-relaxed text-rose-100">
+                            Slot pada <strong>{formatDateIndonesian(sessionDate)}</strong> pukul <strong>{sessionTime}</strong> sudah terisi oleh pesanan lain di sistem.
+                          </p>
+                          {bookedSlotsOnDate.length > 0 && (
+                            <div className="pt-2 border-t border-rose-500/30 text-[10px] text-gray-300">
+                              <span className="font-semibold text-rose-300 uppercase font-mono">Jam terisi di hari ini:</span>{' '}
+                              <span className="font-mono text-white font-semibold">
+                                {bookedSlotsOnDate.map((o) => o.sessionTime).join(' • ')}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {bookedSlotsOnDate.length > 0 && (
-                          <span className="text-[10px] text-gray-400 hidden sm:inline">
-                            ({bookedSlotsOnDate.length} slot lain terisi hari ini)
-                          </span>
+                      ) : (
+                        <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center justify-between animate-in fade-in">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                            <span>✓ Acara 1 Tersedia: {formatDateIndonesian(sessionDate)} ({sessionTime})</span>
+                          </div>
+                          {bookedSlotsOnDate.length > 0 && (
+                            <span className="text-[10px] text-gray-400 hidden sm:inline">
+                              ({bookedSlotsOnDate.length} slot lain terisi)
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                      tipe tempat pemotretan :
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { id: 'studio', label: 'Studio Dimensi' },
+                        { id: 'outdoor', label: 'Outdoor / Alam' },
+                        { id: 'venue', label: 'Gedung / Klien' },
+                      ].map((loc) => (
+                        <button
+                          type="button"
+                          key={loc.id}
+                          onClick={() => handleLocationTypeChange(loc.id as any)}
+                          className={`py-2 px-2 text-xs uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
+                            locationType === loc.id
+                              ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                              : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
+                          }`}
+                        >
+                          {loc.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                      detail alamat : <span className="text-[#D4AF37]">*</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
+                      <input
+                        type="text"
+                        required
+                        value={locationAddress}
+                        onChange={(e) => setLocationAddress(e.target.value)}
+                        placeholder="Contoh: Jl. Melati Indah No. 45 / Gedung Sasana Kriya TMII"
+                        className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none placeholder-gray-600"
+                        id="input-location-address-1"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                      catatan khusus / konsep foto yang diinginkan :
+                    </label>
+                    <div className="relative">
+                      <FileText className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
+                      <textarea
+                        rows={2}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Contoh: Nuansa adat Jawa, prosesi akad nikah khidmat, candid ekspresi keluarga..."
+                        className="w-full pl-10 pr-3.5 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none placeholder-gray-600"
+                        id="input-notes-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ================= ACARA KEDUA (TOGGLEABLE) ================= */}
+              <div className="p-4 bg-[#0D0D0D] border border-white/10 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-white font-mono">
+                      Acara Kedua (Sesi 2 - Opsional / Beda Tanggal & Jam)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextVal = !hasSecondSession;
+                      setHasSecondSession(nextVal);
+                      if (nextVal && !sessionDate2) {
+                        setSessionDate2(sessionDate || minDateStr);
+                      }
+                    }}
+                    className={`px-3 py-1 text-[11px] font-mono uppercase font-bold border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      hasSecondSession
+                        ? 'bg-cyan-500 text-black border-cyan-400'
+                        : 'bg-white/5 text-gray-300 border-white/20 hover:border-cyan-400/60 hover:text-white'
+                    }`}
+                  >
+                    <span>{hasSecondSession ? '✓ Sesi 2 Aktif' : '+ Tambah Acara Kedua'}</span>
+                  </button>
+                </div>
+
+                {hasSecondSession ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in duration-200">
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                        tanggal rencana sesi : <span className="text-[#D4AF37]">*</span>
+                      </label>
+                      <div className="relative">
+                        <Calendar className="w-4 h-4 text-gray-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                        <input
+                          type="date"
+                          required={hasSecondSession}
+                          min={minDateStr}
+                          value={sessionDate2}
+                          onChange={(e) => setSessionDate2(e.target.value)}
+                          className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none [color-scheme:dark]"
+                          id="input-session-date-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                        waktu : <span className="text-[#D4AF37]">*</span>
+                      </label>
+                      <AnimatedClockPicker
+                        value={sessionTime2}
+                        onChange={(newTime) => setSessionTime2(newTime)}
+                        isSlotUnavailable={Boolean(slotConflict2)}
+                        bookedTimes={bookedSlotsOnDate2.map((o) => o.sessionTime)}
+                      />
+                    </div>
+
+                    {/* Quota Feedback for Acara Kedua */}
+                    {sessionDate2 && (
+                      <div className="sm:col-span-2">
+                        {slotConflict2 ? (
+                          <div className="p-3.5 bg-rose-950/50 border-2 border-rose-500/70 text-rose-200 text-xs space-y-2 animate-in fade-in">
+                            <div className="flex items-center gap-2 font-bold text-rose-300 uppercase tracking-wider text-[11px] font-mono">
+                              <Ban className="w-4 h-4 shrink-0 text-rose-400 stroke-[2.5]" />
+                              <span>⛔ Kuota Acara Kedua Penuh!</span>
+                            </div>
+                            <p className="text-[11px] leading-relaxed text-rose-100">
+                              Slot pada <strong>{formatDateIndonesian(sessionDate2)}</strong> pukul <strong>{sessionTime2}</strong> sudah terisi oleh pesanan lain di sistem.
+                            </p>
+                            {bookedSlotsOnDate2.length > 0 && (
+                              <div className="pt-2 border-t border-rose-500/30 text-[10px] text-gray-300">
+                                <span className="font-semibold text-rose-300 uppercase font-mono">Jam terisi di hari ini:</span>{' '}
+                                <span className="font-mono text-white font-semibold">
+                                  {bookedSlotsOnDate2.map((o) => o.sessionTime).join(' • ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-[11px] font-mono flex items-center justify-between animate-in fade-in">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                              <span>✓ Acara 2 Tersedia: {formatDateIndonesian(sessionDate2)} ({sessionTime2})</span>
+                            </div>
+                            {bookedSlotsOnDate2.length > 0 && (
+                              <span className="text-[10px] text-gray-400 hidden sm:inline">
+                                ({bookedSlotsOnDate2.length} slot lain terisi)
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                        tipe tempat pemotretan :
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { id: 'studio', label: 'Studio Dimensi' },
+                          { id: 'outdoor', label: 'Outdoor / Alam' },
+                          { id: 'venue', label: 'Gedung / Klien' },
+                        ].map((loc) => (
+                          <button
+                            type="button"
+                            key={loc.id}
+                            onClick={() => handleLocationTypeChange2(loc.id as any)}
+                            className={`py-2 px-2 text-xs uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
+                              locationType2 === loc.id
+                                ? 'bg-cyan-500 text-black border-cyan-400'
+                                : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
+                            }`}
+                          >
+                            {loc.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                        detail alamat : <span className="text-[#D4AF37]">*</span>
+                      </label>
+                      <div className="relative">
+                        <MapPin className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
+                        <input
+                          type="text"
+                          required={hasSecondSession}
+                          value={locationAddress2}
+                          onChange={(e) => setLocationAddress2(e.target.value)}
+                          placeholder="Contoh: Ballroom Hotel Mulia Senayan, Jakarta"
+                          className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none placeholder-gray-600"
+                          id="input-location-address-2"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                        catatan khusus / konsep foto yang diinginkan :
+                      </label>
+                      <div className="relative">
+                        <FileText className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
+                        <textarea
+                          rows={2}
+                          value={notes2}
+                          onChange={(e) => setNotes2(e.target.value)}
+                          placeholder="Contoh: Resepsi malam hari, lighting dramatis, dokumentasi tamu VVIP dan hiburan musik..."
+                          className="w-full pl-10 pr-3.5 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none placeholder-gray-600"
+                          id="input-notes-2"
+                        />
+                      </div>
+                    </div>
                   </div>
+                ) : (
+                  <p className="text-xs text-gray-500 italic">
+                    Gunakan opsi ini jika paket Anda memiliki 2 acara berbeda (seperti Akad Nikah di hari pertama dan Resepsi / Pesta di hari kedua, atau sesi Studio dan sesi Outdoor).
+                  </p>
                 )}
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Tipe Tempat Pemotretan:
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { id: 'studio', label: 'Studio Dimensi' },
-                      { id: 'outdoor', label: 'Outdoor / Alam' },
-                      { id: 'venue', label: 'Gedung / Klien' },
-                    ].map((loc) => (
-                      <button
-                        type="button"
-                        key={loc.id}
-                        onClick={() => handleLocationTypeChange(loc.id as any)}
-                        className={`py-2 px-2 text-xs uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
-                          locationType === loc.id
-                            ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
-                            : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        {loc.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Detail Alamat / Nama Lokasi <span className="text-[#D4AF37]">*</span>
-                  </label>
-                  <div className="relative">
-                    <MapPin className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
-                    <input
-                      type="text"
-                      required
-                      value={locationAddress}
-                      onChange={(e) => setLocationAddress(e.target.value)}
-                      placeholder="Masukkan alamat venue, studio, atau lokasi pemotretan"
-                      className="w-full pl-10 pr-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none placeholder-gray-600"
-                      id="input-location-address"
-                    />
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Catatan Khusus / Konsep Foto yang Diinginkan (Opsional)
-                  </label>
-                  <div className="relative">
-                    <FileText className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
-                    <textarea
-                      rows={2}
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Contoh: Nuansa adat Jawa, bawa 2 kostum casual, fokus candid ekspresi natural..."
-                      className="w-full pl-10 pr-3.5 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none placeholder-gray-600"
-                      id="input-notes"
-                    />
-                  </div>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Pilihan Ketentuan Pembayaran:
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['DP 30%', 'DP 50%', 'Lunas'] as const).map((pref) => (
-                      <button
-                        type="button"
-                        key={pref}
-                        onClick={() => setPaymentPreference(pref)}
-                        className={`py-2 px-2 text-xs uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
-                          paymentPreference === pref
-                            ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
-                            : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
-                        }`}
-                      >
-                        {pref}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
               </div>
+
+              {/* Payment preference */}
+              <div className="pt-2 border-t border-white/10">
+                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
+                  Pilihan Ketentuan Pembayaran:
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['DP 30%', 'DP 50%', 'Lunas'] as const).map((pref) => (
+                    <button
+                      type="button"
+                      key={pref}
+                      onClick={() => setPaymentPreference(pref)}
+                      className={`py-2 px-2 text-xs uppercase tracking-wider font-semibold border text-center transition-all cursor-pointer ${
+                        paymentPreference === pref
+                          ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                          : 'bg-[#0A0A0A] border-white/10 text-gray-400 hover:border-white/30 hover:text-white'
+                      }`}
+                    >
+                      {pref}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
             {formError && (
@@ -543,15 +785,43 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                   </div>
                 )}
 
+                {/* Acara 1 in summary */}
                 <div className="pt-2 border-t border-white/10 space-y-1">
-                  <span className="text-[10px] font-mono uppercase text-gray-400 block">Jadwal & Lokasi:</span>
-                  <div className="text-white">
+                  <span className="text-[10px] font-mono uppercase text-[#D4AF37] font-bold block">
+                    Jadwal Acara Pertama (Sesi 1):
+                  </span>
+                  <div className="text-white font-medium">
                     {sessionDate ? formatDateIndonesian(sessionDate) : '(Pilih tanggal di formulir)'}
                   </div>
                   <div className="text-gray-400 text-[11px] font-mono">
-                    {sessionTime} • {locationType.toUpperCase()}
+                    {sessionTime} • {locationType === 'studio' ? 'Studio Dimensi' : locationType === 'outdoor' ? 'Outdoor / Alam' : 'Gedung / Klien'}
                   </div>
+                  {locationAddress && (
+                    <div className="text-gray-400 text-[11px] truncate">
+                      📍 {locationAddress}
+                    </div>
+                  )}
                 </div>
+
+                {/* Acara 2 in summary (if enabled) */}
+                {hasSecondSession && (
+                  <div className="pt-2 border-t border-white/10 space-y-1">
+                    <span className="text-[10px] font-mono uppercase text-cyan-400 font-bold block">
+                      Jadwal Acara Kedua (Sesi 2):
+                    </span>
+                    <div className="text-white font-medium">
+                      {sessionDate2 ? formatDateIndonesian(sessionDate2) : '(Pilih tanggal Acara 2)'}
+                    </div>
+                    <div className="text-gray-400 text-[11px] font-mono">
+                      {sessionTime2} • {locationType2 === 'studio' ? 'Studio Dimensi' : locationType2 === 'outdoor' ? 'Outdoor / Alam' : 'Gedung / Klien'}
+                    </div>
+                    {locationAddress2 && (
+                      <div className="text-gray-400 text-[11px] truncate">
+                        📍 {locationAddress2}
+                      </div>
+                    )}
+                  </div>
+                )}
 
               </div>
 
@@ -582,9 +852,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               {/* Submit CTA */}
               <button
                 type="submit"
-                disabled={isSubmitting || Boolean(slotConflict)}
+                disabled={isSubmitting || Boolean(slotConflict) || Boolean(slotConflict2)}
                 className={`w-full py-3.5 font-bold text-xs uppercase tracking-[0.2em] shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                  slotConflict
+                  slotConflict || slotConflict2
                     ? 'bg-rose-900/80 border border-rose-500/50 text-rose-200 cursor-not-allowed opacity-90'
                     : 'bg-[#D4AF37] hover:bg-white text-black disabled:opacity-50'
                 }`}
@@ -592,7 +862,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               >
                 {isSubmitting ? (
                   <span>Mendaftarkan Pesanan...</span>
-                ) : slotConflict ? (
+                ) : slotConflict || slotConflict2 ? (
                   <>
                     <Ban className="w-4 h-4 stroke-[2.5] text-rose-300" />
                     <span>⛔ Kuota Penuh (Pilih Jam/Hari Lain)</span>

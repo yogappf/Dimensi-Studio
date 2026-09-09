@@ -117,22 +117,22 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({
           <div className="text-[8px] font-bold font-mono uppercase text-gray-700 border-b border-gray-300 pb-0.5">
             JADWAL & LOKASI SESI
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Tgl Sesi:</span>
-            <span className="font-bold text-black">{formatDateIndonesian(order.sessionDate)}</span>
+          <div className="text-[7.5px] font-bold text-gray-800">
+            • Acara 1: {formatDateIndonesian(order.sessionDate)} ({order.sessionTime})
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Waktu:</span>
-            <span className="font-mono font-bold text-black">{order.sessionTime} WIB</span>
+          <div className="text-[7px] text-gray-600 truncate">
+            {order.locationType?.toUpperCase()} - {order.locationAddress}
           </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Lokasi:</span>
-            <span className="font-semibold text-black uppercase">{order.locationType}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Alamat:</span>
-            <span className="text-black truncate max-w-[100px] text-right font-medium">{order.locationAddress}</span>
-          </div>
+          {order.hasSecondSession && order.sessionDate2 && (
+            <>
+              <div className="text-[7.5px] font-bold text-blue-900 border-t border-gray-200 pt-0.5 mt-0.5">
+                • Acara 2: {formatDateIndonesian(order.sessionDate2)} ({order.sessionTime2})
+              </div>
+              <div className="text-[7px] text-gray-600 truncate">
+                {order.locationType2?.toUpperCase()} - {order.locationAddress2}
+              </div>
+            </>
+          )}
         </div>
       </div>
 

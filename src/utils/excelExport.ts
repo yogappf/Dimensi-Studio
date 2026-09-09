@@ -27,12 +27,20 @@ export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_K
     'Biaya Tambahan (Rp)': order.addOnsTotal,
     'Total Biaya Sesi (Rp)': order.totalPrice,
     'Metode Pembayaran': order.paymentPreference,
-    'Tanggal Jadwal Sesi': order.sessionDate,
-    'Waktu Sesi': order.sessionTime,
-    'Tipe Lokasi': order.locationType === 'studio' ? 'Studio Dimensi' : order.locationType === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien',
-    'Alamat / Detail Lokasi': order.locationAddress,
-    'Status Pesanan': order.status,
-    'Catatan Khusus': order.notes || '-'
+    'Jumlah Sesi': order.hasSecondSession && order.sessionDate2 ? '2 Sesi (Acara 1 & 2)' : '1 Sesi Tunggal',
+    // Sesi 1
+    'Tanggal Sesi 1': order.sessionDate,
+    'Waktu Sesi 1': order.sessionTime,
+    'Tipe Lokasi 1': order.locationType === 'studio' ? 'Studio Dimensi' : order.locationType === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien',
+    'Alamat Lokasi 1': order.locationAddress,
+    'Catatan Sesi 1': order.notes || '-',
+    // Sesi 2
+    'Tanggal Sesi 2': order.hasSecondSession && order.sessionDate2 ? order.sessionDate2 : '-',
+    'Waktu Sesi 2': order.hasSecondSession && order.sessionTime2 ? order.sessionTime2 : '-',
+    'Tipe Lokasi 2': order.hasSecondSession && order.locationType2 ? (order.locationType2 === 'studio' ? 'Studio Dimensi' : order.locationType2 === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien') : '-',
+    'Alamat Lokasi 2': order.hasSecondSession && order.locationAddress2 ? order.locationAddress2 : '-',
+    'Catatan Sesi 2': order.hasSecondSession && order.notes2 ? order.notes2 : '-',
+    'Status Pesanan': order.status
   }));
 
   // Create worksheet
@@ -52,12 +60,18 @@ export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_K
     { wch: 18 }, // Biaya Tambahan
     { wch: 18 }, // Total Biaya
     { wch: 18 }, // Pembayaran
-    { wch: 16 }, // Tanggal Sesi
-    { wch: 16 }, // Waktu
-    { wch: 18 }, // Tipe Lokasi
-    { wch: 40 }, // Alamat Lokasi
-    { wch: 22 }, // Status
-    { wch: 35 }  // Catatan
+    { wch: 22 }, // Jumlah Sesi
+    { wch: 16 }, // Tanggal Sesi 1
+    { wch: 16 }, // Waktu 1
+    { wch: 18 }, // Tipe Lokasi 1
+    { wch: 35 }, // Alamat Lokasi 1
+    { wch: 30 }, // Catatan 1
+    { wch: 16 }, // Tanggal Sesi 2
+    { wch: 16 }, // Waktu 2
+    { wch: 18 }, // Tipe Lokasi 2
+    { wch: 35 }, // Alamat Lokasi 2
+    { wch: 30 }, // Catatan 2
+    { wch: 22 }  // Status
   ];
 
   // Create workbook
@@ -88,11 +102,16 @@ export function exportOrdersToCSV(orders: BookingOrder[], filename = 'Daftar_Kon
     'Biaya Add-ons (IDR)',
     'Total Biaya (IDR)',
     'Tipe Bayar',
-    'Tanggal Sesi',
-    'Waktu Sesi',
-    'Lokasi',
-    'Status',
-    'Catatan'
+    'Jumlah Sesi',
+    'Tanggal Sesi 1',
+    'Waktu Sesi 1',
+    'Lokasi Sesi 1',
+    'Catatan Sesi 1',
+    'Tanggal Sesi 2',
+    'Waktu Sesi 2',
+    'Lokasi Sesi 2',
+    'Catatan Sesi 2',
+    'Status'
   ];
 
   const rows = orders.map((order, idx) => [
@@ -108,11 +127,16 @@ export function exportOrdersToCSV(orders: BookingOrder[], filename = 'Daftar_Kon
     order.addOnsTotal,
     order.totalPrice,
     `"${order.paymentPreference}"`,
+    `"${order.hasSecondSession && order.sessionDate2 ? '2 Sesi' : '1 Sesi'}"`,
     `"${order.sessionDate}"`,
     `"${order.sessionTime}"`,
     `"${order.locationAddress.replace(/"/g, '""')}"`,
-    `"${order.status}"`,
-    `"${(order.notes || '').replace(/"/g, '""')}"`
+    `"${(order.notes || '').replace(/"/g, '""')}"`,
+    `"${order.hasSecondSession && order.sessionDate2 ? order.sessionDate2 : '-'}"`,
+    `"${order.hasSecondSession && order.sessionTime2 ? order.sessionTime2 : '-'}"`,
+    `"${(order.hasSecondSession && order.locationAddress2 ? order.locationAddress2 : '-').replace(/"/g, '""')}"`,
+    `"${(order.hasSecondSession && order.notes2 ? order.notes2 : '-').replace(/"/g, '""')}"`,
+    `"${order.status}"`
   ]);
 
   const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');

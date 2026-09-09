@@ -276,23 +276,55 @@ export function generateReceiptHTML(order: BookingOrder, studioConfig?: StudioCo
       </div>
 
       <div style="border-left: 1px solid #e4e4e7; padding-left: 8px;">
-        <div class="info-section-title">JADWAL & LOKASI SESI</div>
-        <div class="info-row">
-          <span class="info-label">Tgl Sesi:</span>
-          <span class="info-value">${formatDateIndonesian(order.sessionDate)}</span>
+        <div class="info-section-title">JADWAL & LOKASI SESI ${order.hasSecondSession && order.sessionDate2 ? '(2 ACARA)' : ''}</div>
+        
+        <div style="margin-bottom: ${order.hasSecondSession && order.sessionDate2 ? '4px' : '0'};">
+          ${order.hasSecondSession && order.sessionDate2 ? `
+            <div style="font-size: 8px; font-weight: 800; color: #18181b; text-transform: uppercase; margin-bottom: 2px;">
+              • Acara 1 (Sesi Utama):
+            </div>
+          ` : ''}
+          <div class="info-row">
+            <span class="info-label">Tgl Sesi:</span>
+            <span class="info-value">${formatDateIndonesian(order.sessionDate)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Waktu:</span>
+            <span class="info-value">${order.sessionTime} WIB</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Lokasi:</span>
+            <span class="info-value" style="text-transform: uppercase;">${order.locationType || 'studio'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Alamat:</span>
+            <span class="info-value truncate" style="max-width: 110px; text-align: right;">${order.locationAddress}</span>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Waktu:</span>
-          <span class="info-value">${order.sessionTime} WIB</span>
+
+        ${order.hasSecondSession && order.sessionDate2 ? `
+        <div style="border-top: 1px dashed #d4d4d8; padding-top: 3px; margin-top: 3px;">
+          <div style="font-size: 8px; font-weight: 800; color: #0284c7; text-transform: uppercase; margin-bottom: 2px;">
+            • Acara 2 (Sesi Tambahan):
+          </div>
+          <div class="info-row">
+            <span class="info-label">Tgl Sesi:</span>
+            <span class="info-value">${formatDateIndonesian(order.sessionDate2)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Waktu:</span>
+            <span class="info-value">${order.sessionTime2 || '-'} WIB</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Lokasi:</span>
+            <span class="info-value" style="text-transform: uppercase;">${order.locationType2 || 'venue'}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Alamat:</span>
+            <span class="info-value truncate" style="max-width: 110px; text-align: right;">${order.locationAddress2 || '-'}</span>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Lokasi:</span>
-          <span class="info-value" style="text-transform: uppercase;">${order.locationType}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Alamat:</span>
-          <span class="info-value truncate" style="max-width: 110px; text-align: right;">${order.locationAddress}</span>
-        </div>
+        ` : ''}
       </div>
     </div>
 
@@ -311,7 +343,8 @@ export function generateReceiptHTML(order: BookingOrder, studioConfig?: StudioCo
           <td style="text-align: center; font-weight: bold;">1</td>
           <td>
             <strong>${order.packageName}</strong>
-            ${order.notes ? `<div style="font-size: 8px; color: #52525b; font-style: italic;">Catatan: ${order.notes}</div>` : ''}
+            ${order.notes ? `<div style="font-size: 8px; color: #52525b; font-style: italic;">• Catatan Acara 1: ${order.notes}</div>` : ''}
+            ${order.hasSecondSession && order.notes2 ? `<div style="font-size: 8px; color: #0284c7; font-style: italic;">• Catatan Acara 2: ${order.notes2}</div>` : ''}
           </td>
           <td style="text-align: center; font-size: 8px; text-transform: uppercase;">Paket Utama</td>
           <td style="text-align: right; font-weight: bold; font-family: monospace;">${formatRupiah(order.packagePrice)}</td>
