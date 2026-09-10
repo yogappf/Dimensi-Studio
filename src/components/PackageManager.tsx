@@ -89,12 +89,6 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
       return;
     }
 
-    if (file.size > 1 * 1024 * 1024) {
-      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-      alert(`File "${file.name}" melebihi batas maksimal 1 MB (Ukuran: ${sizeMb} MB).\n\nSilakan pilih atau kompres file gambar paket menjadi di bawah 1 MB.`);
-      return;
-    }
-
     try {
       setImageToast('Mengompresi gambar HD...');
       const compressed = await compressImage(file, 1440, 1440, 0.80);

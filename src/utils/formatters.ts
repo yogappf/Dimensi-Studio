@@ -317,3 +317,224 @@ export function getBookedSlotsForDate(
     return match1 || match2;
   });
 }
+
+export interface UpcomingSessionAlert {
+  order: BookingOrder;
+  sessionNumber: 1 | 2;
+  dateStr: string;
+  timeStr: string;
+  location: string;
+  locationType?: 'studio' | 'outdoor' | 'venue';
+  sessionDateTime: Date;
+  diffHours: number;
+  diffMinutes: number;
+  isToday: boolean;
+  isTomorrow: boolean;
+  timeStatusLabel: string;
+  urgencyLevel: 'imminent' | 'today' | 'tomorrow' | 'upcoming';
+}
+
+/**
+ * Parses session date and time into a valid Date object
+ */
+export function parseSessionDateTime(dateStr?: string, timeStr?: string): Date | null {
+  if (!dateStr) return null;
+  const cleanDate = normalizeDate(dateStr);
+  if (!cleanDate) return null;
+
+  const dateParts = cleanDate.split('-');
+  if (dateParts.length !== 3) return null;
+  const year = parseInt(dateParts[0], 10);
+  const month = parseInt(dateParts[1], 10) - 1;
+  const day = parseInt(dateParts[2], 10);
+
+  let hour = 9;
+  let minute = 0;
+  if (timeStr) {
+    const match = timeStr.match(/(\d{1,2})[:.](\d{2})/);
+    if (match) {
+      hour = parseInt(match[1], 10);
+      minute = parseInt(match[2], 10);
+    }
+  }
+
+  const d = new Date(year, month, day, hour, minute, 0);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Checks if a specific order has any session scheduled within the next 24 hours
+ */
+export function isOrderWithin24Hours(order: BookingOrder, referenceDate: Date = new Date()): boolean {
+  if (!order || order.status === 'Selesai' || order.status === 'Dibatalkan' || (order.status as string) === 'Batal') {
+    return false;
+  }
+
+  const refMs = referenceDate.getTime();
+  const refYear = referenceDate.getFullYear();
+  const refMonth = referenceDate.getMonth();
+  const refDay = referenceDate.getDate();
+  const todayStr = `${refYear}-${String(refMonth + 1).padStart(2, '0')}-${String(refDay).padStart(2, '0')}`;
+  const tomorrow = new Date(refYear, refMonth, refDay + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+  // Check Sesi 1
+  const dt1 = parseSessionDateTime(order.sessionDate, order.sessionTime);
+  if (dt1) {
+    const diffHours = (dt1.getTime() - refMs) / (1000 * 60 * 60);
+    const normDate1 = normalizeDate(order.sessionDate);
+    const isToday1 = normDate1 === todayStr;
+    const isTomorrow1 = normDate1 === tomorrowStr;
+    if ((diffHours >= -4 && diffHours <= 24) || (isToday1 && diffHours > -8) || (isTomorrow1 && diffHours <= 24)) {
+      return true;
+    }
+  }
+
+  // Check Sesi 2
+  if (order.hasSecondSession && order.sessionDate2) {
+    const dt2 = parseSessionDateTime(order.sessionDate2, order.sessionTime2);
+    if (dt2) {
+      const diffHours2 = (dt2.getTime() - refMs) / (1000 * 60 * 60);
+      const normDate2 = normalizeDate(order.sessionDate2);
+      const isToday2 = normDate2 === todayStr;
+      const isTomorrow2 = normDate2 === tomorrowStr;
+      if ((diffHours2 >= -4 && diffHours2 <= 24) || (isToday2 && diffHours2 > -8) || (isTomorrow2 && diffHours2 <= 24)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Returns all upcoming sessions scheduled within 24 hours
+ */
+export function getUpcomingSessionsWithin24Hours(
+  orders: BookingOrder[],
+  referenceDate: Date = new Date()
+): UpcomingSessionAlert[] {
+  if (!Array.isArray(orders)) return [];
+  const results: UpcomingSessionAlert[] = [];
+  const refMs = referenceDate.getTime();
+
+  const refYear = referenceDate.getFullYear();
+  const refMonth = referenceDate.getMonth();
+  const refDay = referenceDate.getDate();
+  const todayStr = `${refYear}-${String(refMonth + 1).padStart(2, '0')}-${String(refDay).padStart(2, '0')}`;
+
+  const tomorrow = new Date(refYear, refMonth, refDay + 1);
+  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
+
+  for (const order of orders) {
+    if (order.status === 'Selesai' || order.status === 'Dibatalkan' || (order.status as string) === 'Batal') {
+      continue;
+    }
+
+    // Check Sesi 1
+    const dt1 = parseSessionDateTime(order.sessionDate, order.sessionTime);
+    if (dt1) {
+      const diffMs = dt1.getTime() - refMs;
+      const diffHours = diffMs / (1000 * 60 * 60);
+      const normDate1 = normalizeDate(order.sessionDate);
+      const isToday = normDate1 === todayStr;
+      const isTomorrow = normDate1 === tomorrowStr;
+
+      if ((diffHours >= -4 && diffHours <= 24) || (isToday && diffHours > -8)) {
+        let urgencyLevel: 'imminent' | 'today' | 'tomorrow' | 'upcoming' = 'upcoming';
+        let timeStatusLabel = '';
+
+        if (diffHours < 0 && isToday) {
+          urgencyLevel = 'imminent';
+          timeStatusLabel = `Hari Ini (${order.sessionTime || 'Sedang Berlangsung'})`;
+        } else if (diffHours >= 0 && diffHours < 1) {
+          urgencyLevel = 'imminent';
+          const mins = Math.max(1, Math.round(diffMs / (1000 * 60)));
+          timeStatusLabel = `🚨 Mulai dalam ${mins} menit!`;
+        } else if (diffHours >= 1 && diffHours <= 6) {
+          urgencyLevel = 'imminent';
+          timeStatusLabel = `⏰ Mulai dalam ${Math.round(diffHours)} jam (${isToday ? 'Hari Ini' : 'Besok'}, ${order.sessionTime})`;
+        } else if (isToday) {
+          urgencyLevel = 'today';
+          timeStatusLabel = `Hari Ini, ${order.sessionTime} (dalam ${Math.round(diffHours)} jam)`;
+        } else if (isTomorrow) {
+          urgencyLevel = 'tomorrow';
+          timeStatusLabel = `Besok, ${order.sessionTime} (dalam ${Math.round(diffHours)} jam)`;
+        } else {
+          timeStatusLabel = `Dalam ${Math.round(diffHours)} jam (${formatDateIndonesian(order.sessionDate)})`;
+        }
+
+        results.push({
+          order,
+          sessionNumber: 1,
+          dateStr: order.sessionDate,
+          timeStr: order.sessionTime,
+          location: order.locationAddress,
+          locationType: order.locationType,
+          sessionDateTime: dt1,
+          diffHours,
+          diffMinutes: Math.round(diffMs / (1000 * 60)),
+          isToday,
+          isTomorrow,
+          timeStatusLabel,
+          urgencyLevel,
+        });
+      }
+    }
+
+    // Check Sesi 2 if exists
+    if (order.hasSecondSession && order.sessionDate2) {
+      const dt2 = parseSessionDateTime(order.sessionDate2, order.sessionTime2);
+      if (dt2) {
+        const diffMs2 = dt2.getTime() - refMs;
+        const diffHours2 = diffMs2 / (1000 * 60 * 60);
+        const normDate2 = normalizeDate(order.sessionDate2);
+        const isToday2 = normDate2 === todayStr;
+        const isTomorrow2 = normDate2 === tomorrowStr;
+
+        if ((diffHours2 >= -4 && diffHours2 <= 24) || (isToday2 && diffHours2 > -8)) {
+          let urgencyLevel: 'imminent' | 'today' | 'tomorrow' | 'upcoming' = 'upcoming';
+          let timeStatusLabel = '';
+
+          if (diffHours2 < 0 && isToday2) {
+            urgencyLevel = 'imminent';
+            timeStatusLabel = `Hari Ini (Sesi 2, ${order.sessionTime2 || 'Sedang Berlangsung'})`;
+          } else if (diffHours2 >= 0 && diffHours2 < 1) {
+            urgencyLevel = 'imminent';
+            const mins = Math.max(1, Math.round(diffMs2 / (1000 * 60)));
+            timeStatusLabel = `🚨 Sesi 2 mulai dalam ${mins} menit!`;
+          } else if (diffHours2 >= 1 && diffHours2 <= 6) {
+            urgencyLevel = 'imminent';
+            timeStatusLabel = `⏰ Sesi 2 dalam ${Math.round(diffHours2)} jam (${isToday2 ? 'Hari Ini' : 'Besok'})`;
+          } else if (isToday2) {
+            urgencyLevel = 'today';
+            timeStatusLabel = `Hari Ini (Sesi 2), ${order.sessionTime2} (dalam ${Math.round(diffHours2)} jam)`;
+          } else if (isTomorrow2) {
+            urgencyLevel = 'tomorrow';
+            timeStatusLabel = `Besok (Sesi 2), ${order.sessionTime2} (dalam ${Math.round(diffHours2)} jam)`;
+          } else {
+            timeStatusLabel = `Sesi 2 dalam ${Math.round(diffHours2)} jam (${formatDateIndonesian(order.sessionDate2)})`;
+          }
+
+          results.push({
+            order,
+            sessionNumber: 2,
+            dateStr: order.sessionDate2,
+            timeStr: order.sessionTime2 || '',
+            location: order.locationAddress2 || order.locationAddress,
+            locationType: order.locationType2 || 'venue',
+            sessionDateTime: dt2,
+            diffHours: diffHours2,
+            diffMinutes: Math.round(diffMs2 / (1000 * 60)),
+            isToday: isToday2,
+            isTomorrow: isTomorrow2,
+            timeStatusLabel,
+            urgencyLevel,
+          });
+        }
+      }
+    }
+  }
+
+  return results.sort((a, b) => a.sessionDateTime.getTime() - b.sessionDateTime.getTime());
+}

@@ -123,16 +123,6 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
   const handleFileUpload = async (files: FileList | null, isReplace: boolean) => {
     if (!files || files.length === 0) return;
 
-    // Check size limit (max 1MB each)
-    const MAX_SIZE_BYTES = 1 * 1024 * 1024; // 1 MB
-    for (let i = 0; i < files.length; i++) {
-      if (files[i].size > MAX_SIZE_BYTES) {
-        const sizeMb = (files[i].size / (1024 * 1024)).toFixed(2);
-        alert(`File "${files[i].name}" melebihi batas maksimal 1 MB (Ukuran: ${sizeMb} MB).\n\nSilakan pilih atau kompres file foto menjadi di bawah 1 MB.`);
-        return;
-      }
-    }
-
     setIsUploading(true);
     setUploadProgressText(`Memproses 0/${files.length} foto...`);
 
@@ -622,8 +612,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     Koleksi Foto Portofolio ({formData.imageUrls?.length || 0} Foto)
                   </label>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono px-2 py-0.5 bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30">
-                      Maks. 1 MB / file
+                    <span className="text-[10px] font-mono px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      Bebas / Tanpa Batas Foto
                     </span>
                     {isUploading && (
                       <span className="text-[11px] font-mono text-[#D4AF37] animate-pulse">
@@ -783,7 +773,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     <ImageIcon className="w-6 h-6 text-gray-600 mx-auto mb-1.5" />
                     <p className="text-xs text-gray-400 font-mono">Belum ada foto yang ditambahkan.</p>
                     <p className="text-[11px] text-gray-500 mt-0.5">
-                      Gunakan tombol <strong>+ Upload Foto Tambahan</strong> di atas untuk menambahkan foto dari galeri HP/laptop Anda (Maksimal 1 MB per file foto).
+                      Gunakan tombol <strong>+ Upload Foto Tambahan</strong> di atas untuk menambahkan foto dari galeri HP/laptop Anda tanpa batasan jumlah foto.
                     </p>
                   </div>
                 )}

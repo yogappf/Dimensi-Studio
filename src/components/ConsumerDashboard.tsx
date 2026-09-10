@@ -11,7 +11,21 @@ import {
   AuditLogItem,
 } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES, PORTFOLIO_ITEMS, INITIAL_CLIENT_ORDERS, STUDIO_INFO } from '../data/mockData';
-import { formatRupiah, formatDateIndonesian, generateWhatsAppLink, generateClientDeliveryWhatsAppLink, generateClientConfirmationWhatsAppLink, generateClientCompletionWhatsAppLink, generateClientReminderMessage, generateClientReminderWhatsAppLink, checkScheduleSlotConflict, getBookedSlotsForDate } from '../utils/formatters';
+import {
+  formatRupiah,
+  formatDateIndonesian,
+  generateWhatsAppLink,
+  generateClientDeliveryWhatsAppLink,
+  generateClientConfirmationWhatsAppLink,
+  generateClientCompletionWhatsAppLink,
+  generateClientReminderMessage,
+  generateClientReminderWhatsAppLink,
+  checkScheduleSlotConflict,
+  getBookedSlotsForDate,
+  getUpcomingSessionsWithin24Hours,
+  isOrderWithin24Hours,
+  UpcomingSessionAlert,
+} from '../utils/formatters';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -21,6 +35,7 @@ import { MasterAdminManager } from './MasterAdminManager';
 import { PrintableReceipt } from './PrintableReceipt';
 import { AnimatedClockPicker } from './AnimatedClockPicker';
 import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receiptPrinter';
+import { getCategoryLabel, getCategoryIcon } from './BookingForm';
 import { useToast } from '../context/ToastContext';
 import {
   FileSpreadsheet,
@@ -61,6 +76,14 @@ import {
   Printer,
   Instagram,
   Star,
+  Bell,
+  BellRing,
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  Send,
+  Timer,
 } from 'lucide-react';
 
 interface ConsumerDashboardProps {
@@ -211,6 +234,26 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [packageFilter, setPackageFilter] = useState<string>('all');
   const [reviewFilter, setReviewFilter] = useState<'all' | 'displayed' | 'hidden'>('all');
   
+  // Upcoming session alert state (< 24 hours)
+  const upcomingSessions = getUpcomingSessionsWithin24Hours(orders);
+  const upcomingOrdersCount = orders.filter((o) => isOrderWithin24Hours(o)).length;
+  const [isAlertBannerDismissed, setIsAlertBannerDismissed] = useState(false);
+  const [isAlertBannerExpanded, setIsAlertBannerExpanded] = useState(true);
+
+  // Trigger Toast Notification for upcoming sessions within 24 hours (Danger Red Theme)
+  const hasNotifiedUpcomingRef = React.useRef(false);
+  React.useEffect(() => {
+    if (upcomingSessions.length > 0 && !hasNotifiedUpcomingRef.current) {
+      hasNotifiedUpcomingRef.current = true;
+      const firstSession = upcomingSessions[0];
+      toast.error(
+        `🚨 PERINGATAN DARURAT: Ada ${upcomingSessions.length} Sesi Foto dalam 24 Jam ke Depan!`,
+        `Jadwal terdekat: ${firstSession.order.clientName} (${firstSession.timeStatusLabel}). Pastikan fotografer & kesiapan studio sudah siap.`,
+        7500
+      );
+    }
+  }, [upcomingSessions.length, toast]);
+
   // Modifikasi ini agar ulasan dari koleksi khusus ditampilkan
   const reviewsData = reviews || [];
   // Gabungkan dari kedua sumber: pesanan yang memiliki review tapi belum masuk ke koleksi reviews, dan dari koleksi reviews
@@ -321,7 +364,13 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       order.packageName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.email && order.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+    const matchesStatus =
+      statusFilter === 'all'
+        ? true
+        : statusFilter === 'upcoming24h'
+        ? isOrderWithin24Hours(order)
+        : order.status === statusFilter;
+
     const matchesPackage = packageFilter === 'all' || order.packageId === packageFilter;
 
     return matchesSearch && matchesStatus && matchesPackage;
@@ -594,13 +643,24 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <Users className={`w-4 h-4 flex-shrink-0 ${activeSubTab === 'orders' ? 'text-black' : 'text-[#D4AF37]'}`} />
                 <span className="truncate">Data Konsumen</span>
               </div>
-              <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
-                activeSubTab === 'orders'
-                  ? 'bg-black/20 text-black border-black/30'
-                  : 'bg-black/40 text-gray-400 border-white/10'
-              }`}>
-                {orders.length}
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {upcomingSessions.length > 0 && (
+                  <span
+                    className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-rose-600 text-white border border-rose-500 animate-pulse flex items-center gap-0.5 shadow-sm"
+                    title={`Ada ${upcomingSessions.length} sesi pemotretan dalam 24 jam ke depan`}
+                  >
+                    <Bell className="w-2.5 h-2.5 fill-current" />
+                    <span>{upcomingSessions.length}</span>
+                  </span>
+                )}
+                <span className={`px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                  activeSubTab === 'orders'
+                    ? 'bg-black/20 text-black border-black/30'
+                    : 'bg-black/40 text-gray-400 border-white/10'
+                }`}>
+                  {orders.length}
+                </span>
+              </div>
             </button>
 
             {/* 2. Master Paket */}
@@ -1076,6 +1136,206 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             </div>
           )}
 
+          {/* 🚨 FITUR NOTIFIKASI PERINGATAN JADWAL SESI MENDEKAT (< 24 JAM) */}
+          {upcomingSessions.length > 0 && !isAlertBannerDismissed && (
+            <div
+              id="alert-upcoming-sessions-banner"
+              className="bg-gradient-to-r from-[#2c0b0b] via-[#1d0909] to-[#121212] border-2 border-rose-600/80 p-4 sm:p-5 shadow-[0_0_35px_rgba(225,29,72,0.25)] relative animate-fadeIn mb-6"
+            >
+              {/* Top Header Row */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-rose-500/30">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="w-10 h-10 rounded bg-rose-500/20 border border-rose-500/60 flex items-center justify-center text-rose-400 flex-shrink-0 animate-pulse shadow-lg">
+                    <BellRing className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-0.5 bg-rose-500/30 text-rose-300 border border-rose-400/60 text-[10px] font-mono font-bold uppercase tracking-wider animate-pulse">
+                        🚨 Peringatan Sesi &lt; 24 Jam
+                      </span>
+                      <span className="text-xs font-mono text-gray-300 font-semibold">
+                        {upcomingSessions.length} Sesi Terjadwal
+                      </span>
+                    </div>
+                    <h2 className="text-sm sm:text-base font-bold text-white mt-1">
+                      Ada <span className="text-rose-400 underline underline-offset-4 font-extrabold">{upcomingSessions.length} sesi foto</span> yang akan berlangsung dalam 24 jam ke depan!
+                    </h2>
+                    <p className="text-[11px] text-gray-400">
+                      Harap verifikasi kehadiran klien, briefing fotografer, serta kesiapan studio & perlengkapan lighting.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Header Action Buttons */}
+                <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
+                  <button
+                    onClick={() => setStatusFilter(statusFilter === 'upcoming24h' ? 'all' : 'upcoming24h')}
+                    className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border transition-all cursor-pointer flex items-center gap-1.5 ${
+                      statusFilter === 'upcoming24h'
+                        ? 'bg-rose-600 text-white border-rose-500 shadow-lg'
+                        : 'bg-rose-950/50 text-rose-300 border-rose-500/50 hover:bg-rose-900/60'
+                    }`}
+                    title="Filter tabel konsumen untuk sesi 24 jam ke depan saja"
+                  >
+                    <Filter className="w-3.5 h-3.5" />
+                    <span>{statusFilter === 'upcoming24h' ? 'Tampilkan Semua' : 'Filter Tabel'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsAlertBannerExpanded(!isAlertBannerExpanded)}
+                    className="px-2.5 py-1.5 bg-[#171717] hover:bg-white/10 text-gray-300 border border-white/10 text-xs font-mono transition-colors cursor-pointer flex items-center gap-1"
+                    title={isAlertBannerExpanded ? 'Ciutkan rincian kartu' : 'Buka rincian kartu'}
+                  >
+                    {isAlertBannerExpanded ? (
+                      <>
+                        <ChevronUp className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Ciutkan</span>
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Rincian ({upcomingSessions.length})</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => setIsAlertBannerDismissed(true)}
+                    className="p-1.5 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors cursor-pointer"
+                    title="Sembunyikan panel peringatan sementara"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Expanded Session Cards Grid */}
+              {isAlertBannerExpanded && (
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {upcomingSessions.map((session, idx) => {
+                    const isUrgent = session.urgencyLevel === 'imminent';
+                    return (
+                      <div
+                        key={`${session.order.id}-sesi-${session.sessionNumber}-${idx}`}
+                        className={`p-3.5 border bg-[#0e0e0e]/95 space-y-3 relative group transition-all ${
+                          isUrgent
+                            ? 'border-rose-500/60 hover:border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.18)] ring-1 ring-rose-500/30'
+                            : 'border-amber-500/40 hover:border-[#D4AF37]'
+                        }`}
+                      >
+                        {/* Card Top Info */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-mono text-[#D4AF37] font-bold">
+                                {session.order.id}
+                              </span>
+                              <span className={`px-1.5 py-0.2 text-[9px] font-mono font-bold uppercase border ${
+                                session.sessionNumber === 1
+                                  ? 'bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/40'
+                                  : 'bg-cyan-500/20 text-cyan-300 border-cyan-400/40'
+                              }`}>
+                                Sesi {session.sessionNumber}
+                              </span>
+                            </div>
+                            <h4 className="text-white font-serif font-bold text-sm leading-snug">
+                              {session.order.clientName}
+                            </h4>
+                            <p className="text-[11px] text-gray-400 truncate max-w-[190px]">
+                              {session.order.packageName}
+                            </p>
+                          </div>
+
+                          {/* Urgency Pill */}
+                          <div className="text-right flex-shrink-0">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono font-bold border ${
+                                isUrgent
+                                  ? 'bg-rose-500/25 text-rose-300 border-rose-500/60 animate-pulse'
+                                  : session.isToday
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                                  : 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+                              }`}
+                            >
+                              <Timer className="w-3 h-3" />
+                              <span>{session.timeStatusLabel}</span>
+                            </span>
+                            <span className={`inline-block px-1.5 py-0.5 text-[8px] font-mono uppercase font-bold border mt-0.5 ${getStatusBadgeClass(session.order.status)} bg-[#0A0A0A]`}>
+                              {session.order.status}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Time & Location Details Box */}
+                        <div className="p-2.5 bg-black/50 border border-white/5 space-y-1.5 text-xs">
+                          <div className="flex items-center gap-1.5 font-mono text-gray-200">
+                            <Clock className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0" />
+                            <span className="font-semibold text-white">{session.timeStr}</span>
+                            <span className="text-gray-400 text-[11px]">({formatDateIndonesian(session.dateStr)})</span>
+                          </div>
+                          <div className="flex items-start gap-1.5 text-gray-300 text-[11px]">
+                            <MapPin className="w-3.5 h-3.5 text-rose-400 flex-shrink-0 mt-0.5" />
+                            <span className="line-clamp-1">{session.location}</span>
+                          </div>
+                          {session.order.phone && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-mono pt-0.5">
+                              <Phone className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                              <span>{session.order.phone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Action Buttons: Kirim Pengingat WA & Lihat Detail */}
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReminderOrder(session.order);
+                              setIsReminderModalOpen(true);
+                            }}
+                            className="px-2.5 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            title="Buka template WhatsApp pengingat sesi foto"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>Kirim Reminder</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDetailOrder(session.order)}
+                            className="px-2.5 py-1.5 bg-[#1a1a1a] hover:bg-white/10 text-gray-200 border border-white/15 font-semibold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            title="Buka rincian lengkap pesanan konsumen"
+                          >
+                            <Eye className="w-3 h-3 text-[#D4AF37]" />
+                            <span>Detail Sesi</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Compact Dismissed Banner */}
+          {upcomingSessions.length > 0 && isAlertBannerDismissed && (
+            <div className="p-3 bg-amber-950/30 border border-amber-500/40 text-xs text-amber-300 flex items-center justify-between gap-3 mb-4 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <BellRing className="w-4 h-4 text-amber-400 animate-pulse shrink-0" />
+                <span>
+                  Pemberitahuan: Terdapat <strong>{upcomingSessions.length} sesi pemotretan</strong> dalam 24 jam ke depan.
+                </span>
+              </div>
+              <button
+                onClick={() => setIsAlertBannerDismissed(false)}
+                className="text-xs font-mono font-bold text-[#D4AF37] underline hover:text-white cursor-pointer shrink-0"
+              >
+                Buka Peringatan Lengkap
+              </button>
+            </div>
+          )}
+
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         
@@ -1156,6 +1416,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               id="filter-status-select"
             >
               <option value="all">Semua Status Pesanan</option>
+              {upcomingOrdersCount > 0 && (
+                <option value="upcoming24h">🚨 Sesi &lt; 24 Jam ke Depan ({upcomingOrdersCount})</option>
+              )}
               <option value="Menunggu Konfirmasi">Menunggu Konfirmasi</option>
               <option value="Terkonfirmasi & Terjadwal">Terkonfirmasi & Terjadwal</option>
               <option value="Proses Editing">Proses Editing</option>
@@ -1181,8 +1444,26 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
 
         </div>
 
-        <div className="flex items-center justify-between text-xs text-gray-400 pt-1 border-t border-white/5">
-          <span>Menampilkan <strong className="text-[#D4AF37]">{filteredOrders.length}</strong> dari {orders.length} konsumen</span>
+        {/* Quick Filter Pill Buttons */}
+        <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-gray-400 pt-1 border-t border-white/5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span>Menampilkan <strong className="text-[#D4AF37]">{filteredOrders.length}</strong> dari {orders.length} konsumen</span>
+            {upcomingOrdersCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setStatusFilter(statusFilter === 'upcoming24h' ? 'all' : 'upcoming24h')}
+                className={`px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                  statusFilter === 'upcoming24h'
+                    ? 'bg-amber-500 text-black border-amber-400 shadow-md'
+                    : 'bg-amber-950/40 text-amber-300 border-amber-500/50 hover:bg-amber-900/60 animate-pulse'
+                }`}
+                title="Saring tabel konsumen hanya untuk sesi foto dalam 24 jam ke depan"
+              >
+                <Timer className="w-3 h-3 text-amber-400" />
+                <span>Sesi &lt; 24 Jam ({upcomingOrdersCount})</span>
+              </button>
+            )}
+          </div>
           <button
             onClick={onResetData}
             className="flex items-center gap-1 text-gray-500 hover:text-[#D4AF37] text-xs transition-colors cursor-pointer font-mono"
@@ -1229,8 +1510,14 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               ) : (
                 filteredOrders.map((order) => {
                   const waLink = generateClientConfirmationWhatsAppLink(order);
+                  const isUpcoming24h = isOrderWithin24Hours(order);
                   return (
-                    <tr key={order.id} className="hover:bg-white/[0.03] transition-colors">
+                    <tr
+                      key={order.id}
+                      className={`hover:bg-white/[0.03] transition-colors ${
+                        isUpcoming24h ? 'bg-amber-950/15 border-l-2 border-l-amber-500' : ''
+                      }`}
+                    >
                       
                       {/* ID & Date */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
@@ -1294,6 +1581,12 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                                 {order.sessionTime2 || '-'} • {order.locationAddress2 || '-'}
                               </div>
                             </div>
+                            {isUpcoming24h && (
+                              <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[9px] font-mono font-bold animate-pulse">
+                                <Timer className="w-2.5 h-2.5 text-amber-400" />
+                                <span>Sesi &lt; 24 Jam</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div>
@@ -1304,6 +1597,12 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                             <div className="text-[10px] text-gray-400 mt-0.5 truncate max-w-[170px]">
                               {order.sessionTime} • {order.locationAddress}
                             </div>
+                            {isUpcoming24h && (
+                              <div className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/50 text-[9px] font-mono font-bold mt-1 animate-pulse">
+                                <Timer className="w-2.5 h-2.5 text-amber-400" />
+                                <span>Sesi &lt; 24 Jam</span>
+                              </div>
+                            )}
                           </div>
                         )}
                       </td>
@@ -1992,17 +2291,36 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">Pilih Paket Foto *</label>
+                  <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
+                    Pilih Paket Foto (Dikelompokkan Tiap Kategori) *
+                  </label>
                   <select
                     value={manualPkgId}
                     onChange={(e) => setManualPkgId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none cursor-pointer"
+                    className="w-full px-3 py-2.5 bg-[#0A0A0A] border border-white/10 text-white focus:border-[#D4AF37] focus:outline-none cursor-pointer font-sans"
                   >
-                    {packages.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} — {formatRupiah(p.price)}
-                      </option>
-                    ))}
+                    {(() => {
+                      const catMap = new Map<string, PhotoPackage[]>();
+                      packages.forEach((pkg) => {
+                        const cat = (pkg.category || 'other').toLowerCase();
+                        if (!catMap.has(cat)) catMap.set(cat, []);
+                        catMap.get(cat)!.push(pkg);
+                      });
+
+                      return Array.from(catMap.entries()).map(([catId, items]) => (
+                        <optgroup
+                          key={catId}
+                          label={`${getCategoryIcon(catId)} ${getCategoryLabel(catId).toUpperCase()} (${items.length} Paket)`}
+                          className="bg-[#141414] text-[#D4AF37] font-bold"
+                        >
+                          {items.map((p) => (
+                            <option key={p.id} value={p.id} className="bg-[#0A0A0A] text-white font-normal py-1">
+                              {p.name} — {formatRupiah(p.price)} ({p.duration})
+                            </option>
+                          ))}
+                        </optgroup>
+                      ));
+                    })()}
                   </select>
                 </div>
 

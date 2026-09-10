@@ -1,10 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { PhotoPackage, AddOnItem, BookingOrder } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES } from '../data/mockData';
 import { formatRupiah, formatDateIndonesian, checkScheduleSlotConflict, getBookedSlotsForDate } from '../utils/formatters';
 import { AnimatedClockPicker } from './AnimatedClockPicker';
 import confetti from 'canvas-confetti';
-import { Calendar, Clock, MapPin, User, Phone, Mail, FileText, CheckCircle2, ShieldCheck, Sparkles, AlertCircle, Ban } from 'lucide-react';
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  User,
+  Phone,
+  Mail,
+  FileText,
+  CheckCircle2,
+  ShieldCheck,
+  Sparkles,
+  AlertCircle,
+  Ban,
+  Layers,
+  Tag,
+  Check,
+  Star,
+  ChevronDown,
+} from 'lucide-react';
+
+// Category label & icon dictionary for consistent presentation
+export const CATEGORY_META: Record<string, { label: string; icon: string }> = {
+  all: { label: 'Semua Kategori', icon: '✨' },
+  wedding: { label: 'Wedding & Akad', icon: '💍' },
+  prewedding: { label: 'Pre-Wedding', icon: '💑' },
+  engagement: { label: 'Engagement & Lamaran', icon: '💐' },
+  siraman: { label: 'Siraman & Pengajian', icon: '🌿' },
+  wisuda: { label: 'Wisuda & Graduation', icon: '🎓' },
+  keluarga: { label: 'Keluarga & Maternity', icon: '👨‍👩‍👧' },
+  ulangtahun: { label: 'Ulang Tahun & Kids', icon: '🎂' },
+  event: { label: 'Event & Gathering', icon: '🎉' },
+  studio: { label: 'Studio & Personal', icon: '📸' },
+};
+
+export const getCategoryLabel = (categoryKey?: string): string => {
+  const key = (categoryKey || '').toLowerCase();
+  return CATEGORY_META[key]?.label || (categoryKey ? categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1) : 'Umum');
+};
+
+export const getCategoryIcon = (categoryKey?: string): string => {
+  const key = (categoryKey || '').toLowerCase();
+  return CATEGORY_META[key]?.icon || '📁';
+};
 
 interface BookingFormProps {
   initialPackageId?: string;
@@ -25,6 +67,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
 }) => {
   const [packageId, setPackageId] = useState<string>(initialPackageId || (packages[0]?.id || 'pkg-default'));
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>(initialAddOnIds);
+  const [selectedCategoryTab, setSelectedCategoryTab] = useState<string>('all');
 
   // Form Fields
   // Acara Pertama Fields
@@ -61,8 +104,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   useEffect(() => {
     if (initialPackageId) {
       setPackageId(initialPackageId);
+      const pkg = packages.find((p) => p.id === initialPackageId);
+      if (pkg?.category) {
+        setSelectedCategoryTab(pkg.category.toLowerCase());
+      }
     }
-  }, [initialPackageId]);
+  }, [initialPackageId, packages]);
 
   useEffect(() => {
     if (initialAddOnIds && initialAddOnIds.length > 0) {
@@ -74,6 +121,66 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const selectedAddonsList = addons.filter((a) => selectedAddOns.includes(a.id));
   const addonsTotal = selectedAddonsList.reduce((acc, a) => acc + a.price, 0);
   const totalPrice = currentPackage.price + addonsTotal;
+
+  // Extract available distinct categories from package list
+  const categoryOptions = useMemo(() => {
+    const map = new Map<string, number>();
+    packages.forEach((pkg) => {
+      const cat = (pkg.category || 'other').toLowerCase();
+      map.set(cat, (map.get(cat) || 0) + 1);
+    });
+
+    const list: { id: string; label: string; icon: string; count: number }[] = [
+      { id: 'all', label: 'Semua Kategori', icon: '✨', count: packages.length },
+    ];
+
+    map.forEach((count, catId) => {
+      list.push({
+        id: catId,
+        label: getCategoryLabel(catId),
+        icon: getCategoryIcon(catId),
+        count,
+      });
+    });
+
+    return list;
+  }, [packages]);
+
+  // Group packages by category
+  const groupedPackages = useMemo(() => {
+    const groups: { categoryId: string; categoryLabel: string; icon: string; items: PhotoPackage[] }[] = [];
+    const catMap = new Map<string, PhotoPackage[]>();
+
+    packages.forEach((pkg) => {
+      const cat = (pkg.category || 'other').toLowerCase();
+      if (!catMap.has(cat)) {
+        catMap.set(cat, []);
+      }
+      catMap.get(cat)!.push(pkg);
+    });
+
+    catMap.forEach((items, catId) => {
+      groups.push({
+        categoryId: catId,
+        categoryLabel: getCategoryLabel(catId),
+        icon: getCategoryIcon(catId),
+        items,
+      });
+    });
+
+    return groups;
+  }, [packages]);
+
+  // Packages to display based on selected category tab
+  const visiblePackages = useMemo(() => {
+    if (selectedCategoryTab === 'all') return packages;
+    return packages.filter((p) => (p.category || 'other').toLowerCase() === selectedCategoryTab);
+  }, [packages, selectedCategoryTab]);
+
+  // Handle selecting package directly
+  const handleSelectPackage = (pkg: PhotoPackage) => {
+    setPackageId(pkg.id);
+  };
 
   // Auto set default address when locationType changes
   const handleLocationTypeChange = (type: 'studio' | 'outdoor' | 'venue') => {
@@ -268,35 +375,183 @@ export const BookingForm: React.FC<BookingFormProps> = ({
           <div className="lg:col-span-7 space-y-6">
             
             {/* Step 1: Package & Add-ons selection */}
-            <div className="p-6 bg-[#141414] border border-white/10 space-y-4">
-              <h3 className="text-xs uppercase tracking-widest font-bold text-white flex items-center gap-2 pb-3 border-b border-white/10">
-                <span className="w-5 h-5 bg-[#D4AF37] text-black font-mono flex items-center justify-center text-[10px] font-black">1</span>
-                <span>Pilihan Paket & Tambahan (Add-ons)</span>
-              </h3>
+            <div className="p-6 bg-[#141414] border border-white/10 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-white/10">
+                <h3 className="text-xs uppercase tracking-widest font-bold text-white flex items-center gap-2">
+                  <span className="w-5 h-5 bg-[#D4AF37] text-black font-mono flex items-center justify-center text-[10px] font-black">1</span>
+                  <span>Pilihan Kategori & Paket Fotografi</span>
+                </h3>
+                <span className="text-[11px] font-mono text-gray-400">
+                  Total <strong className="text-[#D4AF37]">{packages.length}</strong> paket tersedia
+                </span>
+              </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
-                    Paket Fotografi <span className="text-[#D4AF37]">*</span>
+              {/* 1.1 Category Filter Navigation (Tab / Pills) */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] uppercase tracking-wider text-gray-400 font-mono flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <span>Kelompokkan Berdasarkan Kategori:</span>
                   </label>
-                  <select
-                    value={packageId}
-                    onChange={(e) => setPackageId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none cursor-pointer"
-                    id="select-package"
-                  >
-                    {packages.map((pkg) => (
-                      <option key={pkg.id} value={pkg.id}>
-                        {pkg.name} — {formatRupiah(pkg.price)} ({pkg.duration})
-                      </option>
-                    ))}
-                  </select>
+                  {selectedCategoryTab !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCategoryTab('all')}
+                      className="text-[10px] font-mono text-[#D4AF37] hover:underline cursor-pointer"
+                    >
+                      Lihat Semua Kategori
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex flex-wrap gap-1.5 pb-1">
+                  {categoryOptions.map((cat) => {
+                    const isActive = selectedCategoryTab === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setSelectedCategoryTab(cat.id)}
+                        className={`px-3 py-1.5 text-xs font-medium border transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                          isActive
+                            ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md ring-1 ring-[#D4AF37]/50'
+                            : 'bg-[#0A0A0A] text-gray-300 border-white/10 hover:border-white/30 hover:text-white hover:bg-white/5'
+                        }`}
+                        id={`btn-cat-filter-${cat.id}`}
+                      >
+                        <span>{cat.icon}</span>
+                        <span>{cat.label}</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isActive ? 'bg-black/20 text-black font-bold' : 'bg-white/10 text-gray-400'
+                          }`}
+                        >
+                          {cat.count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 1.2 Interactive Grouped Package Selection Cards */}
+              <div className="space-y-3 pt-1">
+                <div className="flex items-center justify-between text-xs">
+                  <label className="block uppercase tracking-wider text-gray-400 font-mono text-[11px] flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    <span>Pilih Paket ({visiblePackages.length} Pilihan):</span> <span className="text-[#D4AF37]">*</span>
+                  </label>
+                  <span className="text-[10px] text-gray-500 font-mono hidden sm:inline">Klik kartu untuk memilih</span>
+                </div>
+
+                {/* Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[460px] overflow-y-auto pr-1">
+                  {visiblePackages.map((pkg) => {
+                    const isSelected = pkg.id === packageId;
+                    const catIcon = getCategoryIcon(pkg.category);
+                    const catLabel = getCategoryLabel(pkg.category);
+
+                    return (
+                      <div
+                        key={pkg.id}
+                        onClick={() => handleSelectPackage(pkg)}
+                        className={`p-3.5 border text-left cursor-pointer transition-all relative flex flex-col justify-between group ${
+                          isSelected
+                            ? 'bg-[#D4AF37]/10 border-[#D4AF37] shadow-[0_0_15px_rgba(212,175,55,0.15)] ring-1 ring-[#D4AF37]'
+                            : 'bg-[#0A0A0A] border-white/10 hover:border-white/30 hover:bg-white/[0.02]'
+                        }`}
+                        id={`card-package-${pkg.id}`}
+                      >
+                        <div>
+                          {/* Card Header: Category badge & popular badge */}
+                          <div className="flex items-center justify-between gap-1.5 mb-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-white/5 border border-white/10 text-[10px] text-gray-300 font-mono">
+                              <span>{catIcon}</span>
+                              <span className="truncate max-w-[120px]">{catLabel}</span>
+                            </span>
+
+                            <div className="flex items-center gap-1">
+                              {pkg.popular && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold uppercase">
+                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                  <span>Populer</span>
+                                </span>
+                              )}
+                              <div
+                                className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                                  isSelected
+                                    ? 'bg-[#D4AF37] border-[#D4AF37] text-black'
+                                    : 'border-white/30 group-hover:border-white/60 text-transparent'
+                                }`}
+                              >
+                                <Check className="w-2.5 h-2.5 stroke-[3]" />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Package Title */}
+                          <h4 className={`text-sm font-bold leading-snug transition-colors ${isSelected ? 'text-[#D4AF37]' : 'text-white group-hover:text-gray-100'}`}>
+                            {pkg.name}
+                          </h4>
+
+                          {pkg.tagline && (
+                            <p className="text-[11px] text-gray-400 line-clamp-2 mt-1 leading-relaxed">
+                              {pkg.tagline}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Card Bottom: Duration & Price */}
+                        <div className="pt-3 mt-3 border-t border-white/5 flex items-end justify-between gap-2">
+                          <div className="text-[10px] font-mono text-gray-400 flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-[#D4AF37]" />
+                            <span className="truncate">{pkg.duration}</span>
+                          </div>
+                          <div className="text-right">
+                            {pkg.originalPrice && pkg.originalPrice > pkg.price && (
+                              <div className="text-[10px] text-gray-500 line-through font-mono">
+                                {formatRupiah(pkg.originalPrice)}
+                              </div>
+                            )}
+                            <div className="text-sm font-bold text-[#D4AF37] font-serif">
+                              {formatRupiah(pkg.price)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Selected Package Highlight Bar */}
+                <div className="p-3 bg-[#0A0A0A] border border-[#D4AF37]/40 flex items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 bg-[#D4AF37]/20 border border-[#D4AF37]/50 flex items-center justify-center text-sm flex-shrink-0">
+                      {getCategoryIcon(currentPackage.category)}
+                    </div>
+                    <div className="truncate">
+                      <div className="text-[10px] text-gray-400 uppercase font-mono flex items-center gap-1.5">
+                        <span>Paket Terpilih ({getCategoryLabel(currentPackage.category)})</span>
+                      </div>
+                      <div className="text-white font-bold truncate text-xs">{currentPackage.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className="text-sm font-bold text-[#D4AF37] font-serif block">{formatRupiah(currentPackage.price)}</span>
+                    <span className="text-[10px] font-mono text-gray-400">{currentPackage.duration}</span>
+                  </div>
                 </div>
 
                 {/* Add-ons checkboxes */}
-                <div className="pt-2">
-                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-2 font-mono">
-                    Layanan Tambahan (Opsional Add-ons):
+                <div className="pt-3 border-t border-white/10">
+                  <label className="block text-xs uppercase tracking-wider text-gray-400 mb-2 font-mono flex items-center justify-between">
+                    <span>Layanan Tambahan (Opsional Add-ons):</span>
+                    {selectedAddOns.length > 0 && (
+                      <span className="text-[#D4AF37] font-bold text-[11px]">
+                        +{formatRupiah(addonsTotal)} ({selectedAddOns.length} dipilih)
+                      </span>
+                    )}
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {addons.map((addon) => {
@@ -316,8 +571,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                             onChange={() => handleToggleAddon(addon.id)}
                             className="mt-0.5 border-white/20 text-[#D4AF37] focus:ring-0 accent-[#D4AF37]"
                           />
-                          <div className="flex-1">
-                            <div className="font-semibold text-white text-xs">{addon.name}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-white text-xs truncate">{addon.name}</div>
                             <div className="text-[#D4AF37] font-medium font-serif text-[11px] mt-0.5">+{formatRupiah(addon.price)}</div>
                           </div>
                         </label>
@@ -765,7 +1020,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               <div className="space-y-3 text-xs">
                 
                 <div>
-                  <span className="text-[10px] font-mono uppercase text-gray-400 block">Paket Pilihan:</span>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[10px] font-mono uppercase text-gray-400">Paket Pilihan:</span>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] text-[9px] font-mono font-bold uppercase">
+                      <span>{getCategoryIcon(currentPackage.category)}</span>
+                      <span>{getCategoryLabel(currentPackage.category)}</span>
+                    </span>
+                  </div>
                   <div className="font-semibold text-white text-sm mt-0.5">{currentPackage.name}</div>
                   <div className="flex justify-between items-center text-gray-300 mt-1">
                     <span className="text-[10px] font-mono text-gray-400">Durasi: {currentPackage.duration}</span>
