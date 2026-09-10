@@ -232,6 +232,11 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         alert('Mohon pilih file gambar (JPG, PNG, WEBP).');
         return;
       }
+      if (file.size > 1 * 1024 * 1024) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+        alert(`Bukti transfer melebihi batas maksimal 1 MB (Ukuran: ${sizeMb} MB).\n\nSilakan pilih foto screenshot bukti bayar di bawah 1 MB.`);
+        return;
+      }
       setProofFile(file);
       const reader = new FileReader();
       reader.onload = () => {
