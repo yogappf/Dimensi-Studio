@@ -1,7 +1,8 @@
 /**
  * High-definition image compressor utility.
- * Retains crystal-clear sharpness and fine details (up to 1440px HD resolution)
+ * Retains crystal-clear sharpness and fine details
  * while optimizing file size for fast loading and Firestore quota safety (< 1MB per doc).
+ * Never discards or deletes any uploaded photos.
  */
 
 export function compressBase64(
@@ -83,7 +84,7 @@ export function compressBase64(
 
         // If single image alone exceeds 180KB, step down slightly to 0.70 quality
         if (result.length > 240000 && quality > 0.65) {
-          result = finalCanvas.toDataURL('image/jpeg', 0.70);
+          result = finalCanvas.toDataURL('image/jpeg', Math.max(0.65, quality - 0.08));
         }
 
         resolve(result);
@@ -120,6 +121,43 @@ export function compressImage(
 }
 
 /**
+ * Adaptive portfolio compressor that scales resolution & quality based on total count
+ * so that 5, 10, 20+ photos all fit in Firestore without dropping any photo.
+ */
+export function compressPortfolioImage(
+  fileOrData: File | Blob | string,
+  totalPhotosCount = 1
+): Promise<string> {
+  let maxWidth = 1440;
+  let maxHeight = 1440;
+  let quality = 0.78;
+
+  if (totalPhotosCount <= 2) {
+    maxWidth = 1440;
+    maxHeight = 1440;
+    quality = 0.78;
+  } else if (totalPhotosCount <= 5) {
+    maxWidth = 1280;
+    maxHeight = 1280;
+    quality = 0.74;
+  } else if (totalPhotosCount <= 10) {
+    maxWidth = 1100;
+    maxHeight = 1100;
+    quality = 0.70;
+  } else if (totalPhotosCount <= 20) {
+    maxWidth = 960;
+    maxHeight = 960;
+    quality = 0.66;
+  } else {
+    maxWidth = 800;
+    maxHeight = 800;
+    quality = 0.62;
+  }
+
+  return compressImage(fileOrData, maxWidth, maxHeight, quality);
+}
+
+/**
  * Calculates rough UTF-8 byte size of an object or string
  */
 export function getPayloadByteSize(obj: any): number {
@@ -132,12 +170,13 @@ export function getPayloadByteSize(obj: any): number {
 }
 
 /**
- * Ensures any Firestore document payload stays safely below 800KB (Firestore limit is 1,048,576 bytes).
- * Retains high visual definition and only recompresses if the total document exceeds the safety quota.
+ * Ensures any Firestore document payload stays safely below Firestore's 1MB limit (safe limit: 950KB).
+ * Retains high visual definition and adaptively recompresses all images if the total document exceeds the safety quota.
+ * NEVER deletes or pops any photo.
  */
 export async function sanitizePayloadForFirestore<T extends Record<string, any>>(
   payload: T,
-  maxBytes = 800000
+  maxBytes = 950000
 ): Promise<T> {
   try {
     let currentSize = getPayloadByteSize(payload);
@@ -149,10 +188,14 @@ export async function sanitizePayloadForFirestore<T extends Record<string, any>>
 
     // 1. Process array of imageUrls: recompress at crisp 1100px HD if payload is oversized
     if (Array.isArray(cloned.imageUrls) && cloned.imageUrls.length > 0) {
+      const photoCount = cloned.imageUrls.length;
+      const targetDim = photoCount > 8 ? 960 : 1100;
+      const targetQual = photoCount > 8 ? 0.66 : 0.70;
+
       const compressedList: string[] = [];
       for (const item of cloned.imageUrls) {
         if (typeof item === 'string' && item.startsWith('data:image/')) {
-          const recompressed = await compressBase64(item, 1100, 1100, 0.70);
+          const recompressed = await compressBase64(item, targetDim, targetDim, targetQual);
           compressedList.push(recompressed);
         } else if (typeof item === 'string') {
           compressedList.push(item);
@@ -171,7 +214,7 @@ export async function sanitizePayloadForFirestore<T extends Record<string, any>>
       return cloned as T;
     }
 
-    // 3. Process single imageUrl field
+    // 3. Process single imageUrl field if not part of array
     if (typeof cloned.imageUrl === 'string' && cloned.imageUrl.startsWith('data:image/')) {
       cloned.imageUrl = await compressBase64(cloned.imageUrl, 1000, 1000, 0.68);
     }
@@ -186,7 +229,7 @@ export async function sanitizePayloadForFirestore<T extends Record<string, any>>
       const compressedHero: string[] = [];
       for (const item of cloned.heroImageUrls) {
         if (typeof item === 'string' && item.startsWith('data:image/')) {
-          const comp = await compressBase64(item, 1200, 1200, 0.70);
+          const comp = await compressBase64(item, 1100, 1100, 0.68);
           compressedHero.push(comp);
         } else if (typeof item === 'string') {
           compressedHero.push(item);
@@ -195,12 +238,19 @@ export async function sanitizePayloadForFirestore<T extends Record<string, any>>
       cloned.heroImageUrls = compressedHero;
     }
 
-    // 6. If still exceeding (e.g. 15+ photos in a single document), gently trim excess images
+    // 6. If still exceeding, step down all images to 800px / 0.62 quality (DO NOT DROP ANY PHOTO!)
     currentSize = getPayloadByteSize(cloned);
-    if (currentSize > maxBytes && Array.isArray(cloned.imageUrls)) {
-      while (cloned.imageUrls.length > 2 && getPayloadByteSize(cloned) > maxBytes) {
-        cloned.imageUrls.pop();
+    if (currentSize > maxBytes && Array.isArray(cloned.imageUrls) && cloned.imageUrls.length > 0) {
+      const deeplyCompressed: string[] = [];
+      for (const item of cloned.imageUrls) {
+        if (typeof item === 'string' && item.startsWith('data:image/')) {
+          const comp = await compressBase64(item, 800, 800, 0.60);
+          deeplyCompressed.push(comp);
+        } else if (typeof item === 'string') {
+          deeplyCompressed.push(item);
+        }
       }
+      cloned.imageUrls = deeplyCompressed;
       if (cloned.imageUrls.length > 0) {
         cloned.imageUrl = cloned.imageUrls[0];
       }

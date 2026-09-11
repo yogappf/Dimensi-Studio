@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { PortfolioItem, CategoryType, PhotoPackage } from '../types';
-import { compressImage } from '../utils/imageCompressor';
+import { compressImage, compressPortfolioImage } from '../utils/imageCompressor';
 import {
   Plus,
   Edit2,
@@ -127,10 +127,15 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     setUploadProgressText(`Memproses 0/${files.length} foto...`);
 
     try {
+      const currentCount = isReplace
+        ? 0
+        : (formData.imageUrls?.length || (formData.imageUrl ? 1 : 0));
+      const totalExpected = currentCount + files.length;
+
       const processedUrls: string[] = [];
       for (let i = 0; i < files.length; i++) {
         setUploadProgressText(`Mengompres foto HD ${i + 1}/${files.length}...`);
-        const compressed = await compressImage(files[i], 1440, 1440, 0.78);
+        const compressed = await compressPortfolioImage(files[i], totalExpected);
         processedUrls.push(compressed);
       }
 

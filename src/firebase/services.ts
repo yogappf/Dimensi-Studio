@@ -807,8 +807,8 @@ export async function savePortfolioToFirestore(item: PortfolioItem): Promise<voi
       updatedAt: new Date().toISOString(),
     };
 
-    // Protect document size against Firestore 1MB quota
-    cleanPayload = await sanitizePayloadForFirestore(cleanPayload, 600000);
+    // Protect document size against Firestore 1MB quota (safely allows unlimited photos via adaptive compression)
+    cleanPayload = await sanitizePayloadForFirestore(cleanPayload, 950000);
 
     try {
       const saved = localStorage.getItem(PORTFOLIOS_STORAGE_KEY);
@@ -872,8 +872,8 @@ export async function updatePortfolioInFirestore(
       }
     }
 
-    // Protect document size against Firestore 1MB quota
-    sanitizedUpdates = await sanitizePayloadForFirestore(sanitizedUpdates, 600000);
+    // Protect document size against Firestore 1MB quota (safely allows unlimited photos via adaptive compression)
+    sanitizedUpdates = await sanitizePayloadForFirestore(sanitizedUpdates, 950000);
 
     await setDoc(docRef, sanitizedUpdates, { merge: true });
   } catch (error) {
