@@ -72,6 +72,10 @@ import {
   logAuditEvent,
   DEFAULT_STUDIO_CONFIG,
 } from '../firebase/services';
+import {
+  sendTestAdminNotificationEmail,
+  sendTestAdminUpcomingReminderEmail,
+} from '../utils/emailNotifier';
 
 interface MasterAdminManagerProps {
   currentUser?: User | null;
@@ -143,6 +147,44 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isHeroPortfolioPickerOpen, setIsHeroPortfolioPickerOpen] = useState(false);
   const [heroToast, setHeroToast] = useState('');
+  const [isTestingEmail, setIsTestingEmail] = useState(false);
+  const [testEmailFeedback, setTestEmailFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTesting24hEmail, setIsTesting24hEmail] = useState(false);
+  const [test24hEmailFeedback, setTest24hEmailFeedback] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestEmailNotification = async () => {
+    const target = (configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com').trim();
+    setIsTestingEmail(true);
+    setTestEmailFeedback(null);
+    try {
+      const res = await sendTestAdminNotificationEmail(target, configForm.studioName || 'Dimensi Fotografi Studio');
+      setTestEmailFeedback(res);
+      if (res.success) {
+        logAuditEvent('Master Admin', 'Uji Coba Email', `Email tes notifikasi terkirim ke ${target}`, 'system');
+      }
+    } catch (err: any) {
+      setTestEmailFeedback({ success: false, message: err?.message || 'Gagal mengirim email tes' });
+    } finally {
+      setIsTestingEmail(false);
+    }
+  };
+
+  const handleTest24hEmailNotification = async () => {
+    const target = (configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com').trim();
+    setIsTesting24hEmail(true);
+    setTest24hEmailFeedback(null);
+    try {
+      const res = await sendTestAdminUpcomingReminderEmail(target, configForm.studioName || 'Dimensi Fotografi Studio');
+      setTest24hEmailFeedback(res);
+      if (res.success) {
+        logAuditEvent('Master Admin', 'Uji Coba Email 24 Jam', `Email tes peringatan sesi foto < 24 jam terkirim ke ${target}`, 'system');
+      }
+    } catch (err: any) {
+      setTest24hEmailFeedback({ success: false, message: err?.message || 'Gagal mengirim email tes pengingat 24 jam' });
+    } finally {
+      setIsTesting24hEmail(false);
+    }
+  };
 
   // Security Passcode Form State
   const [staffPasscode, setStaffPasscode] = useState(studioConfig.staffPasscode || 'DIMENSI2026');
@@ -1946,6 +1988,182 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                   onChange={(e) => setConfigForm({ ...configForm, operatingHours: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs focus:border-[#D4AF37] focus:outline-none"
                 />
+              </div>
+            </div>
+
+            {/* Automated Email Order Notification Settings */}
+            <div className="pt-6 border-t border-white/10 space-y-4">
+              <div className="bg-[#111111] p-4 border border-white/10 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-[#D4AF37] text-black">
+                      <Mail className="w-4 h-4 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                        <span>Notifikasi Email Otomatis (Order Masuk)</span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                          Auto-Background
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Sistem langsung mengirimkan rekap rincian pesanan ke email Admin secara otomatis begitu konsumen memesan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 bg-black/40 px-3 py-1.5 border border-white/10">
+                    <input
+                      type="checkbox"
+                      checked={configForm.enableEmailNotifications !== false}
+                      onChange={(e) => setConfigForm({ ...configForm, enableEmailNotifications: e.target.checked })}
+                      className="w-4 h-4 accent-[#D4AF37] cursor-pointer"
+                    />
+                    <span className="text-xs font-mono text-gray-200">
+                      {configForm.enableEmailNotifications !== false ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300">
+                      Alamat Email Penerima Notifikasi
+                    </label>
+                    <input
+                      type="email"
+                      value={configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com'}
+                      onChange={(e) => setConfigForm({ ...configForm, notificationEmail: e.target.value })}
+                      placeholder="dimensi.idphoto@gmail.com"
+                      className="w-full px-3.5 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-col justify-end">
+                    <button
+                      type="button"
+                      onClick={handleTestEmailNotification}
+                      disabled={isTestingEmail}
+                      className="w-full py-2 px-3 bg-white/10 hover:bg-[#D4AF37] hover:text-black text-gray-200 font-mono text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 border border-white/20 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isTestingEmail ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Mengirim Tes...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                          <span>Kirim Email Tes</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {testEmailFeedback && (
+                  <div
+                    className={`p-3 text-xs font-mono border flex items-center gap-2 ${
+                      testEmailFeedback.success
+                        ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
+                        : 'bg-rose-950/40 border-rose-500/50 text-rose-300'
+                    }`}
+                  >
+                    {testEmailFeedback.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    )}
+                    <span>{testEmailFeedback.message}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 24-Hour Upcoming Photo Session Email Notification Settings */}
+              <div className="bg-[#111111] p-4 border border-amber-500/30 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-amber-500 text-black">
+                      <Clock className="w-4 h-4 stroke-[2.2]" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                        <span>Notifikasi Email Sesi Foto Mendatang (&lt; 24 Jam)</span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                          Priority Alert
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Mengirimkan alert prioritas ke email admin ketika ada sesi pemotretan yang akan berlangsung dalam kurun waktu 24 jam ke depan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 bg-black/40 px-3 py-1.5 border border-white/10">
+                    <input
+                      type="checkbox"
+                      checked={configForm.enableUpcoming24hEmailNotifications !== false}
+                      onChange={(e) => setConfigForm({ ...configForm, enableUpcoming24hEmailNotifications: e.target.checked })}
+                      className="w-4 h-4 accent-amber-500 cursor-pointer"
+                    />
+                    <span className="text-xs font-mono text-gray-200">
+                      {configForm.enableUpcoming24hEmailNotifications !== false ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300">
+                      Email Admin Penerima Peringatan 24 Jam
+                    </label>
+                    <input
+                      type="email"
+                      value={configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com'}
+                      onChange={(e) => setConfigForm({ ...configForm, notificationEmail: e.target.value })}
+                      placeholder="dimensi.idphoto@gmail.com"
+                      className="w-full px-3.5 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-amber-400 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-col justify-end">
+                    <button
+                      type="button"
+                      onClick={handleTest24hEmailNotification}
+                      disabled={isTesting24hEmail}
+                      className="w-full py-2 px-3 bg-amber-500/10 hover:bg-amber-500 hover:text-black text-amber-300 font-mono text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 border border-amber-500/30 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isTesting24hEmail ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Mengirim Peringatan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="w-3.5 h-3.5 text-amber-400" />
+                          <span>Tes Email 24 Jam</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {test24hEmailFeedback && (
+                  <div
+                    className={`p-3 text-xs font-mono border flex items-center gap-2 ${
+                      test24hEmailFeedback.success
+                        ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
+                        : 'bg-rose-950/40 border-rose-500/50 text-rose-300'
+                    }`}
+                  >
+                    {test24hEmailFeedback.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    )}
+                    <span>{test24hEmailFeedback.message}</span>
+                  </div>
+                )}
               </div>
             </div>
 

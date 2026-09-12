@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PhotoPackage, AddOnItem, BookingOrder, StudioConfig } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES } from '../data/mockData';
-import { formatRupiah, formatDateIndonesian, checkScheduleSlotConflict, getBookedSlotsForDate } from '../utils/formatters';
+import {
+  formatRupiah,
+  formatDateIndonesian,
+  checkScheduleSlotConflict,
+  getBookedSlotsForDate,
+  getBookedTimeWindowsForDate,
+} from '../utils/formatters';
 import { AnimatedClockPicker } from './AnimatedClockPicker';
 import confetti from 'canvas-confetti';
 import {
@@ -94,13 +100,15 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check for quota / slot conflict against existing client orders for Acara 1
+  // Check for quota / slot conflict against existing client orders for Acara 1 (with 3-hour duration window)
   const slotConflict = sessionDate && sessionTime ? checkScheduleSlotConflict(sessionDate, sessionTime, existingOrders) : null;
   const bookedSlotsOnDate = sessionDate ? getBookedSlotsForDate(sessionDate, existingOrders) : [];
+  const bookedWindowsOnDate = sessionDate ? getBookedTimeWindowsForDate(sessionDate, existingOrders) : [];
 
-  // Check for quota / slot conflict against existing client orders for Acara 2
+  // Check for quota / slot conflict against existing client orders for Acara 2 (with 3-hour duration window)
   const slotConflict2 = hasSecondSession && sessionDate2 && sessionTime2 ? checkScheduleSlotConflict(sessionDate2, sessionTime2, existingOrders) : null;
   const bookedSlotsOnDate2 = hasSecondSession && sessionDate2 ? getBookedSlotsForDate(sessionDate2, existingOrders) : [];
+  const bookedWindowsOnDate2 = hasSecondSession && sessionDate2 ? getBookedTimeWindowsForDate(sessionDate2, existingOrders) : [];
 
   // Synchronize when parent props change
   useEffect(() => {
@@ -239,11 +247,11 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       return;
     }
 
-    // STRICT QUOTA VALIDATION: Reject booking if date & time slot is already taken in the database
+    // STRICT QUOTA VALIDATION: Reject booking if date & time slot is already taken in the database (with 7-hour buffer: 3h before & 4h after)
     const conflict = checkScheduleSlotConflict(sessionDate, sessionTime, existingOrders);
     if (conflict) {
       setFormError(
-        `⛔ PESANAN DITOLAK (Acara Pertama): Kuota pada hari dan tanggal ${formatDateIndonesian(sessionDate)} pukul ${sessionTime} sudah penuh! Jadwal ini telah terdaftar oleh pesanan lain di sistem. Silakan pilih jam atau tanggal yang berbeda.`
+        `⛔ PESANAN DITOLAK (Acara Pertama): Jadwal pada ${formatDateIndonesian(sessionDate)} pukul ${sessionTime} tidak tersedia! (${conflict.conflictReason || 'Bertabrakan dengan jadwal pesanan lain'}). Studio menerapkan buffer proteksi 7 jam (3 jam sebelum & 4 jam setelah jadwal terisi). Silakan pilih jam atau tanggal yang berbeda.`
       );
       return;
     }
@@ -266,7 +274,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       const conflict2 = checkScheduleSlotConflict(sessionDate2, sessionTime2, existingOrders);
       if (conflict2) {
         setFormError(
-          `⛔ PESANAN DITOLAK (Acara Kedua): Kuota pada hari dan tanggal ${formatDateIndonesian(sessionDate2)} pukul ${sessionTime2} sudah penuh! Jadwal ini telah terdaftar oleh pesanan lain di sistem. Silakan pilih jam atau tanggal yang berbeda.`
+          `⛔ PESANAN DITOLAK (Acara Kedua): Jadwal pada ${formatDateIndonesian(sessionDate2)} pukul ${sessionTime2} tidak tersedia! (${conflict2.conflictReason || 'Bertabrakan dengan jadwal pesanan lain'}). Studio menerapkan buffer proteksi 7 jam (3 jam sebelum & 4 jam setelah jadwal terisi). Silakan pilih jam atau tanggal yang berbeda.`
         );
         return;
       }
@@ -311,6 +319,10 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       paymentPreference: paymentPreference,
     };
 
+    // Trigger creation and instant notification without any delay
+    onOrderCreated(newOrder);
+    setIsSubmitting(false);
+
     // Confetti effect
     try {
       confetti({
@@ -323,27 +335,23 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       // fallback
     }
 
-    setTimeout(() => {
-      onOrderCreated(newOrder);
-      setIsSubmitting(false);
-      // Reset form data diri & kontak konsumen serta jadwal ke keadaan semula
-      setClientName('');
-      setPhone('');
-      setEmail('');
-      setNotes('');
-      setNotes2('');
-      setSessionDate('');
-      setSessionDate2('');
-      setHasSecondSession(false);
-      setSessionTime('10:00 WIB');
-      setSessionTime2('18:30 WIB');
-      setLocationType('studio');
-      setLocationType2('venue');
-      setLocationAddress('Dimensi Photo Studio (Studio 1 Utama)');
-      setLocationAddress2('');
-      setSelectedAddOns([]);
-      setFormError('');
-    }, 400);
+    // Reset form data diri & kontak konsumen serta jadwal ke keadaan semula
+    setClientName('');
+    setPhone('');
+    setEmail('');
+    setNotes('');
+    setNotes2('');
+    setSessionDate('');
+    setSessionDate2('');
+    setHasSecondSession(false);
+    setSessionTime('10:00 WIB');
+    setSessionTime2('18:30 WIB');
+    setLocationType('studio');
+    setLocationType2('venue');
+    setLocationAddress('Dimensi Photo Studio (Studio 1 Utama)');
+    setLocationAddress2('');
+    setSelectedAddOns([]);
+    setFormError('');
   };
 
   // Local min date helper (today)
@@ -701,7 +709,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                       value={sessionTime}
                       onChange={(newTime) => setSessionTime(newTime)}
                       isSlotUnavailable={Boolean(slotConflict)}
-                      bookedTimes={bookedSlotsOnDate.map((o) => o.sessionTime)}
+                      conflictReason={slotConflict?.conflictReason}
+                      bookedTimes={bookedWindowsOnDate.map((w) => w.windowLabel)}
                     />
                   </div>
 
@@ -709,20 +718,28 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                   {sessionDate && (
                     <div className="sm:col-span-2">
                       {slotConflict ? (
-                        <div className="p-3.5 bg-rose-950/50 border-2 border-rose-500/70 text-rose-200 text-xs space-y-2 animate-in fade-in">
+                        <div className="p-3.5 bg-rose-950/60 border-2 border-rose-500/80 text-rose-200 text-xs space-y-2 animate-in fade-in">
                           <div className="flex items-center gap-2 font-bold text-rose-300 uppercase tracking-wider text-[11px] font-mono">
                             <Ban className="w-4 h-4 shrink-0 text-rose-400 stroke-[2.5]" />
-                            <span>⛔ Kuota Acara Pertama Penuh!</span>
+                            <span>⛔ Jadwal Acara Pertama Tidak Tersedia!</span>
                           </div>
                           <p className="text-[11px] leading-relaxed text-rose-100">
-                            Slot pada <strong>{formatDateIndonesian(sessionDate)}</strong> pukul <strong>{sessionTime}</strong> sudah terisi oleh pesanan lain di sistem.
+                            Pukul <strong>{sessionTime}</strong> pada <strong>{formatDateIndonesian(sessionDate)}</strong> tidak dapat dipesan ({slotConflict.conflictReason}).
                           </p>
-                          {bookedSlotsOnDate.length > 0 && (
+                          <div className="p-2 bg-black/40 border border-rose-500/30 text-[10px] text-rose-200 font-mono space-y-1">
+                            <span className="font-semibold text-rose-300 uppercase block">ℹ️ Ketentuan Slot Studio:</span>
+                            <span>Studio menerapkan buffer waktu <strong>7 jam</strong> (<strong>3 jam sebelum</strong> dan <strong>4 jam setelah</strong> jam yang telah terisi). Pemesanan dalam rentang tersebut otomatis diblokir sistem.</span>
+                          </div>
+                          {bookedWindowsOnDate.length > 0 && (
                             <div className="pt-2 border-t border-rose-500/30 text-[10px] text-gray-300">
-                              <span className="font-semibold text-rose-300 uppercase font-mono">Jam terisi di hari ini:</span>{' '}
-                              <span className="font-mono text-white font-semibold">
-                                {bookedSlotsOnDate.map((o) => o.sessionTime).join(' • ')}
-                              </span>
+                              <span className="font-semibold text-rose-300 uppercase font-mono block mb-1">Rentang Terblokir (3 Jam Sebelum & 4 Jam Setelah) di Hari Ini:</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {bookedWindowsOnDate.map((w, idx) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-rose-900/50 border border-rose-500/40 font-mono text-white font-semibold">
+                                    {w.windowLabel}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -732,9 +749,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                             <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                             <span>✓ Acara 1 Tersedia: {formatDateIndonesian(sessionDate)} ({sessionTime})</span>
                           </div>
-                          {bookedSlotsOnDate.length > 0 && (
+                          {bookedWindowsOnDate.length > 0 && (
                             <span className="text-[10px] text-gray-400 hidden sm:inline">
-                              ({bookedSlotsOnDate.length} slot lain terisi)
+                              ({bookedWindowsOnDate.length} rentang sesi lain terisi)
                             </span>
                           )}
                         </div>
@@ -861,7 +878,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                         value={sessionTime2}
                         onChange={(newTime) => setSessionTime2(newTime)}
                         isSlotUnavailable={Boolean(slotConflict2)}
-                        bookedTimes={bookedSlotsOnDate2.map((o) => o.sessionTime)}
+                        conflictReason={slotConflict2?.conflictReason}
+                        bookedTimes={bookedWindowsOnDate2.map((w) => w.windowLabel)}
                       />
                     </div>
 
@@ -869,20 +887,28 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                     {sessionDate2 && (
                       <div className="sm:col-span-2">
                         {slotConflict2 ? (
-                          <div className="p-3.5 bg-rose-950/50 border-2 border-rose-500/70 text-rose-200 text-xs space-y-2 animate-in fade-in">
+                          <div className="p-3.5 bg-rose-950/60 border-2 border-rose-500/80 text-rose-200 text-xs space-y-2 animate-in fade-in">
                             <div className="flex items-center gap-2 font-bold text-rose-300 uppercase tracking-wider text-[11px] font-mono">
                               <Ban className="w-4 h-4 shrink-0 text-rose-400 stroke-[2.5]" />
-                              <span>⛔ Kuota Acara Kedua Penuh!</span>
+                              <span>⛔ Jadwal Acara Kedua Tidak Tersedia!</span>
                             </div>
                             <p className="text-[11px] leading-relaxed text-rose-100">
-                              Slot pada <strong>{formatDateIndonesian(sessionDate2)}</strong> pukul <strong>{sessionTime2}</strong> sudah terisi oleh pesanan lain di sistem.
+                              Pukul <strong>{sessionTime2}</strong> pada <strong>{formatDateIndonesian(sessionDate2)}</strong> tidak dapat dipesan ({slotConflict2.conflictReason}).
                             </p>
-                            {bookedSlotsOnDate2.length > 0 && (
+                            <div className="p-2 bg-black/40 border border-rose-500/30 text-[10px] text-rose-200 font-mono space-y-1">
+                              <span className="font-semibold text-rose-300 uppercase block">ℹ️ Ketentuan Slot Studio:</span>
+                              <span>Studio menerapkan buffer waktu <strong>7 jam</strong> (<strong>3 jam sebelum</strong> dan <strong>4 jam setelah</strong> jam yang telah terisi). Pemesanan dalam rentang tersebut otomatis diblokir sistem.</span>
+                            </div>
+                            {bookedWindowsOnDate2.length > 0 && (
                               <div className="pt-2 border-t border-rose-500/30 text-[10px] text-gray-300">
-                                <span className="font-semibold text-rose-300 uppercase font-mono">Jam terisi di hari ini:</span>{' '}
-                                <span className="font-mono text-white font-semibold">
-                                  {bookedSlotsOnDate2.map((o) => o.sessionTime).join(' • ')}
-                                </span>
+                                <span className="font-semibold text-rose-300 uppercase font-mono block mb-1">Rentang Terblokir (3 Jam Sebelum & 4 Jam Setelah) di Hari Ini:</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {bookedWindowsOnDate2.map((w, idx) => (
+                                    <span key={idx} className="px-2 py-0.5 bg-rose-900/50 border border-rose-500/40 font-mono text-white font-semibold">
+                                      {w.windowLabel}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -892,9 +918,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                               <span>✓ Acara 2 Tersedia: {formatDateIndonesian(sessionDate2)} ({sessionTime2})</span>
                             </div>
-                            {bookedSlotsOnDate2.length > 0 && (
+                            {bookedWindowsOnDate2.length > 0 && (
                               <span className="text-[10px] text-gray-400 hidden sm:inline">
-                                ({bookedSlotsOnDate2.length} slot lain terisi)
+                                ({bookedWindowsOnDate2.length} rentang sesi lain terisi)
                               </span>
                             )}
                           </div>

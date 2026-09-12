@@ -64,6 +64,7 @@ import {
   DEFAULT_STUDIO_CONFIG,
   INITIAL_ADMIN_STAFF,
 } from './firebase/services';
+import { sendAdminOrderNotificationEmail } from './utils/emailNotifier';
 
 const STORAGE_KEY = 'dimensi_photo_orders_v1';
 const PACKAGES_STORAGE_KEY = 'dimensi_photo_packages_v1';
@@ -426,9 +427,26 @@ export default function App() {
 
   // Handle new booking creation
   const handleOrderCreated = async (newOrder: BookingOrder) => {
+    // 1. INSTANT DISPATCH: Fire automatic email notification to Studio Admin immediately with ZERO delay
+    if (studioConfig.enableEmailNotifications !== false) {
+      const targetAdminEmail = studioConfig.notificationEmail || studioConfig.email || studioConfig.masterEmail || STUDIO_ADMIN_EMAIL;
+      const studioName = studioConfig.studioName || STUDIO_INFO.name;
+      sendAdminOrderNotificationEmail(newOrder, targetAdminEmail, studioName)
+        .then((result) => {
+          if (result.success) {
+            logAuditEvent('Sistem Otomatis', 'Email Notifikasi Terkirim', `Notifikasi pesanan #${newOrder.id} terkirim ke ${targetAdminEmail}`, 'system');
+          }
+        })
+        .catch((err) => {
+          console.warn('Background email dispatch notice:', err);
+        });
+    }
+
+    // 2. Update UI and local state immediately
     setOrders((prev) => [newOrder, ...prev]);
     setLatestCreatedOrder(newOrder);
 
+    // 3. Persist to Firestore and log audit in background
     try {
       await saveBookingToFirestore(newOrder);
       await logAuditEvent(newOrder.clientName, 'Pemesanan Baru', `Booking paket ${newOrder.packageName} dibuat.`, 'order');

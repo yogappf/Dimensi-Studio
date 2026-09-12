@@ -257,20 +257,63 @@ export function normalizeTime(timeStr?: string): string {
 }
 
 /**
- * Checks if a requested date and time slot conflicts with existing orders
+ * Converts time string (e.g. "10:00 WIB", "14:30") to total minutes from 00:00
+ */
+export function timeStringToMinutes(timeStr?: string): number | null {
+  if (!timeStr) return null;
+  const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  if (isNaN(h) || isNaN(m)) return null;
+  return h * 60 + m;
+}
+
+/**
+ * Formats minutes from midnight back to HH:MM format
+ */
+export function minutesToTimeString(minutes: number): string {
+  const normalized = Math.max(0, Math.min(23 * 60 + 59, minutes));
+  const h = Math.floor(normalized / 60);
+  const m = normalized % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+export interface ConflictedBookingOrder extends BookingOrder {
+  conflictReason?: string;
+  conflictExistingTime?: string;
+  conflictExistingStartTime?: string;
+  conflictExistingEndTime?: string;
+  conflictDiffMinutes?: number;
+  conflictSessionNumber?: 1 | 2;
+}
+
+/**
+ * Checks if a requested date and time slot conflicts with existing orders.
+ * Rules (Total 7 Hours Blocked Window):
+ * 1. Must be on the exact same date (year-month-day).
+ * 2. If existing order is at T_exist:
+ *    - 3 hours before T_exist (180 minutes before)
+ *    - Same time (T_req === T_exist)
+ *    - 4 hours after T_exist (240 minutes after)
+ *    Total buffer window = 7 hours [T_exist - 3 jam s/d T_exist + 4 jam]
+ *    Any requested time falling within this 7-hour span is blocked.
  */
 export function checkScheduleSlotConflict(
   requestedDate: string,
   requestedTime: string,
   existingOrders: BookingOrder[],
-  excludeOrderId?: string
-): BookingOrder | null {
+  excludeOrderId?: string,
+  preBufferMinutes = 180, // 3 hours before
+  postBufferMinutes = 240 // 4 hours after
+): ConflictedBookingOrder | null {
   if (!requestedDate || !requestedTime || !Array.isArray(existingOrders)) return null;
 
   const targetDate = normalizeDate(requestedDate);
   const targetTime = normalizeTime(requestedTime);
+  const targetMinutes = timeStringToMinutes(targetTime);
 
-  if (!targetDate || !targetTime) return null;
+  if (!targetDate || !targetTime || targetMinutes === null) return null;
 
   for (const order of existingOrders) {
     if (excludeOrderId && order.id === excludeOrderId) continue;
@@ -280,21 +323,149 @@ export function checkScheduleSlotConflict(
     // Check Sesi 1
     const orderDate1 = normalizeDate(order.sessionDate);
     const orderTime1 = normalizeTime(order.sessionTime);
-    if (orderDate1 && orderDate1 === targetDate && orderTime1 && orderTime1 === targetTime) {
-      return order;
+    const orderMinutes1 = timeStringToMinutes(orderTime1);
+
+    if (orderDate1 && orderDate1 === targetDate && orderMinutes1 !== null) {
+      const diffMinutes = targetMinutes - orderMinutes1; // positive means after, negative means before
+      const isBlocked = diffMinutes >= -preBufferMinutes && diffMinutes <= postBufferMinutes;
+
+      if (isBlocked) {
+        const startTimeStr = minutesToTimeString(Math.max(0, orderMinutes1 - preBufferMinutes));
+        const endTimeStr = minutesToTimeString(Math.min(23 * 60 + 59, orderMinutes1 + postBufferMinutes));
+        let reason = '';
+        if (diffMinutes === 0) {
+          reason = `Jam sama persis dengan jadwal pesanan #${order.id} (${order.sessionTime})`;
+        } else if (diffMinutes > 0) {
+          const diffHrs = Math.round((diffMinutes / 60) * 10) / 10;
+          reason = `Terpaut ${diffHrs} jam setelah jadwal pesanan #${order.id} (${order.sessionTime}) yang masuk dalam buffer proteksi 4 jam setelah acara (blokir s/d ${endTimeStr} WIB)`;
+        } else {
+          const diffHrs = Math.round((Math.abs(diffMinutes) / 60) * 10) / 10;
+          reason = `Terpaut ${diffHrs} jam sebelum jadwal pesanan #${order.id} (${order.sessionTime}) yang masuk dalam buffer persiapan 3 jam sebelum acara (blokir mulai ${startTimeStr} WIB)`;
+        }
+
+        return {
+          ...order,
+          conflictReason: reason,
+          conflictExistingTime: order.sessionTime,
+          conflictExistingStartTime: `${startTimeStr} WIB`,
+          conflictExistingEndTime: `${endTimeStr} WIB`,
+          conflictDiffMinutes: diffMinutes,
+          conflictSessionNumber: 1,
+        };
+      }
     }
 
     // Check Sesi 2 if exists
     if (order.hasSecondSession && order.sessionDate2 && order.sessionTime2) {
       const orderDate2 = normalizeDate(order.sessionDate2);
       const orderTime2 = normalizeTime(order.sessionTime2);
-      if (orderDate2 && orderDate2 === targetDate && orderTime2 && orderTime2 === targetTime) {
-        return order;
+      const orderMinutes2 = timeStringToMinutes(orderTime2);
+
+      if (orderDate2 && orderDate2 === targetDate && orderMinutes2 !== null) {
+        const diffMinutes = targetMinutes - orderMinutes2;
+        const isBlocked = diffMinutes >= -preBufferMinutes && diffMinutes <= postBufferMinutes;
+
+        if (isBlocked) {
+          const startTimeStr = minutesToTimeString(Math.max(0, orderMinutes2 - preBufferMinutes));
+          const endTimeStr = minutesToTimeString(Math.min(23 * 60 + 59, orderMinutes2 + postBufferMinutes));
+          let reason = '';
+          if (diffMinutes === 0) {
+            reason = `Jam sama persis dengan jadwal Acara 2 pesanan #${order.id} (${order.sessionTime2})`;
+          } else if (diffMinutes > 0) {
+            const diffHrs = Math.round((diffMinutes / 60) * 10) / 10;
+            reason = `Terpaut ${diffHrs} jam setelah jadwal Acara 2 pesanan #${order.id} (${order.sessionTime2}) yang masuk dalam buffer proteksi 4 jam setelah acara (blokir s/d ${endTimeStr} WIB)`;
+          } else {
+            const diffHrs = Math.round((Math.abs(diffMinutes) / 60) * 10) / 10;
+            reason = `Terpaut ${diffHrs} jam sebelum jadwal Acara 2 pesanan #${order.id} (${order.sessionTime2}) yang masuk dalam buffer persiapan 3 jam sebelum acara (blokir mulai ${startTimeStr} WIB)`;
+          }
+
+          return {
+            ...order,
+            conflictReason: reason,
+            conflictExistingTime: order.sessionTime2,
+            conflictExistingStartTime: `${startTimeStr} WIB`,
+            conflictExistingEndTime: `${endTimeStr} WIB`,
+            conflictDiffMinutes: diffMinutes,
+            conflictSessionNumber: 2,
+          };
+        }
       }
     }
   }
 
   return null;
+}
+
+export interface BookedTimeWindow {
+  orderId: string;
+  clientName: string;
+  packageName: string;
+  startTime: string;
+  endTime: string;
+  sessionNumber: 1 | 2;
+  windowLabel: string;
+}
+
+/**
+ * Returns all booked 7-hour session buffer windows on a given date (3h before & 4h after)
+ */
+export function getBookedTimeWindowsForDate(
+  dateStr: string,
+  existingOrders: BookingOrder[],
+  excludeOrderId?: string,
+  preBufferMinutes = 180, // 3 hours before
+  postBufferMinutes = 240 // 4 hours after
+): BookedTimeWindow[] {
+  if (!dateStr || !Array.isArray(existingOrders)) return [];
+  const targetDate = normalizeDate(dateStr);
+  if (!targetDate) return [];
+
+  const windows: BookedTimeWindow[] = [];
+
+  existingOrders.forEach((ord) => {
+    if (excludeOrderId && ord.id === excludeOrderId) return;
+    if (ord.status === 'Dibatalkan' || (ord.status as string) === 'Batal') return;
+
+    if (normalizeDate(ord.sessionDate) === targetDate) {
+      const mins = timeStringToMinutes(normalizeTime(ord.sessionTime));
+      if (mins !== null) {
+        const startMins = Math.max(0, mins - preBufferMinutes);
+        const endMins = Math.min(23 * 60 + 59, mins + postBufferMinutes);
+        const startStr = `${minutesToTimeString(startMins)} WIB`;
+        const endStr = `${minutesToTimeString(endMins)} WIB`;
+        windows.push({
+          orderId: ord.id,
+          clientName: ord.clientName,
+          packageName: ord.packageName,
+          startTime: startStr,
+          endTime: endStr,
+          sessionNumber: 1,
+          windowLabel: `${startStr} - ${endStr} (Sesi: ${ord.sessionTime})`,
+        });
+      }
+    }
+
+    if (ord.hasSecondSession && ord.sessionDate2 && normalizeDate(ord.sessionDate2) === targetDate) {
+      const mins2 = timeStringToMinutes(normalizeTime(ord.sessionTime2));
+      if (mins2 !== null) {
+        const startMins2 = Math.max(0, mins2 - preBufferMinutes);
+        const endMins2 = Math.min(23 * 60 + 59, mins2 + postBufferMinutes);
+        const startStr2 = `${minutesToTimeString(startMins2)} WIB`;
+        const endStr2 = `${minutesToTimeString(endMins2)} WIB`;
+        windows.push({
+          orderId: ord.id,
+          clientName: ord.clientName,
+          packageName: ord.packageName,
+          startTime: startStr2,
+          endTime: endStr2,
+          sessionNumber: 2,
+          windowLabel: `${startStr2} - ${endStr2} (Acara 2: ${ord.sessionTime2})`,
+        });
+      }
+    }
+  });
+
+  return windows;
 }
 
 /**

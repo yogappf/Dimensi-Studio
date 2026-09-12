@@ -5,6 +5,7 @@ interface AnimatedClockPickerProps {
   value: string;
   onChange: (timeString: string) => void;
   isSlotUnavailable?: boolean;
+  conflictReason?: string;
   bookedTimes?: string[];
 }
 
@@ -12,6 +13,7 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
   value,
   onChange,
   isSlotUnavailable = false,
+  conflictReason,
   bookedTimes = [],
 }) => {
   // Parse existing string (e.g. "10:30 WIB" or "14:15")
@@ -171,22 +173,29 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
           
           {/* Quota Full Alert inside picker */}
           {isSlotUnavailable && (
-            <div className="p-3 bg-red-950/40 border border-red-500/40 text-red-200 text-xs font-mono flex items-start gap-2">
-              <span className="text-base">⛔</span>
-              <div>
-                <strong className="text-white block font-sans">Kuota Jam Ini Sudah Penuh!</strong>
-                <span>Pukul {formatTimeString(hour, minute)} sudah terisi oleh pesanan lain di sistem. Silakan geser jarum jam ke waktu yang berbeda.</span>
+            <div className="p-3 bg-red-950/60 border border-red-500/60 text-red-200 text-xs font-mono space-y-1.5">
+              <div className="flex items-start gap-2">
+                <span className="text-base">⛔</span>
+                <div>
+                  <strong className="text-white block font-sans">Jadwal Jam Ini Tidak Tersedia!</strong>
+                  <span className="text-rose-200 text-[11px] leading-relaxed block mt-0.5">
+                    {conflictReason || `Pukul ${formatTimeString(hour, minute)} bertabrakan dengan jadwal pesanan lain dalam rentang buffer 7 jam (3 jam sebelum & 4 jam setelah).`}
+                  </span>
+                </div>
               </div>
+              <p className="text-[10px] text-gray-300 pl-6 border-t border-red-500/20 pt-1">
+                ℹ️ Buffer studio: 3 jam sebelum jadwal dan 4 jam setelah jadwal terisi (total 7 jam) otomatis tidak dapat dipesan.
+              </p>
             </div>
           )}
 
           {/* List of booked times on that day */}
           {bookedTimes.length > 0 && (
-            <div className="px-3 py-2 bg-white/5 border border-white/10 text-[10px] font-mono text-gray-400 space-y-1">
-              <span className="text-gray-300 block uppercase font-semibold">Jam yang sudah terisi di tanggal ini:</span>
-              <div className="flex flex-wrap gap-1">
+            <div className="px-3 py-2 bg-white/5 border border-white/10 text-[10px] font-mono text-gray-400 space-y-1.5">
+              <span className="text-gray-300 block uppercase font-semibold">Rentang Terblokir Pada Tanggal Ini (3 Jam Sebelum & 4 Jam Setelah):</span>
+              <div className="flex flex-wrap gap-1.5">
                 {bookedTimes.map((bt, idx) => (
-                  <span key={idx} className="px-1.5 py-0.5 bg-red-900/30 border border-red-500/30 text-red-300">
+                  <span key={idx} className="px-2 py-0.5 bg-red-900/40 border border-red-500/40 text-red-200 font-semibold">
                     {bt}
                   </span>
                 ))}

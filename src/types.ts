@@ -162,6 +162,9 @@ export interface StudioConfig {
   heroStat2Label?: string;
   heroStat3Value?: string;
   heroStat3Label?: string;
+  notificationEmail?: string;
+  enableEmailNotifications?: boolean;
+  enableUpcoming24hEmailNotifications?: boolean;
 }
 
 export interface AuditLogItem {

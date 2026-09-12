@@ -22,10 +22,15 @@ import {
   generateClientReminderWhatsAppLink,
   checkScheduleSlotConflict,
   getBookedSlotsForDate,
+  getBookedTimeWindowsForDate,
   getUpcomingSessionsWithin24Hours,
   isOrderWithin24Hours,
   UpcomingSessionAlert,
 } from '../utils/formatters';
+import {
+  sendAdminUpcomingSessionEmail,
+  sendAdminUpcomingSessionsDigestEmail,
+} from '../utils/emailNotifier';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -56,6 +61,7 @@ import {
   X,
   Phone,
   Mail,
+  Loader2,
   MapPin,
   FileText,
   FileCheck,
@@ -239,6 +245,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const upcomingOrdersCount = orders.filter((o) => isOrderWithin24Hours(o)).length;
   const [isAlertBannerDismissed, setIsAlertBannerDismissed] = useState(false);
   const [isAlertBannerExpanded, setIsAlertBannerExpanded] = useState(true);
+  const [isSending24hDigestEmail, setIsSending24hDigestEmail] = useState(false);
+  const [sendingSessionEmailAlertId, setSendingSessionEmailAlertId] = useState<string | null>(null);
 
   // Trigger Toast Notification for upcoming sessions within 24 hours (Danger Red Theme)
   const hasNotifiedUpcomingRef = React.useRef(false);
@@ -253,6 +261,111 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       );
     }
   }, [upcomingSessions.length, toast]);
+
+  // Automated Email Notification Dispatcher to Admin for Upcoming Sessions (< 24 Jam)
+  const hasAutoEmailed24hRef = React.useRef<Record<string, number>>({});
+  React.useEffect(() => {
+    if (upcomingSessions.length === 0) return;
+    if (studioConfig?.enableUpcoming24hEmailNotifications === false) return;
+
+    const targetEmail = (studioConfig?.notificationEmail || studioConfig?.email || 'dimensi.idphoto@gmail.com').trim();
+    const studioName = studioConfig?.studioName || 'Dimensi Fotografi Studio';
+    const now = Date.now();
+    const TWELVE_HOURS = 12 * 60 * 60 * 1000;
+
+    upcomingSessions.forEach(async (session) => {
+      const storageKey = `dimensi_24h_email_sent_${session.order.id}_s${session.sessionNumber}_${session.dateStr}`;
+      let lastSent = hasAutoEmailed24hRef.current[storageKey] || 0;
+      
+      if (!lastSent) {
+        try {
+          const stored = localStorage.getItem(storageKey);
+          if (stored) lastSent = parseInt(stored, 10) || 0;
+        } catch {
+          // ignore
+        }
+      }
+
+      // If never sent or sent more than 12 hours ago
+      if (now - lastSent > TWELVE_HOURS) {
+        hasAutoEmailed24hRef.current[storageKey] = now;
+        try {
+          localStorage.setItem(storageKey, String(now));
+        } catch {
+          // ignore
+        }
+
+        const res = await sendAdminUpcomingSessionEmail(session, targetEmail, studioName);
+        if (res.success) {
+          toast.success(
+            `📧 Peringatan 24 Jam Terkirim ke Email Admin (${targetEmail})`,
+            `Sesi foto #${session.order.id} (${session.order.clientName}, Sesi ${session.sessionNumber}) dijadwalkan ${session.timeStatusLabel}.`
+          );
+        }
+      }
+    });
+  }, [upcomingSessions, studioConfig, toast]);
+
+  // Manual Trigger: Send 24-Hour Upcoming Sessions Digest Email
+  const handleSend24hDigestEmail = async () => {
+    if (upcomingSessions.length === 0) {
+      toast.info('Tidak Ada Sesi Mendatang', 'Tidak ada jadwal sesi foto dalam 24 jam ke depan.');
+      return;
+    }
+
+    const targetEmail = (studioConfig?.notificationEmail || studioConfig?.email || 'dimensi.idphoto@gmail.com').trim();
+    const studioName = studioConfig?.studioName || 'Dimensi Fotografi Studio';
+
+    setIsSending24hDigestEmail(true);
+    try {
+      const res = await sendAdminUpcomingSessionsDigestEmail(upcomingSessions, targetEmail, studioName);
+      if (res.success) {
+        toast.success(
+          `📧 Rekap 24 Jam Terkirim ke ${targetEmail}`,
+          `Rekap ${upcomingSessions.length} sesi foto mendatang berhasil dikirim ke email admin studio.`
+        );
+      } else {
+        toast.error('Gagal Mengirim Email Rekap', res.message);
+      }
+    } catch (err: any) {
+      toast.error('Gagal Mengirim Email', err?.message || 'Terjadi kesalahan sistem.');
+    } finally {
+      setIsSending24hDigestEmail(false);
+    }
+  };
+
+  // Manual Trigger: Send Single Session 24-Hour Reminder Email
+  const handleSendSingleSessionEmail = async (session: UpcomingSessionAlert) => {
+    const targetEmail = (studioConfig?.notificationEmail || studioConfig?.email || 'dimensi.idphoto@gmail.com').trim();
+    const studioName = studioConfig?.studioName || 'Dimensi Fotografi Studio';
+    const alertKey = `${session.order.id}-${session.sessionNumber}`;
+
+    setSendingSessionEmailAlertId(alertKey);
+    try {
+      const res = await sendAdminUpcomingSessionEmail(session, targetEmail, studioName);
+      if (res.success) {
+        // Record timestamp in storage so auto-dispatcher knows it's fresh
+        const storageKey = `dimensi_24h_email_sent_${session.order.id}_s${session.sessionNumber}_${session.dateStr}`;
+        hasAutoEmailed24hRef.current[storageKey] = Date.now();
+        try {
+          localStorage.setItem(storageKey, String(Date.now()));
+        } catch {
+          // ignore
+        }
+
+        toast.success(
+          `📧 Notifikasi Sesi Terkirim ke Admin (${targetEmail})`,
+          `Rincian sesi foto #${session.order.id} (${session.order.clientName}) berhasil dikirim.`
+        );
+      } else {
+        toast.error('Pengiriman Email Gagal', res.message);
+      }
+    } catch (err: any) {
+      toast.error('Pengiriman Email Gagal', err?.message || 'Terjadi gangguan jaringan.');
+    } finally {
+      setSendingSessionEmailAlertId(null);
+    }
+  };
 
   // Modifikasi ini agar ulasan dari koleksi khusus ditampilkan
   const reviewsData = reviews || [];
@@ -423,7 +536,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     const conflict1 = checkScheduleSlotConflict(targetDate, manualTime, orders);
     if (conflict1) {
       const confirmOverride1 = confirm(
-        `⚠️ PERINGATAN KUOTA JADWAL ACARA 1:\n\nSlot pada tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} SUDAH TERISI oleh klien:\n• Nama: ${conflict1.clientName}\n• ID Booking: ${conflict1.id}\n• Paket: ${conflict1.packageName}\n\nApakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+        `⚠️ PERINGATAN BENTROK JADWAL ACARA 1:\n\nJadwal pada tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} ${conflict1.conflictReason || 'bertabrakan dengan pesanan lain'}:\n• Klien: ${conflict1.clientName}\n• ID: ${conflict1.id}\n• Paket: ${conflict1.packageName}\n• Jam Sesi Terisi: ${conflict1.conflictExistingTime || conflict1.sessionTime}\n\nStudio menerapkan proteksi buffer 7 jam (3 jam sebelum & 4 jam setelah jadwal terisi). Apakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
       );
       if (!confirmOverride1) return;
     }
@@ -437,7 +550,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       const conflict2 = checkScheduleSlotConflict(targetDate2, manualTime2, orders);
       if (conflict2) {
         const confirmOverride2 = confirm(
-          `⚠️ PERINGATAN KUOTA JADWAL ACARA 2:\n\nSlot pada tanggal ${formatDateIndonesian(targetDate2)} pukul ${manualTime2} SUDAH TERISI oleh klien:\n• Nama: ${conflict2.clientName}\n• ID Booking: ${conflict2.id}\n• Paket: ${conflict2.packageName}\n\nApakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+          `⚠️ PERINGATAN BENTROK JADWAL ACARA 2:\n\nJadwal pada tanggal ${formatDateIndonesian(targetDate2)} pukul ${manualTime2} ${conflict2.conflictReason || 'bertabrakan dengan pesanan lain'}:\n• Klien: ${conflict2.clientName}\n• ID: ${conflict2.id}\n• Paket: ${conflict2.packageName}\n• Jam Sesi Terisi: ${conflict2.conflictExistingTime || conflict2.sessionTime2}\n\nStudio menerapkan proteksi buffer 7 jam (3 jam sebelum & 4 jam setelah jadwal terisi). Apakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
         );
         if (!confirmOverride2) return;
       }
@@ -1169,6 +1282,25 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 {/* Header Action Buttons */}
                 <div className="flex items-center gap-2 self-end sm:self-center flex-wrap">
                   <button
+                    onClick={handleSend24hDigestEmail}
+                    disabled={isSending24hDigestEmail}
+                    className="px-3 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-mono font-bold text-xs uppercase tracking-wider border border-[#D4AF37] transition-all cursor-pointer flex items-center gap-1.5 shadow-md disabled:opacity-50"
+                    title={`Kirim rekap email sesi foto 24 jam ke email admin (${studioConfig?.notificationEmail || studioConfig?.email || 'dimensi.idphoto@gmail.com'})`}
+                  >
+                    {isSending24hDigestEmail ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Mengirim Rekap...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="w-3.5 h-3.5" />
+                        <span>Email Admin ({upcomingSessions.length})</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
                     onClick={() => setStatusFilter(statusFilter === 'upcoming24h' ? 'all' : 'upcoming24h')}
                     className={`px-3 py-1.5 text-xs font-mono font-bold uppercase border transition-all cursor-pointer flex items-center gap-1.5 ${
                       statusFilter === 'upcoming24h'
@@ -1214,6 +1346,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
                   {upcomingSessions.map((session, idx) => {
                     const isUrgent = session.urgencyLevel === 'imminent';
+                    const isSendingThisSessionEmail = sendingSessionEmailAlertId === `${session.order.id}-${session.sessionNumber}`;
                     return (
                       <div
                         key={`${session.order.id}-sesi-${session.sessionNumber}-${idx}`}
@@ -1279,35 +1412,50 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                           </div>
                           {session.order.phone && (
                             <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-mono pt-0.5">
-                              <Phone className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                              <Phone className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                               <span>{session.order.phone}</span>
                             </div>
                           )}
                         </div>
 
-                        {/* Action Buttons: Kirim Pengingat WA & Lihat Detail */}
-                        <div className="grid grid-cols-2 gap-2 pt-1">
+                        {/* Action Buttons: Kirim Pengingat WA, Kirim Email Admin & Lihat Detail */}
+                        <div className="grid grid-cols-3 gap-1.5 pt-1">
                           <button
                             type="button"
                             onClick={() => {
                               setReminderOrder(session.order);
                               setIsReminderModalOpen(true);
                             }}
-                            className="px-2.5 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                            className="px-2 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm"
                             title="Buka template WhatsApp pengingat sesi foto"
                           >
                             <Send className="w-3 h-3" />
-                            <span>Kirim Reminder</span>
+                            <span>WA Klien</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isSendingThisSessionEmail}
+                            onClick={() => handleSendSingleSessionEmail(session)}
+                            className="px-2 py-1.5 bg-amber-500/20 hover:bg-amber-500 hover:text-black text-amber-300 border border-amber-500/40 font-bold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all cursor-pointer disabled:opacity-50"
+                            title={`Kirim notifikasi email sesi ini ke ${studioConfig?.notificationEmail || studioConfig?.email || 'dimensi.idphoto@gmail.com'}`}
+                          >
+                            {isSendingThisSessionEmail ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Mail className="w-3 h-3" />
+                            )}
+                            <span>Email Admin</span>
                           </button>
 
                           <button
                             type="button"
                             onClick={() => setDetailOrder(session.order)}
-                            className="px-2.5 py-1.5 bg-[#1a1a1a] hover:bg-white/10 text-gray-200 border border-white/15 font-semibold text-[11px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-2 py-1.5 bg-[#1a1a1a] hover:bg-white/10 text-gray-200 border border-white/15 font-semibold text-[10px] uppercase tracking-wider flex items-center justify-center gap-1 transition-colors cursor-pointer"
                             title="Buka rincian lengkap pesanan konsumen"
                           >
                             <Eye className="w-3 h-3 text-[#D4AF37]" />
-                            <span>Detail Sesi</span>
+                            <span>Detail</span>
                           </button>
                         </div>
                       </div>
@@ -2442,7 +2590,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                           value={manualTime}
                           onChange={(t) => setManualTime(t)}
                           isSlotUnavailable={Boolean(checkScheduleSlotConflict(manualDate || new Date().toISOString().split('T')[0], manualTime, orders))}
-                          bookedTimes={getBookedSlotsForDate(manualDate || new Date().toISOString().split('T')[0], orders).map(o => o.sessionTime)}
+                          conflictReason={checkScheduleSlotConflict(manualDate || new Date().toISOString().split('T')[0], manualTime, orders)?.conflictReason}
+                          bookedTimes={getBookedTimeWindowsForDate(manualDate || new Date().toISOString().split('T')[0], orders).map(w => w.windowLabel)}
                         />
                       </div>
 
@@ -2536,7 +2685,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                             value={manualTime2}
                             onChange={(t) => setManualTime2(t)}
                             isSlotUnavailable={Boolean(checkScheduleSlotConflict(manualDate2 || manualDate || new Date().toISOString().split('T')[0], manualTime2, orders))}
-                            bookedTimes={getBookedSlotsForDate(manualDate2 || manualDate || new Date().toISOString().split('T')[0], orders).map(o => o.sessionTime)}
+                            conflictReason={checkScheduleSlotConflict(manualDate2 || manualDate || new Date().toISOString().split('T')[0], manualTime2, orders)?.conflictReason}
+                            bookedTimes={getBookedTimeWindowsForDate(manualDate2 || manualDate || new Date().toISOString().split('T')[0], orders).map(w => w.windowLabel)}
                           />
                         </div>
 

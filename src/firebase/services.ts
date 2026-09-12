@@ -81,6 +81,9 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   heroStat2Label: 'Pengalaman Visual',
   heroStat3Value: '100%',
   heroStat3Label: 'Garansi High-Res',
+  notificationEmail: 'dimensi.idphoto@gmail.com',
+  enableEmailNotifications: true,
+  enableUpcoming24hEmailNotifications: true,
 };
 
 export const INITIAL_ADMIN_STAFF: AdminStaff[] = [
