@@ -365,6 +365,32 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Secret shortcut (Ctrl+Shift+A / Cmd+Shift+A) & URL Hash (#admin) listener for discreet Admin Portal access
+  useEffect(() => {
+    const handleHashCheck = () => {
+      if (window.location.hash === '#admin' || window.location.hash === '#portal-admin') {
+        setActiveTab('admin');
+      }
+    };
+
+    handleHashCheck();
+    window.addEventListener('hashchange', handleHashCheck);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl+Shift+A or Cmd+Shift+A (discreet admin hotkey)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        setActiveTab((prev) => (prev === 'admin' ? 'showcase' : 'admin'));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('hashchange', handleHashCheck);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   // Sync backup orders, packages, addons & portfolios to localStorage
   useEffect(() => {
     try {
@@ -1156,6 +1182,7 @@ export default function App() {
               packages={packages}
               addons={addons}
               existingOrders={orders}
+              studioConfig={studioConfig}
             />
 
             {/* Testimonials & FAQs */}

@@ -124,23 +124,21 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin, stud
                 <span>Email: {studioEmail}</span>
               </div>
             </div>
-
-            <div className="pt-2">
-              <button
-                onClick={onOpenAdmin}
-                className="px-3.5 py-2 bg-[#141414] border border-white/10 text-[11px] font-mono text-gray-400 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors cursor-pointer uppercase tracking-wider"
-              >
-                📊 Panel Admin / Ekspor Excel
-              </button>
-            </div>
           </div>
 
         </div>
 
         {/* Bottom Bar */}
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 font-mono">
-          <div>
-            © {new Date().getFullYear()} <strong className="text-gray-400 font-normal">Dimensi Fotografi Studio</strong>. Hak Cipta Dilindungi.
+        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500 font-mono select-none">
+          <div className="flex items-center gap-1.5">
+            <span
+              onClick={onOpenAdmin}
+              className="cursor-pointer text-gray-500 hover:text-[#D4AF37] transition-colors"
+              title=""
+            >
+              ©
+            </span>
+            <span>{new Date().getFullYear()} <strong className="text-gray-400 font-normal">Dimensi Fotografi Studio</strong>. Hak Cipta Dilindungi.</span>
           </div>
 
           <div className="flex items-center gap-4">

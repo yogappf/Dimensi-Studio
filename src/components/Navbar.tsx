@@ -200,27 +200,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`flex items-center gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border transition-all duration-200 cursor-pointer ${
-                  isAdminAuthenticated
-                    ? 'bg-[#1c1708] border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black'
-                    : 'bg-[#141414] text-gray-400 border-white/10 hover:border-[#D4AF37]/50 hover:text-[#D4AF37]'
-                }`}
-                id="tab-switcher-admin-btn"
-                title={isAdminAuthenticated ? (isMasterAdmin ? "Akses Panel Super Admin" : "Akses Portal Staf") : "Akses Portal Masuk Admin & Staf"}
-              >
-                <Shield className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span className="hidden sm:inline">
-                  {isAdminAuthenticated ? (isMasterAdmin ? 'Panel Master' : 'Portal Staf') : 'Portal Admin'}
-                </span>
-                <span className="sm:hidden">{isMasterAdmin ? 'Master' : 'Staf'}</span>
-                {orderCount > 0 && (
-                  <span className="px-1.5 py-0.2 bg-black/50 text-[#D4AF37] text-[10px] border border-white/10 font-mono">
-                    {orderCount}
+              /* Only visible to already logged in admin/staff */
+              isAdminAuthenticated && (
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className="flex items-center gap-2 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider border transition-all duration-200 cursor-pointer bg-[#1c1708] border-[#D4AF37]/50 text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black"
+                  id="tab-switcher-admin-btn"
+                  title={isMasterAdmin ? "Akses Panel Super Admin" : "Akses Portal Staf"}
+                >
+                  <Shield className="w-3.5 h-3.5 text-[#D4AF37]" />
+                  <span className="hidden sm:inline">
+                    {isMasterAdmin ? 'Panel Master' : 'Portal Staf'}
                   </span>
-                )}
-              </button>
+                  <span className="sm:hidden">{isMasterAdmin ? 'Master' : 'Staf'}</span>
+                  {orderCount > 0 && (
+                    <span className="px-1.5 py-0.2 bg-black/50 text-[#D4AF37] text-[10px] border border-white/10 font-mono">
+                      {orderCount}
+                    </span>
+                  )}
+                </button>
+              )
             )}
 
             {/* Google Auth Status (Only shown if signed in) */}

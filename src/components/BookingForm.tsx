@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { PhotoPackage, AddOnItem, BookingOrder } from '../types';
+import { PhotoPackage, AddOnItem, BookingOrder, StudioConfig } from '../types';
 import { PHOTO_PACKAGES, ADD_ON_SERVICES } from '../data/mockData';
 import { formatRupiah, formatDateIndonesian, checkScheduleSlotConflict, getBookedSlotsForDate } from '../utils/formatters';
 import { AnimatedClockPicker } from './AnimatedClockPicker';
@@ -55,6 +55,7 @@ interface BookingFormProps {
   packages?: PhotoPackage[];
   addons?: AddOnItem[];
   existingOrders?: BookingOrder[];
+  studioConfig?: StudioConfig;
 }
 
 export const BookingForm: React.FC<BookingFormProps> = ({
@@ -64,6 +65,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   packages = PHOTO_PACKAGES,
   addons = ADD_ON_SERVICES,
   existingOrders = [],
+  studioConfig,
 }) => {
   const [packageId, setPackageId] = useState<string>(initialPackageId || (packages[0]?.id || 'pkg-default'));
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>(initialAddOnIds);
