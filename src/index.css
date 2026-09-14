@@ -13,20 +13,97 @@
   font-family: 'Playfair Display', Georgia, serif;
 }
 
-/* Custom scrollbar matching Geometric Balance */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ============================================================
+   SHINY METALLIC GOLD DESIGN SYSTEM
+   ============================================================ */
+:root {
+  --gold-primary: #D4AF37;
+  --gold-light: #FFF0A8;
+  --gold-mid: #F0CF65;
+  --gold-dark: #9A7B1C;
+  --gold-deep: #5A430B;
 }
-::-webkit-scrollbar-track {
-  background: #0A0A0A;
+
+/* Shiny metallic gold gradient backgrounds */
+.bg-gold-metallic {
+  background: linear-gradient(135deg, #FFE899 0%, #F5D77F 22%, #D4AF37 45%, #9A7B1C 70%, #FFF0A8 88%, #D4AF37 100%);
 }
-::-webkit-scrollbar-thumb {
-  background: #222222;
-  border-radius: 2px;
+
+.bg-gold-gradient {
+  background: linear-gradient(135deg, #FFF3B0 0%, #E6CA65 25%, #D4AF37 55%, #AA7C11 80%, #FFE58F 100%);
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #D4AF37;
+
+.bg-gold-shine {
+  background: linear-gradient(110deg, #D4AF37 0%, #FFF8D6 28%, #E5C158 50%, #8A6B14 75%, #F7DC84 100%);
+  background-size: 200% auto;
+}
+
+.bg-gold-dark-metallic {
+  background: linear-gradient(135deg, #2A2412 0%, #1F1A0B 50%, #151207 100%);
+}
+
+/* Shiny metallic gold text gradient */
+.text-gold-metallic,
+.text-gold-gradient {
+  background: linear-gradient(135deg, #FFF6D1 0%, #F5D77F 25%, #D4AF37 50%, #A8811E 75%, #FFF0A8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gold-bright {
+  background: linear-gradient(135deg, #FFFFFF 0%, #FFF0A8 30%, #F5D77F 60%, #D4AF37 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Metallic gold borders with reflective sheen */
+.border-gold-metallic {
+  border-color: #D4AF37;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.22), inset 0 0 8px rgba(255, 240, 168, 0.12);
+}
+
+.border-gold-shine {
+  border: 1px solid transparent;
+  background-image: linear-gradient(#111111, #111111), linear-gradient(135deg, #FFE899, #D4AF37, #8A6B14, #FFF0A8);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+
+/* Gold glow effects */
+.gold-glow {
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.35);
+}
+
+.gold-glow-subtle {
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.18);
+}
+
+.gold-glow-lg {
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.45);
+}
+
+/* Shimmer animation for shiny luxury badges and buttons */
+@keyframes goldShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, rgba(212,175,55,0.8) 0%, rgba(255,248,214,1) 50%, rgba(212,175,55,0.8) 100%);
+  background-size: 200% 100%;
+  animation: goldShimmer 3s infinite linear;
+}
+
+/* Text selection highlight */
+::selection {
+  background-color: #D4AF37;
+  color: #000000;
 }
 
 @keyframes fadeIn {

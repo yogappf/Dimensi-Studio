@@ -38,6 +38,12 @@ import {
   FileCheck,
   CreditCard,
   Star,
+  QrCode,
+  ShieldCheck,
+  Layers,
+  ChevronRight,
+  Printer,
+  CalendarCheck,
 } from 'lucide-react';
 
 interface CustomerPortalProps {
@@ -156,8 +162,8 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     switch (status) {
       case 'Menunggu Konfirmasi':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono uppercase bg-amber-500/10 text-amber-400 border border-amber-500/30">
-            <Hourglass className="w-3.5 h-3.5 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono uppercase bg-gold-metallic text-black font-bold border border-[#FFF0A8]/60 shadow-[0_0_10px_rgba(212,175,55,0.3)]">
+            <Hourglass className="w-3.5 h-3.5 animate-pulse text-black" />
             <span>Menunggu Konfirmasi</span>
           </span>
         );
@@ -194,10 +200,10 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
 
   const getStepProgress = (status: OrderStatus) => {
     const steps = [
-      { id: 1, label: 'Reservasi Diterima' },
-      { id: 2, label: 'Jadwal Terkonfirmasi' },
-      { id: 3, label: 'Pemotretan & Editing' },
-      { id: 4, label: 'Hasil Selesai' },
+      { id: 1, label: 'Booking Diterima', desc: 'Reservasi & Data Tersimpan' },
+      { id: 2, label: 'Sesi Terjadwal', desc: 'Jadwal & Tim Fotografer Aktif' },
+      { id: 3, label: 'Proses Editing', desc: 'Color Grading & Retouching' },
+      { id: 4, label: 'Selesai', desc: 'Hasil Foto Siap Diunduh' },
     ];
 
     let currentStep = 1;
@@ -391,188 +397,370 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
       {/* Results / User Order List */}
       {displayedOrders.length > 0 ? (
         <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-300 font-mono">
-              Daftar Pesanan Ditemukan ({displayedOrders.length})
-            </h3>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] animate-pulse"></span>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-200 font-mono">
+                Hasil Lacak Pesanan ({displayedOrders.length} Ditemukan)
+              </h3>
+            </div>
             <button
               onClick={onGoToBooking}
-              className="text-xs text-[#D4AF37] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-xs text-[#D4AF37] hover:text-white flex items-center gap-1.5 px-3 py-1.5 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 border border-[#D4AF37]/30 transition-colors cursor-pointer"
             >
               <span>+ Booking Sesi Baru</span>
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
             {displayedOrders.map((order) => {
               const { steps, currentStep } = getStepProgress(order.status);
               const waLink = generateWhatsAppLink(order);
+              const progressPercentage =
+                order.status === 'Dibatalkan'
+                  ? 0
+                  : Math.max(0, Math.min(100, ((currentStep - 1) / (steps.length - 1)) * 100));
 
               return (
                 <div
                   key={order.id}
-                  className="bg-[#121212] border border-white/10 hover:border-[#D4AF37]/50 transition-all p-5 sm:p-6 relative flex flex-col justify-between"
+                  className="bg-[#111111] border border-white/15 hover:border-[#D4AF37]/60 transition-all p-5 sm:p-7 relative shadow-2xl"
                   id={`order-card-${order.id}`}
                 >
-                  <div>
-                    {/* Top Row: ID & Status */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                      <div>
-                        <span className="text-xs font-mono font-bold text-[#D4AF37] tracking-wider">
+                  {/* 1. Header Bar: ID, Date & Status */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4 mb-5">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-mono uppercase text-gray-400">ID Pesanan:</span>
+                        <span className="text-sm sm:text-base font-mono font-bold text-black tracking-wider px-2 py-0.5 bg-gold-metallic border border-[#FFF0A8] shadow-sm">
                           {order.id}
                         </span>
-                        <p className="text-[11px] text-gray-400">
-                          Dipesan pada {formatDateIndonesian(order.createdAt)}
-                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyAccountNumber(order.id, `order-id-${order.id}`)}
+                          className="p-1 hover:text-white text-gray-400 transition-colors cursor-pointer"
+                          title="Salin ID Pesanan"
+                        >
+                          {copiedBankId === `order-id-${order.id}` ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
                       </div>
-                      <div>{getStatusBadge(order.status)}</div>
+                      <p className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                        <Calendar className="w-3 h-3 text-[#D4AF37]" />
+                        <span>Dipesan pada {formatDateIndonesian(order.createdAt)}</span>
+                      </p>
                     </div>
 
-                    {/* Progress Stepper */}
-                    {order.status !== 'Dibatalkan' && (
-                      <div className="mb-6 p-3.5 bg-[#171717] border border-white/5">
-                        <div className="grid grid-cols-4 gap-1 relative">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <div>{getStatusBadge(order.status)}</div>
+                      <button
+                        type="button"
+                        onClick={() => printReceipt(order)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#252525] text-gray-200 hover:text-white border border-white/20 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
+                        title="Lihat Invoice & QR Code"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <span>Invoice & QR</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. Connected Horizontal Stepper Timeline (Matching User Manual) */}
+                  {order.status !== 'Dibatalkan' && (
+                    <div className="mb-6 p-4 sm:p-5 bg-[#161616] border border-white/10 rounded-none relative">
+                      <div className="text-[11px] font-mono font-bold uppercase tracking-wider text-gray-400 mb-4 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Layers className="w-3.5 h-3.5 text-[#D4AF37]" />
+                          <span>Timeline Status Pengerjaan Foto:</span>
+                        </span>
+                        <span className="text-[#D4AF37]">
+                          Tahap {currentStep} dari {steps.length}
+                        </span>
+                      </div>
+
+                      <div className="relative">
+                        {/* Connecting Track Line */}
+                        <div className="absolute top-4 left-6 right-6 h-1 bg-white/10 -translate-y-1/2 z-0 hidden sm:block">
+                          <div
+                            className="h-full bg-gradient-to-r from-[#D4AF37] to-emerald-400 transition-all duration-500"
+                            style={{ width: `${progressPercentage}%` }}
+                          />
+                        </div>
+
+                        {/* Step items */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-2 relative z-10">
                           {steps.map((step) => {
-                            const isCompleted = step.id <= currentStep;
+                            const isCompleted = step.id < currentStep;
                             const isCurrent = step.id === currentStep;
 
                             return (
-                              <div key={step.id} className="text-center">
+                              <div
+                                key={step.id}
+                                className={`text-center flex flex-col items-center p-2 rounded-none transition-all ${
+                                  isCurrent ? 'bg-[#D4AF37]/5 sm:bg-transparent' : ''
+                                }`}
+                              >
                                 <div
-                                  className={`w-5 h-5 mx-auto rounded-full flex items-center justify-center text-[10px] font-mono font-bold mb-1.5 transition-colors ${
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono font-bold mb-2 transition-all shadow-md ${
                                     isCurrent
-                                      ? 'bg-[#D4AF37] text-black ring-2 ring-[#D4AF37]/30'
+                                      ? 'bg-gold-metallic text-black ring-4 ring-[#D4AF37]/40 scale-110 shadow-[0_0_12px_rgba(212,175,55,0.4)]'
                                       : isCompleted
                                       ? 'bg-emerald-500 text-black'
-                                      : 'bg-white/10 text-gray-500'
+                                      : 'bg-[#222222] text-gray-400 border border-white/15'
                                   }`}
                                 >
-                                  {step.id}
+                                  {isCompleted ? (
+                                    <Check className="w-4 h-4 text-black stroke-[3]" />
+                                  ) : isCurrent ? (
+                                    <span className="animate-pulse">{step.id}</span>
+                                  ) : (
+                                    step.id
+                                  )}
                                 </div>
                                 <p
-                                  className={`text-[9px] sm:text-[10px] leading-tight ${
+                                  className={`text-xs font-bold leading-tight ${
                                     isCurrent
-                                      ? 'text-[#D4AF37] font-semibold'
+                                      ? 'text-[#D4AF37]'
                                       : isCompleted
-                                      ? 'text-gray-300'
-                                      : 'text-gray-600'
+                                      ? 'text-white'
+                                      : 'text-gray-500'
                                   }`}
                                 >
                                   {step.label}
+                                </p>
+                                <p className="text-[10px] text-gray-400 leading-tight mt-0.5 max-w-[140px]">
+                                  {step.desc}
                                 </p>
                               </div>
                             );
                           })}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* Package & Schedule Info */}
-                    <div className="space-y-3 mb-6">
-                      <div className="p-3 bg-[#1A1A1A] border border-white/10">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-mono text-gray-400 uppercase">Paket Foto</span>
-                          <span className="text-xs font-bold text-white">{order.packageName}</span>
+                  {/* 3. Bento Grid: Left (Sesi & Paket) | Right (Pembayaran & Google Drive) */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 mb-6">
+                    {/* Left Column (7 cols): Paket & Jadwal Acara */}
+                    <div className="lg:col-span-7 space-y-4">
+                      {/* Package & Client Info Box */}
+                      <div className="p-4 bg-[#181818] border border-white/10 space-y-3">
+                        <div className="flex flex-wrap items-start justify-between gap-2 border-b border-white/10 pb-2.5">
+                          <div>
+                            <span className="text-[10px] font-mono uppercase text-gray-400 block">Paket Fotografi</span>
+                            <h4 className="text-base font-bold text-white font-serif">{order.packageName}</h4>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-mono uppercase text-gray-400 block">Total Investasi</span>
+                            <span className="text-base font-mono font-bold text-[#D4AF37]">
+                              {formatRupiah(order.totalPrice)}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono block">
+                              ({order.paymentPreference})
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-                          <span className="text-[11px] text-gray-400">Total Investasi</span>
-                          <span className="text-xs font-bold text-[#D4AF37] font-mono">
-                            {formatRupiah(order.totalPrice)} ({order.paymentPreference})
-                          </span>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-[10px] font-mono text-gray-400 block">Klien / Pemesan:</span>
+                            <span className="font-semibold text-white">{order.clientName}</span>
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-mono text-gray-400 block">WhatsApp:</span>
+                            <span className="font-mono text-gray-300">{order.phone}</span>
+                          </div>
                         </div>
+
+                        {order.addOnsText && order.addOnsText !== 'Tidak ada' && (
+                          <div className="pt-2 border-t border-white/10 text-xs">
+                            <span className="text-[10px] font-mono text-gray-400 block mb-1">Layanan Tambahan (Add-ons):</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {order.addOnsText.split(',').map((item, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-2 py-0.5 bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-mono"
+                                >
+                                  {item.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Sesi 1 */}
-                      <div className="p-2.5 bg-black/40 border border-white/5 space-y-2">
-                        <div className="text-[10px] font-mono font-bold text-[#D4AF37] uppercase">
-                          {order.hasSecondSession ? 'Acara Pertama (Sesi 1):' : 'Jadwal & Lokasi Sesi:'}
+                      {/* Sesi 1 Schedule Box */}
+                      <div className="p-3.5 bg-black/50 border border-white/10 space-y-2">
+                        <div className="text-[11px] font-mono font-bold text-[#D4AF37] uppercase flex items-center justify-between">
+                          <span>{order.hasSecondSession ? 'Acara Utama (Sesi 1):' : 'Jadwal & Lokasi Sesi Pemotretan:'}</span>
+                          <span className="text-[10px] px-2 py-0.5 bg-white/10 text-gray-200 uppercase font-mono">
+                            {order.locationType}
+                          </span>
                         </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                          <div className="flex items-center gap-2 text-gray-300">
-                            <Calendar className="w-3.5 h-3.5 text-[#D4AF37]" />
-                            <span>{formatDateIndonesian(order.sessionDate)}</span>
+                          <div className="flex items-center gap-2 text-gray-200">
+                            <Calendar className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                            <span className="font-semibold">{formatDateIndonesian(order.sessionDate)}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-gray-300">
-                            <Clock className="w-3.5 h-3.5 text-[#D4AF37]" />
-                            <span>{order.sessionTime}</span>
+                          <div className="flex items-center gap-2 text-gray-200">
+                            <Clock className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                            <span className="font-mono font-semibold text-[#D4AF37]">{order.sessionTime} WIB</span>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2 text-xs text-gray-300 pt-1 border-t border-white/5">
-                          <MapPin className="w-3.5 h-3.5 text-[#D4AF37] flex-shrink-0 mt-0.5" />
+
+                        <div className="flex items-start gap-2 text-xs text-gray-300 pt-1.5 border-t border-white/5">
+                          <MapPin className="w-4 h-4 text-[#D4AF37] shrink-0 mt-0.5" />
                           <div>
-                            <span className="font-semibold text-white uppercase text-[10px]">
-                              {order.locationType}:
-                            </span>{' '}
-                            <span className="text-gray-400">{order.locationAddress}</span>
+                            <span className="text-gray-400 text-[11px]">{order.locationAddress}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Sesi 2 if exists */}
                       {order.hasSecondSession && order.sessionDate2 && (
-                        <div className="p-2.5 bg-black/40 border border-cyan-500/30 space-y-2">
-                          <div className="text-[10px] font-mono font-bold text-cyan-400 uppercase">
-                            Acara Kedua (Sesi 2):
+                        <div className="p-3.5 bg-black/50 border border-cyan-500/30 space-y-2">
+                          <div className="text-[11px] font-mono font-bold text-cyan-400 uppercase flex items-center justify-between">
+                            <span>Acara Kedua (Sesi 2):</span>
+                            <span className="text-[10px] px-2 py-0.5 bg-cyan-500/10 text-cyan-300 uppercase font-mono">
+                              {order.locationType2 || 'venue'}
+                            </span>
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <div className="flex items-center gap-2 text-gray-300">
-                              <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>{formatDateIndonesian(order.sessionDate2)}</span>
+                            <div className="flex items-center gap-2 text-gray-200">
+                              <Calendar className="w-4 h-4 text-cyan-400 shrink-0" />
+                              <span className="font-semibold">{formatDateIndonesian(order.sessionDate2)}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-gray-300">
-                              <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                              <span>{order.sessionTime2 || '-'}</span>
+                            <div className="flex items-center gap-2 text-gray-200">
+                              <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
+                              <span className="font-mono font-semibold text-cyan-300">{order.sessionTime2 || '-'} WIB</span>
                             </div>
                           </div>
-                          <div className="flex items-start gap-2 text-xs text-gray-300 pt-1 border-t border-white/5">
-                            <MapPin className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" />
+                          <div className="flex items-start gap-2 text-xs text-gray-300 pt-1.5 border-t border-white/5">
+                            <MapPin className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
                             <div>
-                              <span className="font-semibold text-white uppercase text-[10px]">
-                                {order.locationType2 || 'venue'}:
-                              </span>{' '}
-                              <span className="text-gray-400">{order.locationAddress2 || '-'}</span>
+                              <span className="text-gray-400 text-[11px]">{order.locationAddress2 || '-'}</span>
                             </div>
                           </div>
                         </div>
                       )}
+                    </div>
 
-                      {order.addOnsText && order.addOnsText !== 'Tidak ada' && (
-                        <div className="text-xs text-gray-400 p-2 bg-white/5">
-                          <span className="text-gray-300 font-semibold">Layanan Tambahan:</span> {order.addOnsText}
+                    {/* Right Column (5 cols): Google Drive Deliverables, Payment Proof & Bank Accounts */}
+                    <div className="lg:col-span-5 space-y-4">
+                      {/* Google Drive Photo Deliverables Box */}
+                      {order.driveFolderUrl ? (
+                        <div className="p-4 bg-gradient-to-br from-[#1c1910] via-[#141414] to-[#0f1a14] border-2 border-[#D4AF37] space-y-3 shadow-xl">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono uppercase font-bold text-[#D4AF37] flex items-center gap-1.5">
+                              <Sparkles className="w-4 h-4" />
+                              <span>Hasil Foto Selesai</span>
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-mono font-bold border border-emerald-500/40 animate-pulse">
+                              SIAP UNDUH
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-200">
+                            Semua file foto resolusi tinggi, hasil color grading, dan video telah siap di Google Drive Cloud studio.
+                          </p>
+                          <div className="space-y-2 pt-1">
+                            <a
+                              href={order.driveFolderUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center justify-center gap-2 w-full py-2.5 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(212,175,55,0.35)] cursor-pointer"
+                              id={`open-drive-portal-${order.id}`}
+                            >
+                              <Download className="w-4 h-4" />
+                              <span>Buka & Unduh di Google Drive</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyAccountNumber(order.driveFolderUrl || '', `drive-link-${order.id}`)}
+                              className="w-full py-1.5 bg-black/60 hover:bg-black text-gray-300 hover:text-white border border-white/15 text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              {copiedBankId === `drive-link-${order.id}` ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span className="text-emerald-400">Link Drive Tersalin!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Salin Tautan Google Drive</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
+                      ) : (
+                        (order.status === 'Selesai' || order.status === 'Proses Editing') && (
+                          <div className="p-3.5 bg-[#171717] border border-white/10 text-xs text-gray-300 space-y-1.5">
+                            <div className="flex items-center gap-2 text-[#D4AF37] font-mono text-[11px] uppercase font-bold">
+                              <Clock className="w-3.5 h-3.5" />
+                              <span>Tahap Kurasi & Upload Cloud</span>
+                            </div>
+                            <p className="text-gray-400 text-[11px]">
+                              Tim editor sedang melakukan color grading dan mengekspor foto master ke Google Drive.
+                            </p>
+                          </div>
+                        )
                       )}
 
-                      {/* Payment Proof Status Banner or Warning Banner */}
+                      {/* Payment Proof Status Banner */}
                       {order.paymentProofUrl ? (
-                        <div className="p-3 bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                            <div className="truncate">
-                              <span className="text-xs font-bold text-amber-300 block truncate">
-                                Bukti Transfer Terunggah ({order.paymentProofType || 'DP/Pelunasan'})
+                        <div className="p-3.5 bg-[#181818] border border-emerald-500/30 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Bukti Transfer Terverifikasi</span>
+                            </span>
+                            <span className="text-[10px] font-mono text-gray-400">
+                              {order.paymentProofType || 'DP/Pelunasan'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2.5">
+                            <img
+                              src={order.paymentProofUrl}
+                              alt="Bukti Transfer"
+                              className="w-12 h-12 object-cover border border-white/20 cursor-pointer bg-black"
+                              onClick={() => setViewingProofUrl(order.paymentProofUrl || null)}
+                            />
+                            <div className="text-[11px] text-gray-300 truncate">
+                              <span className="block truncate font-mono">
+                                {order.paymentProofBank || 'Transfer Bank'}
                               </span>
-                              <span className="text-[10px] text-gray-400 font-mono block truncate">
+                              <span className="text-[10px] text-gray-400 font-mono block">
                                 {order.paymentProofUploadedAt
-                                  ? `${new Date(order.paymentProofUploadedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
-                                  : 'Menunggu verifikasi admin'}
-                                {order.paymentProofBank ? ` • ${order.paymentProofBank}` : ''}
+                                  ? `${new Date(order.paymentProofUploadedAt).toLocaleDateString('id-ID', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })}`
+                                  : 'Tercatat'}
                               </span>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-2 pt-1 border-t border-white/10">
                             <button
                               type="button"
                               onClick={() => setViewingProofUrl(order.paymentProofUrl || null)}
-                              className="px-2.5 py-1 bg-black/80 hover:bg-black text-[#D4AF37] hover:text-white border border-[#D4AF37]/40 text-[10px] uppercase font-mono tracking-wider font-semibold whitespace-nowrap cursor-pointer transition-colors"
+                              className="flex-1 py-1.5 bg-black/80 hover:bg-black text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer"
                             >
-                              Lihat Bukti
+                              <Eye className="w-3 h-3" />
+                              <span>Lihat Bukti</span>
                             </button>
                             {order.status === 'Menunggu Konfirmasi' && (
                               <button
                                 type="button"
                                 onClick={() => handleOpenUploadModal(order)}
-                                className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/20 text-[10px] uppercase font-mono tracking-wider font-semibold whitespace-nowrap cursor-pointer transition-colors"
-                                title="Unggah ulang / ganti foto bukti transfer"
+                                className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/15 text-[10px] font-mono uppercase cursor-pointer"
                               >
                                 Ganti
                               </button>
@@ -581,81 +769,79 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                         </div>
                       ) : (
                         order.status === 'Menunggu Konfirmasi' && (
-                          <div className="p-3 bg-amber-950/30 border border-amber-500/40 space-y-2">
+                          <div className="p-3.5 bg-amber-950/25 border border-amber-500/40 space-y-2">
                             <div className="flex items-start gap-2">
                               <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                               <div>
-                                <span className="text-xs font-bold text-amber-300 block">Menunggu Upload Bukti Pembayaran (DP / Lunas)</span>
+                                <span className="text-xs font-bold text-amber-300 block">
+                                  Menunggu Bukti Transfer
+                                </span>
                                 <span className="text-[11px] text-gray-300 block mt-0.5">
-                                  Jadwal sesi foto akan <strong>diverifikasi & diaktifkan</strong> oleh tim admin setelah Anda mengunggah foto struk/bukti transfer rekening.
+                                  Unggah bukti transfer rekening untuk mengonfirmasi jadwal pemotretan Anda.
                                 </span>
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => handleOpenUploadModal(order)}
-                              className="w-full py-2 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md"
+                              className="w-full py-2 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all shadow-[0_0_12px_rgba(212,175,55,0.3)]"
                             >
                               <Upload className="w-3.5 h-3.5" />
-                              <span>Upload Bukti Transfer Sekarang</span>
+                              <span>Upload Bukti Transfer</span>
                             </button>
                           </div>
                         )
                       )}
 
-                      {/* Google Drive Photo Deliverables Link */}
-                      {order.driveFolderUrl ? (
-                        <div className="p-3 bg-gradient-to-r from-[#D4AF37]/15 to-emerald-500/10 border border-[#D4AF37]/40 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-mono uppercase font-bold text-[#D4AF37] flex items-center gap-1.5">
-                              <ExternalLink className="w-3.5 h-3.5" />
-                              <span>Hasil Foto Google Drive Tersedia</span>
-                            </span>
-                            <span className="text-[10px] px-2 py-0.5 bg-emerald-500/20 text-emerald-400 font-mono font-bold">
-                              SIAP UNDUH
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-gray-300">
-                            Folder Google Drive berisi file foto resolusi tinggi, hasil color grading, dan siap cetak.
-                          </p>
-                          <a
-                            href={order.driveFolderUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center justify-center gap-2 w-full py-2 bg-[#D4AF37] hover:bg-[#c49f2e] text-black font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
-                            id={`open-drive-portal-${order.id}`}
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Buka & Unduh Foto di Google Drive</span>
-                          </a>
+                      {/* Official Studio Bank Accounts (Quick Copy) */}
+                      <div className="p-3 bg-black/40 border border-white/10 space-y-1.5 text-xs">
+                        <span className="text-[10px] font-mono uppercase text-gray-400 block">
+                          Rekening Resmi Studio (Untuk DP/Pelunasan):
+                        </span>
+                        <div className="space-y-1">
+                          {activeBankAccounts.slice(0, 2).map((bank) => (
+                            <div
+                              key={bank.id}
+                              className="flex items-center justify-between p-1.5 bg-[#141414] border border-white/5"
+                            >
+                              <div className="truncate">
+                                <span className="text-[10px] font-mono text-gray-400 uppercase font-bold mr-1">
+                                  {bank.bankCode || bank.bankName}:
+                                </span>
+                                <span className="font-mono text-xs font-bold text-[#D4AF37]">
+                                  {bank.accountNumber}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyAccountNumber(bank.accountNumber, bank.id)}
+                                className="px-2 py-0.5 bg-black hover:bg-white/10 text-[10px] font-mono text-gray-300 hover:text-white border border-white/10 uppercase cursor-pointer"
+                              >
+                                {copiedBankId === bank.id ? 'Tersalin' : 'Salin'}
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ) : (
-                        (order.status === 'Selesai' || order.status === 'Proses Editing') && (
-                          <div className="p-2.5 bg-white/[0.02] border border-white/10 text-[11px] text-gray-400 flex items-center gap-2">
-                            <Clock className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
-                            <span>Foto sedang dalam tahap kurasi/unggah ke Google Drive Cloud studio.</span>
-                          </div>
-                        )
-                      )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Customer Review / Satisfaction Section */}
+                  {/* 4. Customer Review / Satisfaction Section */}
                   {order.rating ? (
-                    <div className="mt-3 p-3 bg-[#D4AF37]/10 border border-[#D4AF37]/30 space-y-1">
+                    <div className="mb-5 p-3.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-mono uppercase font-bold text-[#D4AF37] flex items-center gap-1.5">
+                        <span className="text-xs font-mono uppercase font-bold text-[#D4AF37] flex items-center gap-1.5">
                           <Sparkles className="w-3.5 h-3.5" />
-                          <span>Ulasan & Kepuasan Anda Terkirim</span>
+                          <span>Ulasan & Kepuasan Pelanggan:</span>
                         </span>
                         <div className="flex items-center gap-1">
                           {[...Array(order.rating)].map((_, i) => (
-                            <Star key={i} className="w-3 h-3 fill-[#D4AF37] text-[#D4AF37]" />
+                            <Star key={i} className="w-3.5 h-3.5 fill-[#D4AF37] text-[#D4AF37]" />
                           ))}
                         </div>
                       </div>
                       {order.review && (
-                        <p className="text-xs text-gray-300 italic">"{order.review}"</p>
+                        <p className="text-xs text-gray-200 italic">"{order.review}"</p>
                       )}
                       <button
                         type="button"
@@ -670,10 +856,12 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                       </button>
                     </div>
                   ) : (
-                    <div className="mt-3 p-3 bg-white/[0.03] border border-white/10 flex items-center justify-between gap-2">
+                    <div className="mb-5 p-3.5 bg-white/[0.03] border border-white/10 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <Star className="w-4 h-4 text-[#D4AF37] shrink-0" />
-                        <span className="text-xs text-gray-300">Bagaimana kepuasan Anda terhadap layanan sesi foto ini?</span>
+                        <span className="text-xs text-gray-300">
+                          Bagikan ulasan dan rating kepuasan Anda bersama tim fotografer Dimensi.
+                        </span>
                       </div>
                       <button
                         type="button"
@@ -682,36 +870,42 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                           setReviewRating(5);
                           setReviewComment('');
                         }}
-                        className="px-3 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-[11px] uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap"
+                        className="px-3.5 py-1.5 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shadow-[0_0_10px_rgba(212,175,55,0.3)]"
                       >
-                        Beri Ulasan
+                        Beri Ulasan Bintang
                       </button>
                     </div>
                   )}
 
-                  {/* Actions Bar */}
+                  {/* 5. Actions Bar (Print Receipt, WA Confirmation, PDF Download) */}
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-white/10">
-                    <div>
-                      {order.status === 'Selesai' && (
-                        /* KETIKA STATUS SELESAI: Tampilkan Tombol Cetak Bukti */
-                        <button
-                          type="button"
-                          onClick={() => printReceipt(order)}
-                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-white/15 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
-                          id={`print-receipt-${order.id}`}
-                          title="Cetak nota atau simpan bukti reservasi"
-                        >
-                          <Receipt className="w-3.5 h-3.5 text-[#D4AF37]" />
-                          <span>Cetak Bukti</span>
-                        </button>
-                      )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => printReceipt(order)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#1A1A1A] hover:bg-[#252525] text-white border border-[#D4AF37]/40 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors shadow-sm"
+                        id={`print-receipt-${order.id}`}
+                        title="Cetak nota atau simpan bukti reservasi digital (A5/PDF)"
+                      >
+                        <Printer className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <span>Cetak / Unduh Invoice (A5)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadReceiptPDFFile(order, studioConfig)}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-black hover:bg-white/10 text-gray-300 hover:text-white border border-white/15 text-xs font-mono uppercase tracking-wider cursor-pointer transition-colors"
+                        title="Unduh file dokumen invoice"
+                      >
+                        <Download className="w-3.5 h-3.5 text-[#D4AF37]" />
+                        <span>Unduh Nota</span>
+                      </button>
                     </div>
 
                     <a
                       href={waLink}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider cursor-pointer shadow-md transition-colors ml-auto"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold uppercase tracking-wider cursor-pointer shadow-lg transition-colors ml-auto"
                       id={`chat-wa-order-${order.id}`}
                     >
                       <MessageCircle className="w-3.5 h-3.5" />
@@ -1104,16 +1298,32 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
             {/* Printable Receipt Content Area */}
             <div id="printable-receipt" className="space-y-4">
               {/* Receipt Header */}
-              <div className="border-b-2 border-[#D4AF37]/50 pb-4 flex justify-between items-end">
+              <div className="border-b-2 border-[#D4AF37]/50 pb-4 flex justify-between items-start gap-3">
                 <div>
-                  <div className="text-xl font-bold tracking-widest text-white">
+                  <div className="text-xl font-bold tracking-widest text-white font-serif">
                     DIMENSI<span className="text-[#D4AF37]">STUDIO</span>
                   </div>
                   <div className="text-xs text-gray-400 font-mono">Studio & Outdoor Photography</div>
+                  <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                    WA: {studioPhoneDisplay} • IG: {studioInstagramDisplay}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-gray-400 font-mono">Bukti Reservasi</div>
-                  <div className="text-xs font-mono font-bold text-[#D4AF37]">{selectedOrder.id}</div>
+                <div className="text-right flex flex-col items-end">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] uppercase font-mono px-2 py-0.5 bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 font-bold">
+                      INVOICE DIGITAL (A5)
+                    </span>
+                  </div>
+                  <div className="text-xs font-mono font-bold text-white">
+                    No: <span className="text-[#D4AF37]">{selectedOrder.id}</span>
+                  </div>
+                  <div className="text-[10px] text-gray-400 font-mono">
+                    {new Date(selectedOrder.createdAt).toLocaleDateString('id-ID', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </div>
                 </div>
               </div>
 

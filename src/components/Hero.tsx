@@ -63,7 +63,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
             {/* Main Headline - Geometric Balance Typography */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light leading-tight text-white tracking-tight">
               {titleMain} <br/>
-              <span className="italic font-serif text-[#D4AF37]">{titleHighlight}</span>
+              <span className="italic font-serif text-gold-metallic font-normal">{titleHighlight}</span>
             </h1>
 
             {/* Subtext */}
@@ -75,7 +75,7 @@ export const Hero: React.FC<HeroProps> = ({ onOpenBooking, onSelectPackageFilter
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <button
                 onClick={onOpenBooking}
-                className="bg-[#D4AF37] text-black font-bold py-3.5 px-6 text-xs uppercase tracking-[0.2em] hover:bg-white transition-all shadow-md flex items-center gap-2.5 cursor-pointer group"
+                className="bg-gold-metallic text-black font-bold py-3.5 px-6 text-xs uppercase tracking-[0.2em] hover:brightness-110 transition-all shadow-[0_0_20px_rgba(212,175,55,0.35)] flex items-center gap-2.5 cursor-pointer group"
                 id="hero-order-btn"
               >
                 <span>{buttonText}</span>

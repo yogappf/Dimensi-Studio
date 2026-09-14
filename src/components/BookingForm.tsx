@@ -483,15 +483,15 @@ export const BookingForm: React.FC<BookingFormProps> = ({
 
                             <div className="flex items-center gap-1">
                               {pkg.popular && (
-                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[9px] font-mono font-bold uppercase">
-                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-gold-metallic text-black text-[9px] font-mono font-bold uppercase shadow-sm">
+                                  <Star className="w-2.5 h-2.5 fill-black text-black" />
                                   <span>Populer</span>
                                 </span>
                               )}
                               <div
                                 className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
                                   isSelected
-                                    ? 'bg-[#D4AF37] border-[#D4AF37] text-black'
+                                    ? 'bg-gold-metallic border-[#FFF0A8] text-black font-bold'
                                     : 'border-white/30 group-hover:border-white/60 text-transparent'
                                 }`}
                               >
@@ -1142,10 +1142,10 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting || Boolean(slotConflict) || Boolean(slotConflict2)}
-                className={`w-full py-3.5 font-bold text-xs uppercase tracking-[0.2em] shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                className={`w-full py-3.5 font-bold text-xs uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(212,175,55,0.3)] flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   slotConflict || slotConflict2
                     ? 'bg-rose-900/80 border border-rose-500/50 text-rose-200 cursor-not-allowed opacity-90'
-                    : 'bg-[#D4AF37] hover:bg-white text-black disabled:opacity-50'
+                    : 'bg-gold-metallic hover:brightness-110 text-black disabled:opacity-50'
                 }`}
                 id="submit-order-btn"
               >

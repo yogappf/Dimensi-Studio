@@ -90,6 +90,10 @@ import {
   Zap,
   Send,
   Timer,
+  Copy,
+  Check,
+  Link2,
+  Unlink,
 } from 'lucide-react';
 
 interface ConsumerDashboardProps {
@@ -386,6 +390,68 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [viewingProofUrl, setViewingProofUrl] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [exportSuccessMsg, setExportSuccessMsg] = useState('');
+  
+  // Consumer Details Link Management State
+  const [driveLinkInput, setDriveLinkInput] = useState('');
+  const [isCopiedDriveLink, setIsCopiedDriveLink] = useState(false);
+  const [confirmDeleteLinkId, setConfirmDeleteLinkId] = useState<string | null>(null);
+
+  // Sync driveLinkInput whenever detailOrder changes
+  React.useEffect(() => {
+    if (detailOrder) {
+      setDriveLinkInput(detailOrder.driveFolderUrl || '');
+      setConfirmDeleteLinkId(null);
+    }
+  }, [detailOrder?.id, detailOrder?.driveFolderUrl]);
+
+  const handleSaveOrUpdateDriveLink = (targetOrder: BookingOrder, customVal?: string) => {
+    const valToSave = (customVal !== undefined ? customVal : driveLinkInput).trim();
+    if (onUpdateOrder) {
+      onUpdateOrder(targetOrder.id, {
+        driveFolderUrl: valToSave || '',
+        driveFolderId: valToSave ? targetOrder.driveFolderId : '',
+      });
+      setDetailOrder({
+        ...targetOrder,
+        driveFolderUrl: valToSave || undefined,
+        driveFolderId: valToSave ? targetOrder.driveFolderId : undefined,
+      });
+      setDriveLinkInput(valToSave);
+      setConfirmDeleteLinkId(null);
+      if (valToSave) {
+        toast.success('Link Google Drive berhasil diperbarui & tersimpan!');
+      } else {
+        toast.success('Link Google Drive berhasil dikosongkan/dihapus.');
+      }
+    }
+  };
+
+  const handleExecuteDeleteDriveLink = (targetOrder: BookingOrder) => {
+    if (onUpdateOrder) {
+      onUpdateOrder(targetOrder.id, {
+        driveFolderUrl: '',
+        driveFolderId: '',
+      });
+    }
+    setDetailOrder((prev) => {
+      if (!prev || prev.id !== targetOrder.id) return prev;
+      return {
+        ...prev,
+        driveFolderUrl: undefined,
+        driveFolderId: undefined,
+      };
+    });
+    setDriveLinkInput('');
+    setConfirmDeleteLinkId(null);
+    toast.success('Link Google Drive berhasil dihapus dari data konsumen!');
+  };
+
+  const handleCopyDriveLink = (url: string) => {
+    navigator.clipboard.writeText(url);
+    setIsCopiedDriveLink(true);
+    toast.success('Link Google Drive berhasil disalin ke clipboard!');
+    setTimeout(() => setIsCopiedDriveLink(false), 2000);
+  };
 
   const confirmDeleteOrder = () => {
     if (orderToDelete) {
@@ -896,7 +962,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               onClick={handleMasterTabClick}
               className={`px-3.5 py-3 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center justify-between gap-2 text-left ${
                 activeSubTab === 'master'
-                  ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-xl ring-1 ring-[#D4AF37]'
+                  ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_15px_rgba(212,175,55,0.4)] ring-1 ring-[#FFF0A8]'
                   : 'bg-[#181307] text-[#D4AF37] border-[#D4AF37]/40 hover:bg-[#D4AF37]/20 hover:text-white hover:border-[#D4AF37]'
               }`}
               id="tab-master-admin-view"
@@ -2104,70 +2170,179 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
               )}
 
               {/* Google Drive Photo Deliverables Cloud Section */}
-              <div className="p-3.5 bg-gradient-to-br from-[#141414] to-[#0A0A0A] border border-[#D4AF37]/40 space-y-3">
+              <div className="p-4 bg-gradient-to-br from-[#161616] via-[#111111] to-[#0A0A0A] border border-[#D4AF37]/40 shadow-xl space-y-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <HardDrive className="w-4 h-4 text-[#D4AF37]" />
-                    <span className="font-semibold text-white uppercase text-[11px] font-mono">
-                      Google Drive Cloud Foto
-                    </span>
+                    <div className="w-6 h-6 rounded bg-[#D4AF37]/15 border border-[#D4AF37]/30 flex items-center justify-center">
+                      <HardDrive className="w-3.5 h-3.5 text-[#D4AF37]" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-white uppercase text-[11px] font-mono tracking-wider">
+                        Google Drive Cloud Foto
+                      </span>
+                    </div>
                   </div>
                   {detailOrder.driveFolderUrl ? (
-                    <a
-                      href={detailOrder.driveFolderUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] font-mono text-[#D4AF37] hover:underline flex items-center gap-1"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      <span>Buka Folder Drive</span>
-                    </a>
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      Link Aktif Terhubung
+                    </span>
                   ) : (
-                    <span className="text-[10px] text-gray-500 font-mono">Belum ada link folder</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-gray-400 font-mono text-[10px]">
+                      Belum Ada Link
+                    </span>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-gray-400 font-mono text-[10px] mb-1">
-                    Link Folder Google Drive (Hasil Foto Klien):
+                {/* Previously Saved Link Box with Delete & Actions */}
+                {detailOrder.driveFolderUrl && (
+                  <div className="p-3 bg-black/60 border border-emerald-500/20 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 mb-1">
+                          <Link2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span>Link Tersimpan Saat Ini:</span>
+                        </div>
+                        <a
+                          href={detailOrder.driveFolderUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block text-xs font-mono text-[#D4AF37] hover:text-white truncate hover:underline"
+                          title={detailOrder.driveFolderUrl}
+                        >
+                          {detailOrder.driveFolderUrl}
+                        </a>
+                      </div>
+                    </div>
+
+                    {confirmDeleteLinkId === detailOrder.id ? (
+                      <div className="p-2.5 bg-rose-950/80 border border-rose-500/50 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 text-xs text-rose-200">
+                          <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                          <span>Yakin hapus tautan Google Drive ini?</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleExecuteDeleteDriveLink(detailOrder)}
+                            className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] uppercase tracking-wider cursor-pointer shadow transition-all"
+                            id={`btn-confirm-delete-drive-${detailOrder.id}`}
+                          >
+                            Ya, Hapus
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteLinkId(null)}
+                            className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-gray-300 text-[11px] uppercase tracking-wider cursor-pointer transition-colors"
+                          >
+                            Batal
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
+                        <a
+                          href={detailOrder.driveFolderUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#D4AF37]/15 hover:bg-[#D4AF37]/30 text-[#D4AF37] text-[11px] font-medium border border-[#D4AF37]/30 transition-colors"
+                          id={`btn-open-drive-${detailOrder.id}`}
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          <span>Buka Folder</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyDriveLink(detailOrder.driveFolderUrl!)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/5 hover:bg-white/15 text-gray-200 text-[11px] font-medium border border-white/15 transition-colors cursor-pointer"
+                          id={`btn-copy-drive-${detailOrder.id}`}
+                        >
+                          {isCopiedDriveLink ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span className="text-emerald-400">Tersalin!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>Salin Link</span>
+                            </>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteLinkId(detailOrder.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 hover:text-rose-100 text-[11px] font-medium border border-rose-500/30 transition-colors cursor-pointer ml-auto"
+                          id={`btn-delete-drive-${detailOrder.id}`}
+                          title="Hapus tautan Google Drive dari pesanan ini"
+                        >
+                          <Trash2 className="w-3 h-3 text-rose-400" />
+                          <span>Hapus Link</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Edit / Update / Input Link Section */}
+                <div className="space-y-1.5">
+                  <label className="block text-gray-300 font-mono text-[10px] uppercase tracking-wider">
+                    {detailOrder.driveFolderUrl ? 'Perbarui / Ganti Link Folder Google Drive:' : 'Masukkan Link Folder Google Drive Baru:'}
                   </label>
                   <div className="flex gap-2">
-                    <input
-                      type="url"
-                      placeholder="https://drive.google.com/drive/folders/..."
-                      defaultValue={detailOrder.driveFolderUrl || ''}
-                      id={`drive-input-${detailOrder.id}`}
-                      className="flex-1 px-3 py-1.5 bg-black border border-white/15 text-xs text-white font-mono focus:border-[#D4AF37] focus:outline-none"
-                    />
+                    <div className="relative flex-1">
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/drive/folders/..."
+                        value={driveLinkInput}
+                        onChange={(e) => setDriveLinkInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleSaveOrUpdateDriveLink(detailOrder);
+                          }
+                        }}
+                        id={`drive-input-${detailOrder.id}`}
+                        className="w-full pl-3 pr-8 py-2 bg-black border border-white/15 text-xs text-white font-mono focus:border-[#D4AF37] focus:outline-none"
+                      />
+                      {driveLinkInput && (
+                        <button
+                          type="button"
+                          onClick={() => setDriveLinkInput('')}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white p-0.5"
+                          title="Kosongkan input"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        const input = document.getElementById(`drive-input-${detailOrder.id}`) as HTMLInputElement;
-                        if (input && onUpdateOrder) {
-                          const val = input.value.trim();
-                          onUpdateOrder(detailOrder.id, { driveFolderUrl: val || undefined });
-                          setDetailOrder({ ...detailOrder, driveFolderUrl: val || undefined });
-                          alert('Link Google Drive berhasil diperbarui dan tersimpan ke Firebase Cloud!');
-                        }
-                      }}
-                      className="px-3 py-1.5 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider cursor-pointer"
+                      onClick={() => handleSaveOrUpdateDriveLink(detailOrder)}
+                      className="px-3.5 py-2 bg-gold-metallic hover:opacity-90 text-black font-bold text-xs uppercase tracking-wider cursor-pointer shadow-md transition-all shrink-0 flex items-center gap-1.5"
+                      id={`btn-save-drive-${detailOrder.id}`}
                     >
-                      Simpan Link
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{detailOrder.driveFolderUrl ? 'Perbarui Link' : 'Simpan Link'}</span>
                     </button>
                   </div>
+                  <p className="text-[10px] text-gray-400 font-mono">
+                    *Tautan yang disimpan otomatis disinkronkan ke cloud dan dapat diakses klien melalui Portal Konsumen.
+                  </p>
                 </div>
 
                 {detailOrder.driveFolderUrl && (
-                  <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+                  <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
                     <p className="text-[10px] text-gray-400">Klien dapat mengunduh langsung dari Portal Konsumen.</p>
                     <a
                       href={generateClientDeliveryWhatsAppLink(detailOrder)}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] uppercase tracking-wider cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] uppercase tracking-wider cursor-pointer transition-colors shrink-0 shadow-md"
+                      id={`btn-wa-delivery-${detailOrder.id}`}
                     >
                       <Share2 className="w-3 h-3" />
-                      <span>Kirim Link Drive ke WA Klien</span>
+                      <span>Kirim ke WA Klien</span>
                     </a>
                   </div>
                 )}

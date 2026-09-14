@@ -266,6 +266,9 @@ export async function updateBookingInFirestore(
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         sanitizedUpdates[key] = value;
+      } else {
+        // Explicitly set undefined values as empty or null to clear them in Firestore merge
+        sanitizedUpdates[key] = '';
       }
     }
     if (updates.status === 'Selesai' && !updates.completedAt) {

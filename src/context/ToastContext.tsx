@@ -112,15 +112,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               Icon: AlertCircle,
             },
             info: {
-              border: 'border-[#D4AF37]/50 bg-[#171510]',
-              iconBg: 'bg-[#D4AF37]/20 text-[#D4AF37]',
-              bar: 'bg-[#D4AF37]',
+              border: 'border-[#D4AF37] bg-[#171510] shadow-[0_0_15px_rgba(212,175,55,0.25)]',
+              iconBg: 'bg-gold-metallic text-black font-bold shadow-sm',
+              bar: 'bg-gold-metallic',
               Icon: Info,
             },
             warning: {
-              border: 'border-amber-500/50 bg-[#1a1710]',
-              iconBg: 'bg-amber-500/20 text-amber-400',
-              bar: 'bg-amber-500',
+              border: 'border-[#D4AF37]/80 bg-[#1a1710] shadow-[0_0_15px_rgba(212,175,55,0.2)]',
+              iconBg: 'bg-gold-gradient text-black font-bold shadow-sm',
+              bar: 'bg-gold-gradient',
               Icon: AlertTriangle,
             },
           }[toast.type];

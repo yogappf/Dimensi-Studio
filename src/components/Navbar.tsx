@@ -11,6 +11,7 @@ import {
   Search,
   ArrowLeft,
   User as UserIcon,
+  BookOpen,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { STUDIO_INFO } from '../data/mockData';
@@ -22,6 +23,7 @@ interface NavbarProps {
   setActiveTab: (tab: 'showcase' | 'admin' | 'customer-portal') => void;
   orderCount: number;
   onOpenBooking: () => void;
+  onOpenManual?: () => void;
   currentUser?: User | null;
   isAdminAuthenticated: boolean;
   isMasterAdmin?: boolean;
@@ -37,6 +39,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   orderCount,
   onOpenBooking,
+  onOpenManual,
   currentUser,
   isAdminAuthenticated,
   isMasterAdmin = false,
@@ -90,16 +93,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="flex items-center gap-3 cursor-pointer group select-none"
             id="brand-logo-btn"
           >
-            <div className="w-10 h-10 bg-[#1A1A1A] border border-white/10 flex items-center justify-center text-[#D4AF37] group-hover:border-[#D4AF37] transition-colors">
+            <div className="w-10 h-10 bg-[#1A1A1A] border border-[#D4AF37]/30 flex items-center justify-center text-[#D4AF37] group-hover:border-[#D4AF37] group-hover:shadow-[0_0_12px_rgba(212,175,55,0.4)] transition-all">
               <Camera className="w-5 h-5 stroke-[2]" />
             </div>
             <div>
               <div className="text-xl sm:text-2xl font-bold tracking-widest text-white flex items-center gap-2">
-                <span>DIMENSI<span className="text-[#D4AF37]">STUDIO</span></span>
+                <span>DIMENSI<span className="text-gold-metallic font-extrabold ml-0.5">STUDIO</span></span>
                 {isAdminAuthenticated && (
                   <span className={`text-[10px] font-mono px-2 py-0.5 border tracking-wider ${
                     isMasterAdmin
-                      ? 'bg-[#D4AF37]/20 text-[#D4AF37] border-[#D4AF37]/40'
+                      ? 'bg-gold-metallic text-black font-bold border-[#FFE082]'
                       : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
                   }`}>
                     {isMasterAdmin ? 'MASTER' : 'STAF'}
@@ -157,10 +160,35 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Search className="w-3.5 h-3.5" />
               <span>Lacak Pesanan</span>
             </button>
+
+            {/* Buku Panduan Modal Trigger */}
+            {onOpenManual && (
+              <button
+                onClick={onOpenManual}
+                className="text-gray-300 hover:text-[#D4AF37] transition-colors py-1 cursor-pointer flex items-center gap-1.5"
+                id="nav-manual-btn"
+                title="Buka Buku Panduan Pengguna Lengkap"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <span>Panduan</span>
+              </button>
+            )}
           </nav>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Quick Manual button on mobile */}
+            {onOpenManual && (
+              <button
+                onClick={onOpenManual}
+                className="lg:hidden flex items-center gap-1 px-2.5 py-2 text-[11px] font-mono text-[#D4AF37] bg-[#141414] border border-[#D4AF37]/30 hover:bg-[#D4AF37] hover:text-black transition-colors"
+                title="Buku Panduan Aplikasi"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Panduan</span>
+              </button>
+            )}
+
             {/* Customer Portal Button (Mobile / Quick access) */}
             {activeTab !== 'customer-portal' && activeTab !== 'admin' && (
               <button
@@ -247,7 +275,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {activeTab === 'showcase' && (
               <button
                 onClick={onOpenBooking}
-                className="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] bg-[#D4AF37] text-black hover:bg-white transition-all shadow-sm cursor-pointer"
+                className="flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 text-[11px] font-bold uppercase tracking-[0.18em] bg-gold-metallic text-black hover:brightness-110 transition-all shadow-[0_0_15px_rgba(212,175,55,0.35)] cursor-pointer"
                 id="header-booking-cta-btn"
               >
                 <CalendarCheck className="w-3.5 h-3.5 stroke-[2.2]" />

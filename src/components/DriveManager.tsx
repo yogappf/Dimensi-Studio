@@ -78,6 +78,7 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
   // Client Order Auto-Folder Generator Modal
   const [isOrderGenOpen, setIsOrderGenOpen] = useState<boolean>(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>(orders[0]?.id || '');
+  const [confirmUnlinkOrderId, setConfirmUnlinkOrderId] = useState<string | null>(null);
   const [isGeneratingStructure, setIsGeneratingStructure] = useState<boolean>(false);
   const [genSuccessMessage, setGenSuccessMessage] = useState<string | null>(null);
 
@@ -420,37 +421,67 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                     </div>
                     <p className="text-[11px] text-gray-400 truncate">{order.packageName}</p>
                   </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                    <a
-                      href={order.driveFolderUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 py-1.5 px-2 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] text-[11px] font-semibold border border-[#D4AF37]/30 flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Buka Drive</span>
-                    </a>
-                    <button
-                      onClick={() => copyToClipboard(order.driveFolderUrl!, `Link Drive ${order.clientName}`)}
-                      className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 text-xs transition-colors cursor-pointer"
-                      title="Salin Link Google Drive"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
-                    {order.phone && (
+                  {confirmUnlinkOrderId === order.id ? (
+                    <div className="flex items-center justify-between gap-1.5 p-2 bg-rose-950/80 border border-rose-500/40 text-[11px] text-rose-200 pt-2 border-t">
+                      <span>Lepas tautan Drive?</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            onUpdateOrder(order.id, { driveFolderUrl: '', driveFolderId: '' });
+                            setConfirmUnlinkOrderId(null);
+                          }}
+                          className="px-2 py-0.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-[10px] uppercase rounded"
+                        >
+                          Ya
+                        </button>
+                        <button
+                          onClick={() => setConfirmUnlinkOrderId(null)}
+                          className="px-2 py-0.5 bg-white/10 hover:bg-white/20 text-gray-300 text-[10px] uppercase rounded"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                       <a
-                        href={`https://api.whatsapp.com/send?phone=${order.phone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(
-                          `Halo Kak ${order.clientName}, berikut kami kirimkan link folder Google Drive untuk hasil sesi foto ${order.packageName} dari Dimensi Fotografi:\n\n🔗 ${order.driveFolderUrl}\n\nTerima kasih atas kepercayaannya!`
-                        )}`}
+                        href={order.driveFolderUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="p-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 text-xs transition-colors"
-                        title="Kirim Link ke WhatsApp Konsumen"
+                        className="flex-1 py-1.5 px-2 bg-[#D4AF37]/10 hover:bg-[#D4AF37]/20 text-[#D4AF37] text-[11px] font-semibold border border-[#D4AF37]/30 flex items-center justify-center gap-1.5 transition-colors"
                       >
-                        <Send className="w-3.5 h-3.5" />
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Buka Drive</span>
                       </a>
-                    )}
-                  </div>
+                      <button
+                        onClick={() => copyToClipboard(order.driveFolderUrl!, `Link Drive ${order.clientName}`)}
+                        className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 text-xs transition-colors cursor-pointer"
+                        title="Salin Link Google Drive"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmUnlinkOrderId(order.id)}
+                        className="p-1.5 bg-rose-950/40 hover:bg-rose-900/70 text-rose-400 hover:text-rose-200 border border-rose-500/30 text-xs transition-colors cursor-pointer"
+                        title="Hapus / Lepas Tautan Drive dari Konsumen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      {order.phone && (
+                        <a
+                          href={`https://api.whatsapp.com/send?phone=${order.phone.replace(/[^0-9]/g, '')}&text=${encodeURIComponent(
+                            `Halo Kak ${order.clientName}, berikut kami kirimkan link folder Google Drive untuk hasil sesi foto ${order.packageName} dari Dimensi Fotografi:\n\n🔗 ${order.driveFolderUrl}\n\nTerima kasih atas kepercayaannya!`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 text-xs transition-colors"
+                          title="Kirim Link ke WhatsApp Konsumen"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
           </div>

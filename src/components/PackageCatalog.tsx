@@ -270,7 +270,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                     >
                       {/* Popular Ribbon */}
                       {pkg.popular && (
-                        <div className="absolute top-3 right-3 z-20 px-2.5 py-1 bg-[#D4AF37] text-black text-[10px] font-bold uppercase tracking-widest shadow-md">
+                        <div className="absolute top-3 right-3 z-20 px-2.5 py-1 bg-gold-metallic text-black text-[10px] font-bold uppercase tracking-widest shadow-[0_0_12px_rgba(212,175,55,0.4)]">
                           Paling Favorit
                         </div>
                       )}
@@ -312,7 +312,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
 
                           {/* Price Section */}
                           <div className="pt-3 border-t border-white/10 flex items-baseline gap-2 flex-wrap">
-                            <span className="text-2xl sm:text-3xl font-serif font-bold text-[#D4AF37]">
+                            <span className="text-2xl sm:text-3xl font-serif font-bold text-gold-metallic">
                               {formatRupiah(pkg.price)}
                             </span>
                             {pkg.originalPrice && (
@@ -355,7 +355,7 @@ export const PackageCatalog: React.FC<PackageCatalogProps> = ({
                         <div className="pt-3 border-t border-white/10 space-y-2">
                           <button
                             onClick={() => onSelectPackageForBooking(pkg)}
-                            className="w-full py-3 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-[0.18em] shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                            className="w-full py-3 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-[0.18em] shadow-[0_0_15px_rgba(212,175,55,0.25)] flex items-center justify-center gap-2 transition-all cursor-pointer"
                             id={`btn-order-${pkg.id}`}
                           >
                             <span>Booking / Order Paket Ini</span>

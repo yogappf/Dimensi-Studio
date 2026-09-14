@@ -939,12 +939,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-[#D4AF37] text-black flex items-center justify-center font-bold shrink-0 shadow-lg">
+            <div className="w-12 h-12 bg-gold-metallic text-black flex items-center justify-center font-bold shrink-0 shadow-[0_0_15px_rgba(212,175,55,0.4)]">
               <Crown className="w-7 h-7" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="px-2 py-0.5 bg-[#D4AF37] text-black text-[10px] font-bold uppercase tracking-widest font-mono">
+                <span className="px-2 py-0.5 bg-gold-metallic text-black text-[10px] font-bold uppercase tracking-widest font-mono shadow-sm">
                   MASTER PRIVILEGES
                 </span>
                 <span className="text-xs font-mono text-gray-400">
@@ -952,7 +952,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-white mt-1">
-                Pusat Kendali <span className="italic text-[#D4AF37]">Master Admin Studio</span>
+                Pusat Kendali <span className="italic text-gold-metallic">Master Admin Studio</span>
               </h2>
               <p className="text-xs text-gray-300 max-w-2xl mt-1">
                 Sebagai Master Admin, Anda memegang hak akses tertinggi untuk mengatur staf studio, keamanan PIN, profil pembayaran konsumen, hingga backup & pemulihan database Firestore.
@@ -963,7 +963,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           <div className="flex items-center gap-2 self-start md:self-center">
             <button
               onClick={handleExportFullBackup}
-              className="px-3.5 py-2 bg-[#D4AF37] hover:bg-white text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+              className="px-3.5 py-2 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_12px_rgba(212,175,55,0.3)] transition-all cursor-pointer"
               title="Unduh Backup Lengkap Database"
             >
               <FileDown className="w-4 h-4" />
@@ -979,7 +979,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           onClick={() => setActiveTab('master_user')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'master_user'
-              ? 'bg-gradient-to-r from-[#D4AF37] to-amber-400 text-black border-[#D4AF37] font-bold shadow-md'
+              ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
               : 'bg-[#1c1708] text-[#D4AF37] border-[#D4AF37]/30 hover:bg-[#D4AF37]/20 hover:text-white'
           }`}
           id="tab-master-user-btn"
@@ -992,7 +992,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           onClick={() => setActiveTab('staff')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'staff'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
+              ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
           id="tab-staff-management-btn"
@@ -1005,7 +1005,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           onClick={() => setActiveTab('security')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'security'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
+              ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
           id="tab-security-btn"
@@ -1018,7 +1018,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           onClick={() => setActiveTab('profile')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'profile'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
+              ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
           id="tab-profile-btn"
@@ -1031,7 +1031,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           onClick={() => setActiveTab('backup')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'backup'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
+              ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
           id="tab-backup-btn"
@@ -1044,7 +1044,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
           onClick={() => setActiveTab('audit')}
           className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'audit'
-              ? 'bg-[#D4AF37] text-black border-[#D4AF37] font-bold shadow-md'
+              ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.3)]'
               : 'bg-[#141414] text-gray-400 border-white/10 hover:text-white'
           }`}
           id="tab-audit-btn"
