@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useToast } from '../context/ToastContext';
 import {
   X,
   RotateCw,
@@ -50,6 +51,7 @@ export const BannerCropperModal: React.FC<BannerCropperModalProps> = ({
   subtitle = 'Signature Series',
   badgeText = 'Top Rated Studio',
 }) => {
+  const toast = useToast();
   const [selectedRatioId, setSelectedRatioId] = useState<string>('4:5');
   const [rotation, setRotation] = useState<number>(0);
   const [showLivePreview, setShowLivePreview] = useState<boolean>(false);
@@ -565,7 +567,7 @@ export const BannerCropperModal: React.FC<BannerCropperModalProps> = ({
       onClose();
     } catch (err) {
       console.error('Error applying manual crop:', err);
-      alert('Terjadi kesalahan saat memotong gambar.');
+      toast.error('Terjadi kesalahan saat memotong gambar.');
     } finally {
       setIsProcessing(false);
     }

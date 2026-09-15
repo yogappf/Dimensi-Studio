@@ -9,6 +9,7 @@ import {
   createClientOrderFolderStructure,
 } from '../services/googleDrive';
 import { getCachedAccessToken } from '../firebase/services';
+import { useToast } from '../context/ToastContext';
 import {
   HardDrive,
   FolderPlus,
@@ -52,6 +53,7 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
   currentUser,
   onGoogleSignIn,
 }) => {
+  const toast = useToast();
   const [accessToken, setAccessToken] = useState<string | null>(getCachedAccessToken());
   const [currentFolderId, setCurrentFolderId] = useState<string>('root');
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([{ id: 'root', name: 'Google Drive Studio' }]);
@@ -139,9 +141,10 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
       await createDriveFolder(accessToken, newFolderName.trim(), currentFolderId);
       setNewFolderName('');
       setIsCreateFolderOpen(false);
+      toast.success(`Folder "${newFolderName.trim()}" berhasil dibuat`);
       await loadFiles(currentFolderId);
     } catch (err: any) {
-      alert(`Gagal membuat folder: ${err.message}`);
+      toast.error(`Gagal membuat folder: ${err.message || err}`);
     } finally {
       setIsCreatingFolder(false);
     }
@@ -158,11 +161,12 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
         setUploadProgress(`Mengunggah file (${i + 1}/${selectedFiles.length}): ${selectedFiles[i].name}...`);
         await uploadFileToDrive(accessToken, selectedFiles[i], currentFolderId);
       }
+      toast.success(`Berhasil mengunggah ${selectedFiles.length} file ke Google Drive`);
       setSelectedFiles([]);
       setIsUploadOpen(false);
       await loadFiles(currentFolderId);
     } catch (err: any) {
-      alert(`Gagal mengunggah file: ${err.message}`);
+      toast.error(`Gagal mengunggah file: ${err.message || err}`);
     } finally {
       setIsUploading(false);
       setUploadProgress('');
@@ -174,10 +178,11 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
     setIsDeleting(true);
     try {
       await deleteDriveFile(accessToken, fileToDelete.id);
+      toast.info(`Item "${fileToDelete.name}" berhasil dihapus dari Drive`);
       setFileToDelete(null);
       await loadFiles(currentFolderId);
     } catch (err: any) {
-      alert(`Gagal menghapus file: ${err.message}`);
+      toast.error(`Gagal menghapus file: ${err.message || err}`);
     } finally {
       setIsDeleting(false);
     }
@@ -208,11 +213,12 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
       setGenSuccessMessage(
         `Berhasil membuat struktur folder untuk ${targetOrder.clientName}! Link folder Google Drive telah terhubung otomatis ke data pemesanan.`
       );
+      toast.success(`Folder klien ${targetOrder.clientName} berhasil dibuat dan dihubungkan`);
       
       // Reload current list if in root
       await loadFiles(currentFolderId);
     } catch (err: any) {
-      alert(`Gagal membuat folder klien: ${err.message}`);
+      toast.error(`Gagal membuat folder klien: ${err.message || err}`);
     } finally {
       setIsGeneratingStructure(false);
     }

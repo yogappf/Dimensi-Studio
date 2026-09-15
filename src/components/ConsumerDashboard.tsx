@@ -587,7 +587,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const handleManualAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualName.trim() || !manualPhone.trim()) {
-      alert('Nama dan nomor telepon wajib diisi.');
+      toast.error('Nama dan nomor telepon wajib diisi.');
       return;
     }
 
@@ -601,10 +601,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     // Check conflict for Sesi 1
     const conflict1 = checkScheduleSlotConflict(targetDate, manualTime, orders);
     if (conflict1) {
-      const confirmOverride1 = confirm(
-        `⚠️ PERINGATAN BENTROK JADWAL ACARA 1:\n\nJadwal pada tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} ${conflict1.conflictReason || 'bertabrakan dengan pesanan lain'}:\n• Klien: ${conflict1.clientName}\n• ID: ${conflict1.id}\n• Paket: ${conflict1.packageName}\n• Jam Sesi Terisi: ${conflict1.conflictExistingTime || conflict1.sessionTime}\n\nStudio menerapkan proteksi buffer 7 jam (3 jam sebelum & 4 jam setelah jadwal terisi). Apakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+      toast.warning(
+        `Catatan Bentrok Jadwal Sesi 1: Tanggal ${formatDateIndonesian(targetDate)} pukul ${manualTime} bertabrakan dengan pesanan ${conflict1.clientName} (${conflict1.id}). Pesanan tetap disimpan oleh Admin.`
       );
-      if (!confirmOverride1) return;
     }
 
     // Check conflict for Sesi 2 if enabled
@@ -615,10 +614,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       }
       const conflict2 = checkScheduleSlotConflict(targetDate2, manualTime2, orders);
       if (conflict2) {
-        const confirmOverride2 = confirm(
-          `⚠️ PERINGATAN BENTROK JADWAL ACARA 2:\n\nJadwal pada tanggal ${formatDateIndonesian(targetDate2)} pukul ${manualTime2} ${conflict2.conflictReason || 'bertabrakan dengan pesanan lain'}:\n• Klien: ${conflict2.clientName}\n• ID: ${conflict2.id}\n• Paket: ${conflict2.packageName}\n• Jam Sesi Terisi: ${conflict2.conflictExistingTime || conflict2.sessionTime2}\n\nStudio menerapkan proteksi buffer 7 jam (3 jam sebelum & 4 jam setelah jadwal terisi). Apakah Anda sebagai Admin tetap ingin menambahkan pesanan ini?`
+        toast.warning(
+          `Catatan Bentrok Jadwal Sesi 2: Tanggal ${formatDateIndonesian(targetDate2)} pukul ${manualTime2} bertabrakan dengan pesanan ${conflict2.clientName} (${conflict2.id}). Pesanan tetap disimpan oleh Admin.`
         );
-        if (!confirmOverride2) return;
       }
     }
 
@@ -2159,7 +2157,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                       ...detailOrder,
                       status: 'Terkonfirmasi & Terjadwal',
                     });
-                    alert('Bukti transfer telah diverifikasi! Status pesanan berhasil diubah menjadi Terkonfirmasi & Terjadwal.');
+                    toast.success('Bukti transfer telah diverifikasi!', 'Status pesanan berhasil diubah menjadi Terkonfirmasi & Terjadwal.');
                   }}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all"
                   id="btn-admin-quick-confirm"

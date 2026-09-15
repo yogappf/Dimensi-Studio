@@ -235,7 +235,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Mohon pilih file gambar (JPG, PNG, WEBP).');
+        toast.error('Mohon pilih file gambar (JPG, PNG, WEBP).');
         return;
       }
       setProofFile(file);

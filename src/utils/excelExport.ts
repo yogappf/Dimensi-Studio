@@ -3,7 +3,6 @@ import { BookingOrder } from '../types';
 
 export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_Konsumen_Dimensi_Fotografi.xlsx') {
   if (!orders || orders.length === 0) {
-    alert('Tidak ada data konsumen untuk diekspor.');
     return false;
   }
 
@@ -85,7 +84,6 @@ export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_K
 
 export function exportOrdersToCSV(orders: BookingOrder[], filename = 'Daftar_Konsumen_Dimensi_Fotografi.csv') {
   if (!orders || orders.length === 0) {
-    alert('Tidak ada data konsumen untuk diekspor.');
     return false;
   }
 

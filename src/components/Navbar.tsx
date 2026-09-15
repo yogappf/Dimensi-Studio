@@ -11,7 +11,6 @@ import {
   Search,
   ArrowLeft,
   User as UserIcon,
-  BookOpen,
 } from 'lucide-react';
 import { User } from 'firebase/auth';
 import { STUDIO_INFO } from '../data/mockData';
@@ -23,7 +22,6 @@ interface NavbarProps {
   setActiveTab: (tab: 'showcase' | 'admin' | 'customer-portal') => void;
   orderCount: number;
   onOpenBooking: () => void;
-  onOpenManual?: () => void;
   currentUser?: User | null;
   isAdminAuthenticated: boolean;
   isMasterAdmin?: boolean;
@@ -39,7 +37,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   orderCount,
   onOpenBooking,
-  onOpenManual,
   currentUser,
   isAdminAuthenticated,
   isMasterAdmin = false,
@@ -160,35 +157,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Search className="w-3.5 h-3.5" />
               <span>Lacak Pesanan</span>
             </button>
-
-            {/* Buku Panduan Modal Trigger */}
-            {onOpenManual && (
-              <button
-                onClick={onOpenManual}
-                className="text-gray-300 hover:text-[#D4AF37] transition-colors py-1 cursor-pointer flex items-center gap-1.5"
-                id="nav-manual-btn"
-                title="Buka Buku Panduan Pengguna Lengkap"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>Panduan</span>
-              </button>
-            )}
           </nav>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2.5 sm:gap-3">
-            {/* Quick Manual button on mobile */}
-            {onOpenManual && (
-              <button
-                onClick={onOpenManual}
-                className="lg:hidden flex items-center gap-1 px-2.5 py-2 text-[11px] font-mono text-[#D4AF37] bg-[#141414] border border-[#D4AF37]/30 hover:bg-[#D4AF37] hover:text-black transition-colors"
-                title="Buku Panduan Aplikasi"
-              >
-                <BookOpen className="w-3.5 h-3.5" />
-                <span>Panduan</span>
-              </button>
-            )}
-
             {/* Customer Portal Button (Mobile / Quick access) */}
             {activeTab !== 'customer-portal' && activeTab !== 'admin' && (
               <button

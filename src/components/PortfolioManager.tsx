@@ -162,7 +162,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       );
     } catch (err) {
       console.error('Error uploading/compressing image:', err);
-      alert('Gagal memproses unggahan foto. Pastikan format file gambar valid (JPG, PNG, WEBP).');
+      showToast('Gagal memproses unggahan foto. Pastikan format file gambar valid (JPG, PNG, WEBP).');
     } finally {
       setIsUploading(false);
       setUploadProgressText('');
@@ -176,7 +176,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
     if (!trimmed) return;
 
     if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://') && !trimmed.startsWith('data:image/')) {
-      alert('Masukkan tautan URL foto yang valid (diawali https://).');
+      showToast('Masukkan tautan URL foto yang valid (diawali https://).');
       return;
     }
 
@@ -275,7 +275,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       .filter((u) => Boolean(u));
 
     if (cleanUrls.length === 0 && !formData.imageUrl.trim()) {
-      alert('Silakan unggah minimal 1 foto atau masukkan tautan URL gambar portofolio terlebih dahulu.');
+      showToast('Silakan unggah minimal 1 foto atau masukkan tautan URL gambar portofolio terlebih dahulu.');
       return;
     }
 
@@ -320,7 +320,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
       }
     } catch (err) {
       console.error('Error saving portfolio item:', err);
-      alert('Gagal menyimpan foto portofolio. Silakan coba lagi.');
+      showToast('Gagal menyimpan foto portofolio. Silakan coba lagi.');
     } finally {
       setIsSaving(false);
     }
@@ -645,13 +645,7 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                     type="button"
                     disabled={isUploading}
                     onClick={() => {
-                      if (formData.imageUrls.length > 0) {
-                        if (confirm('Upload ulang akan menimpa dan mengganti seluruh foto lama di kategori ini. Lanjutkan?')) {
-                          replaceFileInputRef.current?.click();
-                        }
-                      } else {
-                        replaceFileInputRef.current?.click();
-                      }
+                      replaceFileInputRef.current?.click();
                     }}
                     className="w-full py-3 px-3 bg-[#1A1A1A] hover:bg-[#252525] border border-white/20 text-gray-300 hover:text-white text-xs font-mono flex items-center justify-center gap-2 transition-all cursor-pointer"
                     id="btn-upload-replace-photos"
@@ -698,10 +692,8 @@ export const PortfolioManager: React.FC<PortfolioManagerProps> = ({
                       <button
                         type="button"
                         onClick={() => {
-                          if (confirm('Hapus semua foto dari daftar ini?')) {
-                            setFormData((prev) => ({ ...prev, imageUrls: [], imageUrl: '' }));
-                            showToast('Semua foto di daftar telah dikosongkan.');
-                          }
+                          setFormData((prev) => ({ ...prev, imageUrls: [], imageUrl: '' }));
+                          showToast('Semua foto di daftar telah dikosongkan.');
                         }}
                         className="text-[10px] font-mono text-rose-400 hover:text-rose-300 underline cursor-pointer"
                       >

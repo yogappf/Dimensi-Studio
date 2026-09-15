@@ -524,6 +524,5 @@ export async function downloadReceiptPDFFile(
     html2pdf().set(opt).from(tempDiv).save();
   } catch (error) {
     console.error("Error generating PDF:", error);
-    alert("Gagal mengunduh PDF.");
   }
 }

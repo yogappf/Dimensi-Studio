@@ -57,6 +57,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { BannerCropperModal } from './BannerCropperModal';
+import { useToast } from '../context/ToastContext';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
 import {
   INDONESIAN_BANK_PRESETS,
@@ -120,6 +121,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   onRestoreAllData,
   isFirebaseConnected,
 }) => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'master_user' | 'staff' | 'security' | 'profile' | 'backup' | 'audit'>('master_user');
 
   // Master User Form State
@@ -305,7 +307,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
 
   const handleDeleteBankAccount = (id: string) => {
     if (bankAccountsList.length <= 1) {
-      alert('Minimal harus ada 1 data rekening bank studio.');
+      toast.warning('Minimal harus ada 1 data rekening bank studio.');
       return;
     }
     const filtered = bankAccountsList.filter((b) => b.id !== id);
@@ -327,7 +329,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        alert('Mohon pilih file gambar QRIS (PNG, JPG, WEBP).');
+        toast.error('Mohon pilih file gambar QRIS (PNG, JPG, WEBP).');
         return;
       }
       try {
@@ -335,7 +337,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         setConfigForm((prev) => ({ ...prev, qrisUrl: compressed }));
       } catch (err) {
         console.error('QRIS compression failed:', err);
-        alert('Gagal memproses gambar QRIS.');
+        toast.error('Gagal memproses gambar QRIS.');
       }
     }
   };
@@ -401,7 +403,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         }
 
         if (processedImages.length === 0) {
-          alert('Tidak ada file gambar yang valid.');
+          toast.error('Tidak ada file gambar yang valid.');
           return;
         }
 
@@ -438,7 +440,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         setTimeout(() => setHeroToast(''), 3500);
       } catch (err) {
         console.error('Error uploading multiple images:', err);
-        alert('Gagal mengupload beberapa foto.');
+        toast.error('Gagal mengupload beberapa foto.');
       } finally {
         e.target.value = '';
       }
@@ -448,12 +450,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     // Single file upload: open crop modal
     const file = files[0];
     if (!file.type.startsWith('image/')) {
-      alert('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
+      toast.error('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
       return;
     }
 
     if (file.size > 20 * 1024 * 1024) {
-      alert('Ukuran file maksimal 20MB.');
+      toast.error('Ukuran file maksimal 20MB.');
       return;
     }
 
@@ -516,7 +518,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       setTimeout(() => setHeroToast(''), 3500);
     } catch (err) {
       console.error('Error saving cropped banner:', err);
-      alert('Gagal menyimpan hasil crop banner.');
+      toast.error('Gagal menyimpan hasil crop banner.');
     }
   };
 
@@ -542,11 +544,11 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     const phone = masterPhone.trim();
 
     if (!u) {
-      alert('Username Master Admin tidak boleh kosong.');
+      toast.error('Username Master Admin tidak boleh kosong.');
       return;
     }
     if (!p) {
-      alert('PIN Master Admin tidak boleh kosong.');
+      toast.error('PIN Master Admin tidak boleh kosong.');
       return;
     }
 
@@ -670,7 +672,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     const mPass = masterPasscode.trim();
 
     if (!sPass || !mPass) {
-      alert('Passcode tidak boleh kosong.');
+      toast.error('Passcode tidak boleh kosong.');
       return;
     }
 
@@ -738,7 +740,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const handleSaveStaff = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffName.trim() || !staffEmail.trim()) {
-      alert('Nama dan Email staf admin wajib diisi.');
+      toast.error('Nama dan Email staf admin wajib diisi.');
       return;
     }
 
@@ -1675,7 +1677,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                                 <button
                                   type="button"
                                   onClick={async () => {
-                                    if (!confirm('Hapus semua slide banner?')) return;
                                     const updatedConfig = {
                                       ...studioConfig,
                                       ...configForm,

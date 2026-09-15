@@ -85,7 +85,8 @@ export const PackageManager: React.FC<PackageManagerProps> = ({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
+      setImageToast('Mohon pilih file gambar yang valid (JPEG, PNG, WebP).');
+      setTimeout(() => setImageToast(''), 3500);
       return;
     }
 

@@ -68,7 +68,7 @@ export const AddonManager: React.FC<AddonManagerProps> = ({
   const handleSaveSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
-      alert('Nama layanan add-on wajib diisi.');
+      showToast('Nama layanan add-on wajib diisi.');
       return;
     }
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, MapPin, Phone, Mail, Instagram, Clock, ArrowUp, Heart, BookOpen } from 'lucide-react';
+import { Camera, MapPin, Phone, Mail, Instagram, Clock, ArrowUp, Heart } from 'lucide-react';
 import { STUDIO_INFO } from '../data/mockData';
 import { StudioConfig } from '../types';
 import { normalizeWhatsAppNumber } from '../utils/formatters';
@@ -7,11 +7,10 @@ import { normalizeWhatsAppNumber } from '../utils/formatters';
 interface FooterProps {
   onOpenBooking: () => void;
   onOpenAdmin: () => void;
-  onOpenManual?: () => void;
   studioConfig?: StudioConfig;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin, onOpenManual, studioConfig }) => {
+export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin, studioConfig }) => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -143,17 +142,6 @@ export const Footer: React.FC<FooterProps> = ({ onOpenBooking, onOpenAdmin, onOp
           </div>
 
           <div className="flex items-center gap-4 flex-wrap">
-            {onOpenManual && (
-              <button
-                onClick={onOpenManual}
-                className="flex items-center gap-1.5 text-gray-400 hover:text-[#D4AF37] transition-colors cursor-pointer uppercase tracking-wider text-[11px]"
-                title="Buka Buku Panduan Pengguna"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-[#D4AF37]" />
-                <span>Buku Panduan (User Manual)</span>
-              </button>
-            )}
-
             <button
               onClick={scrollToTop}
               className="flex items-center gap-1 text-gray-400 hover:text-[#D4AF37] transition-colors cursor-pointer uppercase tracking-wider"

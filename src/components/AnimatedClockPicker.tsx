@@ -105,8 +105,8 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
       let selectedHour12 = Math.round(theta / 30) % 12;
       if (selectedHour12 === 0) selectedHour12 = 12;
 
-      // Inner ring vs Outer ring detection: radius is ~120px, threshold ~75px
-      const isInner = distance < 78;
+      // Inner ring vs Outer ring detection: threshold at ~52px distance from center
+      const isInner = distance < 54;
       let finalHour = selectedHour12;
       if (isInner) {
         finalHour = selectedHour12 === 12 ? 0 : selectedHour12 + 12;
@@ -141,9 +141,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
     }
   };
 
-  // Clock Hand Angles
+  // Clock Hand Angles (scaled for compact size)
   const isInnerHour = hour === 0 || hour > 12;
-  const activeHandLength = dialMode === 'hour' ? (isInnerHour ? 54 : 82) : 84;
+  const activeHandLength = dialMode === 'hour' ? (isInnerHour ? 38 : 56) : 58;
   const activeHandAngle = dialMode === 'hour' ? (hour % 12) * 30 : minute * 6;
   const hourGhostAngle = ((hour % 12) + minute / 60) * 30;
   const minuteGhostAngle = minute * 6;
@@ -227,18 +227,18 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
 
       {/* Main Clock Picker Popover / Dropdown */}
       {isOpen && (
-        <div className={`p-4 bg-[#121212] border shadow-2xl rounded-none space-y-4 animate-in fade-in zoom-in-95 duration-200 ${
+        <div className={`p-3 sm:p-3.5 bg-[#121212] border shadow-2xl rounded-none space-y-3 max-w-sm sm:max-w-md mx-auto animate-in fade-in zoom-in-95 duration-200 ${
           isSlotUnavailable ? 'border-rose-500/80 ring-1 ring-rose-500/30' : 'border-[#D4AF37]/60 shadow-[0_0_25px_rgba(212,175,55,0.15)]'
         }`}>
           
           {/* Conflict Alert Banner inside picker */}
           {isSlotUnavailable && (
-            <div className="p-3 bg-rose-950/60 border border-rose-500/60 text-rose-200 text-xs font-mono space-y-1">
+            <div className="p-2.5 bg-rose-950/60 border border-rose-500/60 text-rose-200 text-xs font-mono space-y-1">
               <div className="flex items-start gap-2">
                 <span className="text-base">⛔</span>
                 <div>
-                  <strong className="text-white block font-sans">Jadwal Jam Ini Tidak Tersedia!</strong>
-                  <span className="text-rose-200 text-[11px] leading-relaxed block mt-0.5">
+                  <strong className="text-white block font-sans text-xs">Jadwal Jam Ini Tidak Tersedia!</strong>
+                  <span className="text-rose-200 text-[10px] leading-relaxed block mt-0.5">
                     {conflictReason || `Pukul ${formatTimeString(hour, minute)} bertabrakan dengan jadwal pesanan lain dalam rentang buffer 7 jam.`}
                   </span>
                 </div>
@@ -248,13 +248,13 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
 
           {/* Booked Times List for Context */}
           {bookedTimes.length > 0 && (
-            <div className="px-3 py-2 bg-white/5 border border-white/10 text-[10px] font-mono text-gray-400 space-y-1">
-              <span className="text-gray-300 block uppercase font-semibold">
+            <div className="px-2.5 py-1.5 bg-white/5 border border-white/10 text-[10px] font-mono text-gray-400 space-y-1">
+              <span className="text-gray-300 block uppercase font-semibold text-[9.5px]">
                 Rentang Jadwal Terblokir Pada Hari Ini (Buffer 3 Jam Sebelum & 4 Jam Setelah):
               </span>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <div className="flex flex-wrap gap-1 pt-0.5">
                 {bookedTimes.map((bt, idx) => (
-                  <span key={idx} className="px-2 py-0.5 bg-rose-950/60 border border-rose-500/40 text-rose-200 font-semibold">
+                  <span key={idx} className="px-1.5 py-0.5 bg-rose-950/60 border border-rose-500/40 text-rose-200 font-semibold text-[9.5px]">
                     {bt}
                   </span>
                 ))}
@@ -263,24 +263,24 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
           )}
 
           {/* Header Controls: Mode Selector & View Tabs */}
-          <div className="space-y-3 pb-3 border-b border-white/10">
+          <div className="space-y-2.5 pb-2.5 border-b border-white/10">
             {/* View Mode Tabs */}
-            <div className="grid grid-cols-3 gap-1 p-1 bg-black/60 border border-white/10 text-[11px] font-mono uppercase tracking-wider">
+            <div className="grid grid-cols-3 gap-1 p-0.5 bg-black/60 border border-white/10 text-[10px] font-mono uppercase tracking-wider">
               <button
                 type="button"
                 onClick={() => setActiveView('analog')}
-                className={`py-1.5 px-2 text-center font-bold transition-all cursor-pointer ${
+                className={`py-1 px-1.5 text-center font-bold transition-all cursor-pointer ${
                   activeView === 'analog'
                     ? 'bg-gold-metallic text-black shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`}
               >
-                🕒 Jam Analog
+                🕒 Analog
               </button>
               <button
                 type="button"
                 onClick={() => setActiveView('presets')}
-                className={`py-1.5 px-2 text-center font-bold transition-all cursor-pointer ${
+                className={`py-1 px-1.5 text-center font-bold transition-all cursor-pointer ${
                   activeView === 'presets'
                     ? 'bg-gold-metallic text-black shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -291,7 +291,7 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
               <button
                 type="button"
                 onClick={() => setActiveView('stepper')}
-                className={`py-1.5 px-2 text-center font-bold transition-all cursor-pointer ${
+                className={`py-1 px-1.5 text-center font-bold transition-all cursor-pointer ${
                   activeView === 'stepper'
                     ? 'bg-gold-metallic text-black shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
@@ -301,13 +301,13 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
               </button>
             </div>
 
-            {/* Large Interactive Digital Time Display */}
-            <div className="flex items-center justify-between bg-black/40 p-3 border border-white/10">
+            {/* Compact Interactive Digital Time Display */}
+            <div className="flex items-center justify-between bg-black/40 p-2 sm:p-2.5 border border-white/10">
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400 block mb-1">
+                <span className="text-[9px] font-mono uppercase tracking-widest text-gray-400 block mb-0.5">
                   Waktu Terpilih:
                 </span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   {/* Hour Segment */}
                   <button
                     type="button"
@@ -315,9 +315,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                       setActiveView('analog');
                       setDialMode('hour');
                     }}
-                    className={`px-3 py-1.5 text-xl font-mono font-bold transition-all cursor-pointer border ${
+                    className={`px-2.5 py-1 text-base sm:text-lg font-mono font-bold transition-all cursor-pointer border ${
                       dialMode === 'hour' && activeView === 'analog'
-                        ? 'bg-gold-metallic text-black border-[#FFF0A8] shadow-[0_0_12px_rgba(212,175,55,0.4)]'
+                        ? 'bg-gold-metallic text-black border-[#FFF0A8] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
                         : 'bg-white/5 border-white/15 text-white hover:border-[#D4AF37]'
                     }`}
                     title="Klik untuk memilih Jam"
@@ -325,7 +325,7 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                     {String(hour).padStart(2, '0')}
                   </button>
 
-                  <span className="text-xl font-bold font-mono text-[#D4AF37] animate-pulse">:</span>
+                  <span className="text-base sm:text-lg font-bold font-mono text-[#D4AF37] animate-pulse">:</span>
 
                   {/* Minute Segment */}
                   <button
@@ -334,9 +334,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                       setActiveView('analog');
                       setDialMode('minute');
                     }}
-                    className={`px-3 py-1.5 text-xl font-mono font-bold transition-all cursor-pointer border ${
+                    className={`px-2.5 py-1 text-base sm:text-lg font-mono font-bold transition-all cursor-pointer border ${
                       dialMode === 'minute' && activeView === 'analog'
-                        ? 'bg-gold-metallic text-black border-[#FFF0A8] shadow-[0_0_12px_rgba(212,175,55,0.4)]'
+                        ? 'bg-gold-metallic text-black border-[#FFF0A8] shadow-[0_0_10px_rgba(212,175,55,0.4)]'
                         : 'bg-white/5 border-white/15 text-white hover:border-[#D4AF37]'
                     }`}
                     title="Klik untuk memilih Menit"
@@ -344,9 +344,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                     {String(minute).padStart(2, '0')}
                   </button>
 
-                  <div className="ml-2 flex flex-col">
-                    <span className="text-xs font-mono font-bold text-white">WIB</span>
-                    <span className={`text-[10px] flex items-center gap-1 ${period.color}`}>
+                  <div className="ml-1.5 flex flex-col">
+                    <span className="text-[11px] font-mono font-bold text-white">WIB</span>
+                    <span className={`text-[9.5px] flex items-center gap-0.5 ${period.color}`}>
                       <PeriodIcon className="w-2.5 h-2.5" />
                       <span>{period.label}</span>
                     </span>
@@ -355,13 +355,13 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
               </div>
 
               {/* Quick Stepper +/- 1 Hour */}
-              <div className="flex flex-col gap-1 items-end">
-                <span className="text-[10px] font-mono text-gray-400">Penyesuaian Cepat:</span>
+              <div className="flex flex-col gap-0.5 items-end">
+                <span className="text-[9px] font-mono text-gray-400">Penyesuaian:</span>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setTime((hour - 1 + 24) % 24, minute)}
-                    className="px-2 py-1 bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 text-xs font-mono cursor-pointer transition-colors"
+                    className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 text-[10px] font-mono cursor-pointer transition-colors"
                     title="Mundurkan 1 Jam"
                   >
                     -1 Jam
@@ -369,7 +369,7 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                   <button
                     type="button"
                     onClick={() => setTime((hour + 1) % 24, minute)}
-                    className="px-2 py-1 bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 text-xs font-mono cursor-pointer transition-colors"
+                    className="px-1.5 py-0.5 bg-white/5 hover:bg-white/15 text-gray-300 border border-white/10 text-[10px] font-mono cursor-pointer transition-colors"
                     title="Majukan 1 Jam"
                   >
                     +1 Jam
@@ -379,22 +379,22 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
             </div>
           </div>
 
-          {/* VIEW 1: INTERACTIVE ANALOG CLOCK */}
+          {/* VIEW 1: INTERACTIVE COMPACT ANALOG CLOCK */}
           {activeView === 'analog' && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {/* Dial Header & Mode Switcher */}
-              <div className="flex items-center justify-between text-xs font-mono">
-                <span className="text-gray-400">
-                  Mode Jam Analog:{' '}
+              <div className="flex items-center justify-between text-[11px] font-mono">
+                <span className="text-gray-400 text-[10px]">
+                  Mode:{' '}
                   <strong className="text-[#D4AF37]">
-                    {dialMode === 'hour' ? '1. Pilih Angka Jam (00 - 23)' : '2. Pilih Angka Menit (00 - 59)'}
+                    {dialMode === 'hour' ? '1. Jam (00-23)' : '2. Menit (00-59)'}
                   </strong>
                 </span>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1">
                   <button
                     type="button"
                     onClick={() => setDialMode('hour')}
-                    className={`px-2.5 py-1 border text-[11px] font-semibold uppercase transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 border text-[10px] font-semibold uppercase transition-all cursor-pointer ${
                       dialMode === 'hour'
                         ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] font-bold'
                         : 'border-white/10 text-gray-400 hover:text-white'
@@ -405,7 +405,7 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                   <button
                     type="button"
                     onClick={() => setDialMode('minute')}
-                    className={`px-2.5 py-1 border text-[11px] font-semibold uppercase transition-all cursor-pointer ${
+                    className={`px-2 py-0.5 border text-[10px] font-semibold uppercase transition-all cursor-pointer ${
                       dialMode === 'minute'
                         ? 'bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37] font-bold'
                         : 'border-white/10 text-gray-400 hover:text-white'
@@ -416,8 +416,8 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                 </div>
               </div>
 
-              {/* Analog Clock Dial */}
-              <div className="relative flex items-center justify-center py-2 select-none">
+              {/* Compact Analog Clock Dial */}
+              <div className="relative flex items-center justify-center py-1 select-none">
                 <div
                   ref={clockRef}
                   onMouseDown={handlePointerDown}
@@ -426,13 +426,13 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                   onTouchStart={handlePointerDown}
                   onTouchMove={handlePointerMove}
                   onTouchEnd={handlePointerUp}
-                  className="relative w-64 h-64 sm:w-72 sm:h-72 rounded-full bg-[#0A0A0A] border-2 border-[#D4AF37]/40 shadow-inner flex items-center justify-center cursor-pointer overflow-hidden touch-none"
+                  className="relative w-48 h-48 sm:w-52 sm:h-52 rounded-full bg-[#0A0A0A] border-2 border-[#D4AF37]/40 shadow-inner flex items-center justify-center cursor-pointer overflow-hidden touch-none"
                   style={{
                     backgroundImage: 'radial-gradient(circle at center, rgba(212,175,55,0.08) 0%, rgba(0,0,0,0.95) 75%)',
                   }}
                 >
                   {/* Center Pin with Metallic Sheen */}
-                  <div className="absolute w-4 h-4 bg-gold-metallic rounded-full z-30 shadow-[0_0_10px_rgba(212,175,55,0.5)] ring-2 ring-black" />
+                  <div className="absolute w-3 h-3 bg-gold-metallic rounded-full z-30 shadow-[0_0_8px_rgba(212,175,55,0.5)] ring-1.5 ring-black" />
 
                   {/* Active Animated Clock Hand */}
                   <div
@@ -441,13 +441,13 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                       height: `${activeHandLength}px`,
                       bottom: '50%',
                       transform: `rotate(${activeHandAngle}deg)`,
-                      width: '2.5px',
+                      width: '2px',
                       background: 'linear-gradient(to top, #8A6B14, #FFE899)',
                     }}
                   >
                     {/* Hand End Circle Knob / Indicator */}
-                    <div className="absolute -top-3.5 -left-3.5 w-7 h-7 rounded-full bg-gold-metallic shadow-[0_0_12px_rgba(212,175,55,0.6)] flex items-center justify-center ring-2 ring-black">
-                      <div className="w-2 h-2 rounded-full bg-black" />
+                    <div className="absolute -top-2.5 -left-2.5 w-5 h-5 rounded-full bg-gold-metallic shadow-[0_0_8px_rgba(212,175,55,0.6)] flex items-center justify-center ring-1.5 ring-black">
+                      <div className="w-1.5 h-1.5 rounded-full bg-black" />
                     </div>
                   </div>
 
@@ -456,10 +456,10 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                     <div
                       className="absolute z-10 origin-bottom pointer-events-none opacity-30"
                       style={{
-                        height: '56px',
+                        height: '38px',
                         bottom: '50%',
                         transform: `rotate(${hourGhostAngle}deg)`,
-                        width: '3.5px',
+                        width: '2.5px',
                         backgroundColor: '#ffffff',
                       }}
                     />
@@ -469,10 +469,10 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                     <div
                       className="absolute z-10 origin-bottom pointer-events-none opacity-25"
                       style={{
-                        height: '84px',
+                        height: '56px',
                         bottom: '50%',
                         transform: `rotate(${minuteGhostAngle}deg)`,
-                        width: '2px',
+                        width: '1.5px',
                         backgroundColor: '#ffffff',
                       }}
                     />
@@ -483,8 +483,8 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                     <>
                       {/* Outer Ring 1 - 12 */}
                       {outerHours.map((h, i) => {
-                        const angle = (i * 30 - 60) * (Math.PI / 180);
-                        const radius = 104; // px from center for 288px clock
+                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                        const radius = 68; // px from center for compact clock
                         const x = Math.cos(angle) * radius;
                         const y = Math.sin(angle) * radius;
                         const isSelected = hour === (h === 12 ? 12 : h);
@@ -497,9 +497,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                               e.stopPropagation();
                               handleHourSelect(h === 12 ? 12 : h);
                             }}
-                            className={`absolute w-8 h-8 flex items-center justify-center text-xs font-mono font-bold rounded-full transition-all cursor-pointer z-25 ${
+                            className={`absolute w-6 h-6 flex items-center justify-center text-[10px] font-mono font-bold rounded-full transition-all cursor-pointer z-25 ${
                               isSelected
-                                ? 'bg-gold-metallic text-black font-extrabold shadow-[0_0_12px_rgba(212,175,55,0.6)] scale-110'
+                                ? 'bg-gold-metallic text-black font-extrabold shadow-[0_0_10px_rgba(212,175,55,0.6)] scale-110'
                                 : 'text-gray-200 hover:text-white hover:bg-white/10'
                             }`}
                             style={{
@@ -513,8 +513,8 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
 
                       {/* Inner Ring 13 - 00 (24 Hour format) */}
                       {innerHours.map((h, i) => {
-                        const angle = (i * 30 - 60) * (Math.PI / 180);
-                        const radius = 68; // px from center
+                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                        const radius = 43; // px from center
                         const x = Math.cos(angle) * radius;
                         const y = Math.sin(angle) * radius;
                         const val = h === '00' ? 0 : Number(h);
@@ -528,9 +528,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                               e.stopPropagation();
                               handleHourSelect(val);
                             }}
-                            className={`absolute w-7 h-7 flex items-center justify-center text-[10px] font-mono rounded-full transition-all cursor-pointer z-25 ${
+                            className={`absolute w-5 h-5 flex items-center justify-center text-[8.5px] font-mono rounded-full transition-all cursor-pointer z-25 ${
                               isSelected
-                                ? 'bg-gold-metallic text-black font-extrabold shadow-[0_0_10px_rgba(212,175,55,0.5)] scale-110'
+                                ? 'bg-gold-metallic text-black font-extrabold shadow-[0_0_8px_rgba(212,175,55,0.5)] scale-110'
                                 : 'text-gray-400 hover:text-white hover:bg-white/10'
                             }`}
                             style={{
@@ -548,8 +548,8 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                   {dialMode === 'minute' && (
                     <>
                       {minuteMarks.map((m, i) => {
-                        const angle = (i * 30 - 60) * (Math.PI / 180);
-                        const radius = 104; // px from center
+                        const angle = (i * 30 - 90) * (Math.PI / 180);
+                        const radius = 68; // px from center
                         const x = Math.cos(angle) * radius;
                         const y = Math.sin(angle) * radius;
                         const isSelected = minute === m;
@@ -562,9 +562,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                               e.stopPropagation();
                               handleMinuteSelect(m);
                             }}
-                            className={`absolute w-8 h-8 flex items-center justify-center text-xs font-mono font-bold rounded-full transition-all cursor-pointer z-25 ${
+                            className={`absolute w-6 h-6 flex items-center justify-center text-[9.5px] font-mono font-bold rounded-full transition-all cursor-pointer z-25 ${
                               isSelected
-                                ? 'bg-gold-metallic text-black font-extrabold shadow-[0_0_12px_rgba(212,175,55,0.6)] scale-110'
+                                ? 'bg-gold-metallic text-black font-extrabold shadow-[0_0_10px_rgba(212,175,55,0.6)] scale-110'
                                 : 'text-gray-200 hover:text-white hover:bg-white/10'
                             }`}
                             style={{
@@ -580,10 +580,10 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-[11px] font-mono text-gray-400 bg-white/5 p-2 border border-white/10">
-                <span>💡 Sentuh atau klik langsung angka pada jam.</span>
+              <div className="flex items-center justify-between text-[10px] font-mono text-gray-400 bg-white/5 px-2 py-1.5 border border-white/10">
+                <span>💡 Klik langsung angka pada dial.</span>
                 <span className="text-[#D4AF37] font-semibold">
-                  {dialMode === 'hour' ? 'Lingkaran luar: 1-12 | Dalam: 13-00' : 'Kelipatan 5 menit'}
+                  {dialMode === 'hour' ? 'Luar: 1-12 | Dalam: 13-00' : 'Kelipatan 5 mnt'}
                 </span>
               </div>
             </div>
@@ -591,19 +591,19 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
 
           {/* VIEW 2: PRESET TIME SLOTS */}
           {activeView === 'presets' && (
-            <div className="space-y-3.5 py-1">
-              <div className="text-xs text-gray-300 font-mono flex items-center justify-between">
-                <span>Pilih Slot Waktu Rekomendasi Studio:</span>
-                <span className="text-[10px] text-gray-400">1-Klik Langsung Pilih</span>
+            <div className="space-y-2.5 py-1">
+              <div className="text-[11px] text-gray-300 font-mono flex items-center justify-between">
+                <span>Pilih Slot Rekomendasi Studio:</span>
+                <span className="text-[9.5px] text-gray-400">1-Klik Pilih</span>
               </div>
 
-              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                 {presetGroups.map((group, idx) => (
-                  <div key={idx} className="p-3 bg-black/40 border border-white/10 space-y-2">
-                    <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-white block">
+                  <div key={idx} className="p-2 bg-black/40 border border-white/10 space-y-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-white block">
                       {group.category}
                     </span>
-                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1.5">
+                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-1">
                       {group.slots.map((s) => {
                         const [sH, sM] = s.split(':').map(Number);
                         const isCurrentSelected = hour === sH && minute === sM;
@@ -612,9 +612,9 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                             key={s}
                             type="button"
                             onClick={() => setTime(sH, sM)}
-                            className={`py-2 px-1 text-center font-mono text-xs font-semibold border transition-all cursor-pointer ${
+                            className={`py-1 px-0.5 text-center font-mono text-[11px] font-semibold border transition-all cursor-pointer ${
                               isCurrentSelected
-                                ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_10px_rgba(212,175,55,0.4)] scale-105'
+                                ? 'bg-gold-metallic text-black border-[#FFF0A8] font-bold shadow-[0_0_8px_rgba(212,175,55,0.4)] scale-105'
                                 : 'bg-[#181818] border-white/10 text-gray-300 hover:border-[#D4AF37] hover:text-white'
                             }`}
                           >
@@ -631,41 +631,41 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
 
           {/* VIEW 3: STEPPERS & MANUAL ADJUSTMENT */}
           {activeView === 'stepper' && (
-            <div className="space-y-4 py-2">
-              <div className="p-4 bg-black/40 border border-white/10 space-y-4">
-                <span className="text-xs font-mono uppercase tracking-wider text-gray-300 block font-semibold">
+            <div className="space-y-2.5 py-1">
+              <div className="p-2.5 bg-black/40 border border-white/10 space-y-2.5">
+                <span className="text-[11px] font-mono uppercase tracking-wider text-gray-300 block font-semibold">
                   Penyesuaian Cepat Satuan Waktu:
                 </span>
 
                 {/* Hour Adjusters */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-mono text-gray-400 uppercase">Pengaturan Jam:</span>
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono text-gray-400 uppercase">Pengaturan Jam:</span>
+                  <div className="grid grid-cols-4 gap-1">
                     <button
                       type="button"
                       onClick={() => setTime((hour - 2 + 24) % 24, minute)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       -2 Jam
                     </button>
                     <button
                       type="button"
                       onClick={() => setTime((hour - 1 + 24) % 24, minute)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       -1 Jam
                     </button>
                     <button
                       type="button"
                       onClick={() => setTime((hour + 1) % 24, minute)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       +1 Jam
                     </button>
                     <button
                       type="button"
                       onClick={() => setTime((hour + 2) % 24, minute)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       +2 Jam
                     </button>
@@ -673,34 +673,34 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                 </div>
 
                 {/* Minute Adjusters */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-mono text-gray-400 uppercase">Pengaturan Menit:</span>
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono text-gray-400 uppercase">Pengaturan Menit:</span>
+                  <div className="grid grid-cols-4 gap-1">
                     <button
                       type="button"
                       onClick={() => setTime(hour, (minute - 15 + 60) % 60)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       -15 Mnt
                     </button>
                     <button
                       type="button"
                       onClick={() => setTime(hour, (minute - 5 + 60) % 60)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       -5 Mnt
                     </button>
                     <button
                       type="button"
                       onClick={() => setTime(hour, (minute + 5) % 60)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       +5 Mnt
                     </button>
                     <button
                       type="button"
                       onClick={() => setTime(hour, (minute + 15) % 60)}
-                      className="py-2 px-2 bg-white/5 hover:bg-white/15 border border-white/10 text-xs font-mono text-white cursor-pointer"
+                      className="py-1 px-1 bg-white/5 hover:bg-white/15 border border-white/10 text-[11px] font-mono text-white cursor-pointer"
                     >
                       +15 Mnt
                     </button>
@@ -708,15 +708,15 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
                 </div>
 
                 {/* Direct Number Input */}
-                <div className="pt-2 border-t border-white/10 flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-gray-400">Atur Menit Tepat:</span>
-                  <div className="flex gap-1.5">
+                <div className="pt-1.5 border-t border-white/10 flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-gray-400">Menit Tepat:</span>
+                  <div className="flex gap-1">
                     {[0, 15, 30, 45].map((exactM) => (
                       <button
                         key={exactM}
                         type="button"
                         onClick={() => setTime(hour, exactM)}
-                        className={`px-3 py-1 text-xs font-mono border transition-all cursor-pointer ${
+                        className={`px-2 py-0.5 text-[11px] font-mono border transition-all cursor-pointer ${
                           minute === exactM
                             ? 'bg-gold-metallic text-black font-bold border-[#FFF0A8]'
                             : 'bg-white/5 border-white/10 text-gray-300 hover:text-white'
@@ -732,15 +732,15 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
           )}
 
           {/* Bottom Confirmation Bar */}
-          <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+          <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => {
                   setTime(10, 0);
                   setDialMode('hour');
                 }}
-                className="px-3 py-2 bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white text-xs font-mono flex items-center gap-1.5 border border-white/10 cursor-pointer transition-colors"
+                className="px-2.5 py-1.5 bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white text-[11px] font-mono flex items-center gap-1 border border-white/10 cursor-pointer transition-colors"
                 title="Kembali ke Default (10:00 WIB)"
               >
                 <RotateCcw className="w-3 h-3" />
@@ -751,10 +751,10 @@ export const AnimatedClockPicker: React.FC<AnimatedClockPickerProps> = ({
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="flex-1 py-2.5 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(212,175,55,0.3)] transition-all"
+              className="flex-1 py-2 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(212,175,55,0.3)] transition-all"
               id="btn-confirm-clock-time"
             >
-              <Check className="w-4 h-4 stroke-[2.5]" />
+              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Gunakan Jam {String(hour).padStart(2, '0')}:{String(minute).padStart(2, '0')} WIB</span>
             </button>
           </div>

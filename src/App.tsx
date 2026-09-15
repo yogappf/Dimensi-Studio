@@ -20,7 +20,6 @@ import { AddonsCalculator } from './components/AddonsCalculator';
 import { PortfolioGallery } from './components/PortfolioGallery';
 import { BookingForm } from './components/BookingForm';
 import { BookingSuccessModal } from './components/BookingSuccessModal';
-import { UserManualModal } from './components/UserManualModal';
 import { ConsumerDashboard } from './components/ConsumerDashboard';
 import { CustomerPortal } from './components/CustomerPortal';
 import { AdminGate } from './components/AdminGate';
@@ -189,7 +188,6 @@ export default function App() {
   const [bookingPackageId, setBookingPackageId] = useState<string>(packages[0]?.id || PHOTO_PACKAGES[0].id);
   const [bookingAddOnIds, setBookingAddOnIds] = useState<string[]>([]);
   const [latestCreatedOrder, setLatestCreatedOrder] = useState<BookingOrder | null>(null);
-  const [isManualModalOpen, setIsManualModalOpen] = useState<boolean>(false);
 
   // Check if current authenticated user has admin or master role
   const isGoogleAdminEmail = currentUser?.email?.toLowerCase() === STUDIO_ADMIN_EMAIL.toLowerCase();
@@ -766,19 +764,17 @@ export default function App() {
 
   // Reset to default sample orders
   const handleResetData = async () => {
-    if (confirm('Kembalikan data ke contoh awal bawaan studio dan sinkronkan ke Firebase?')) {
-      setOrders(INITIAL_CLIENT_ORDERS);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_CLIENT_ORDERS));
-      for (const order of INITIAL_CLIENT_ORDERS) {
-        try {
-          await saveBookingToFirestore(order);
-        } catch {
-          // ignore
-        }
+    setOrders(INITIAL_CLIENT_ORDERS);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_CLIENT_ORDERS));
+    for (const order of INITIAL_CLIENT_ORDERS) {
+      try {
+        await saveBookingToFirestore(order);
+      } catch {
+        // ignore
       }
-      await logAuditEvent(currentUser?.email || 'Master Admin', 'Reset Data Pesanan', 'Seluruh data pesanan direset ke default.', 'system');
-      toast.info('Data pesanan direset ke default bawaan');
     }
+    await logAuditEvent(currentUser?.email || 'Master Admin', 'Reset Data Pesanan', 'Seluruh data pesanan direset ke default.', 'system');
+    toast.info('Data pesanan direset ke default bawaan');
   };
 
   // Package Management Handlers
@@ -843,18 +839,16 @@ export default function App() {
   };
 
   const handleResetPackages = async () => {
-    if (confirm('Kembalikan semua paket foto ke daftar default bawaan studio?')) {
-      setPackages(PHOTO_PACKAGES);
-      localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(PHOTO_PACKAGES));
-      for (const pkg of PHOTO_PACKAGES) {
-        try {
-          await savePackageToFirestore(pkg);
-        } catch {
-          // ignore
-        }
+    setPackages(PHOTO_PACKAGES);
+    localStorage.setItem(PACKAGES_STORAGE_KEY, JSON.stringify(PHOTO_PACKAGES));
+    for (const pkg of PHOTO_PACKAGES) {
+      try {
+        await savePackageToFirestore(pkg);
+      } catch {
+        // ignore
       }
-      toast.info('Katalog paket dikembalikan ke default');
     }
+    toast.info('Katalog paket dikembalikan ke default');
   };
 
   // Add-on Management Handlers
@@ -916,18 +910,16 @@ export default function App() {
   };
 
   const handleResetAddons = async () => {
-    if (confirm('Kembalikan semua layanan add-on ke daftar default bawaan studio?')) {
-      setAddons(ADD_ON_SERVICES);
-      localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(ADD_ON_SERVICES));
-      for (const a of ADD_ON_SERVICES) {
-        try {
-          await saveAddonToFirestore(a);
-        } catch {
-          // ignore
-        }
+    setAddons(ADD_ON_SERVICES);
+    localStorage.setItem(ADDONS_STORAGE_KEY, JSON.stringify(ADD_ON_SERVICES));
+    for (const a of ADD_ON_SERVICES) {
+      try {
+        await saveAddonToFirestore(a);
+      } catch {
+        // ignore
       }
-      toast.info('Layanan add-on dikembalikan ke default');
     }
+    toast.info('Layanan add-on dikembalikan ke default');
   };
 
   // Portfolio Management Handlers
@@ -1000,18 +992,16 @@ export default function App() {
   };
 
   const handleResetPortfolios = async () => {
-    if (confirm('Kembalikan semua item portofolio ke galeri default bawaan studio?')) {
-      setPortfolios(PORTFOLIO_ITEMS);
-      localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(PORTFOLIO_ITEMS));
-      for (const item of PORTFOLIO_ITEMS) {
-        try {
-          await savePortfolioToFirestore(item);
-        } catch {
-          // ignore
-        }
+    setPortfolios(PORTFOLIO_ITEMS);
+    localStorage.setItem(PORTFOLIOS_STORAGE_KEY, JSON.stringify(PORTFOLIO_ITEMS));
+    for (const item of PORTFOLIO_ITEMS) {
+      try {
+        await savePortfolioToFirestore(item);
+      } catch {
+        // ignore
       }
-      toast.info('Galeri portofolio dikembalikan ke default');
     }
+    toast.info('Galeri portofolio dikembalikan ke default');
   };
 
   // Studio Config Handlers
@@ -1154,7 +1144,6 @@ export default function App() {
         setActiveTab={setActiveTab}
         orderCount={orders.length}
         onOpenBooking={handleOpenBooking}
-        onOpenManual={() => setIsManualModalOpen(true)}
         currentUser={currentUser}
         isAdminAuthenticated={isAdminAuthenticated}
         isMasterAdmin={isMasterAdminSession || isGoogleAdminEmail}
@@ -1285,7 +1274,6 @@ export default function App() {
           setActiveTab('admin');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
-        onOpenManual={() => setIsManualModalOpen(true)}
         studioConfig={studioConfig}
       />
 
@@ -1294,14 +1282,6 @@ export default function App() {
         order={latestCreatedOrder}
         onClose={() => setLatestCreatedOrder(null)}
         studioConfig={studioConfig}
-      />
-
-      {/* Complete User Manual & Documentation Modal */}
-      <UserManualModal
-        isOpen={isManualModalOpen}
-        onClose={() => setIsManualModalOpen(false)}
-        studioName={studioConfig?.studioName || 'Dimensi Fotografi Studio'}
-        adminEmail={studioConfig?.notificationEmail || studioConfig?.email || 'dimensi.idphoto@gmail.com'}
       />
 
     </div>
