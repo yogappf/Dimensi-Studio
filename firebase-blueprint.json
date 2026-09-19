@@ -93,6 +93,21 @@
           "maxLength": 500,
           "description": "Google Drive folder URL link for client deliverables"
         },
+        "selectedPrintFiles": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Comma-separated or multiline list of client-selected photo file names for printing and albums"
+        },
+        "selectedPrintFilesNote": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Client printing instructions or notes for selected photo files"
+        },
+        "selectedPrintFilesUpdatedAt": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Timestamp when client last updated selected print files"
+        },
         "status": {
           "type": "string",
           "enum": ["Menunggu Konfirmasi", "Terkonfirmasi & Terjadwal", "Proses Editing", "Selesai", "Dibatalkan"],

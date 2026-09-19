@@ -32,6 +32,7 @@ import {
   Loader2,
   X,
   File,
+  Printer,
 } from 'lucide-react';
 import { formatRupiah, formatDateIndonesian } from '../utils/formatters';
 
@@ -426,6 +427,32 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                       <span className="text-[10px] font-mono text-[#D4AF37]">{order.id}</span>
                     </div>
                     <p className="text-[11px] text-gray-400 truncate">{order.packageName}</p>
+                    {order.selectedPrintFiles && (
+                      <div className="mt-2 p-2 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[10px] space-y-1">
+                        <div className="flex items-center justify-between text-[#D4AF37] font-mono font-bold">
+                          <span className="flex items-center gap-1">
+                            <Printer className="w-3 h-3" />
+                            File Cetak Klien:
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(order.selectedPrintFiles!, `File Cetak ${order.clientName}`)}
+                            className="text-gray-300 hover:text-white p-0.5"
+                            title="Salin nomor file"
+                          >
+                            <Copy className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                        <p className="font-mono text-white font-medium break-all line-clamp-2">
+                          {order.selectedPrintFiles}
+                        </p>
+                        {order.selectedPrintFilesNote && (
+                          <p className="text-[9px] text-gray-400 italic truncate">
+                            Note: {order.selectedPrintFilesNote}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   {confirmUnlinkOrderId === order.id ? (
                     <div className="flex items-center justify-between gap-1.5 p-2 bg-rose-950/80 border border-rose-500/40 text-[11px] text-rose-200 pt-2 border-t">

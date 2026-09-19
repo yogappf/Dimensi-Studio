@@ -396,13 +396,50 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   const [isCopiedDriveLink, setIsCopiedDriveLink] = useState(false);
   const [confirmDeleteLinkId, setConfirmDeleteLinkId] = useState<string | null>(null);
 
-  // Sync driveLinkInput whenever detailOrder changes
+  // Consumer Details Selected Print Files Management State in Admin
+  const [printFilesInput, setPrintFilesInput] = useState('');
+  const [printFilesNoteInput, setPrintFilesNoteInput] = useState('');
+  const [isCopiedPrintFilesAdmin, setIsCopiedPrintFilesAdmin] = useState(false);
+
+  // Sync inputs whenever detailOrder changes
   React.useEffect(() => {
     if (detailOrder) {
       setDriveLinkInput(detailOrder.driveFolderUrl || '');
       setConfirmDeleteLinkId(null);
+      setPrintFilesInput(detailOrder.selectedPrintFiles || '');
+      setPrintFilesNoteInput(detailOrder.selectedPrintFilesNote || '');
     }
-  }, [detailOrder?.id, detailOrder?.driveFolderUrl]);
+  }, [
+    detailOrder?.id,
+    detailOrder?.driveFolderUrl,
+    detailOrder?.selectedPrintFiles,
+    detailOrder?.selectedPrintFilesNote,
+  ]);
+
+  const handleSaveAdminPrintFiles = (targetOrder: BookingOrder) => {
+    const filesVal = printFilesInput.trim();
+    const noteVal = printFilesNoteInput.trim();
+    if (onUpdateOrder) {
+      const updates: Partial<BookingOrder> = {
+        selectedPrintFiles: filesVal || undefined,
+        selectedPrintFilesNote: noteVal || undefined,
+        selectedPrintFilesUpdatedAt: new Date().toISOString(),
+      };
+      onUpdateOrder(targetOrder.id, updates);
+      setDetailOrder({
+        ...targetOrder,
+        ...updates,
+      });
+      toast.success('Daftar nomor file pilihan cetak berhasil disimpan!');
+    }
+  };
+
+  const handleCopyAdminPrintFiles = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setIsCopiedPrintFilesAdmin(true);
+    toast.success('Nomor file cetak disalin ke clipboard!');
+    setTimeout(() => setIsCopiedPrintFilesAdmin(false), 2000);
+  };
 
   const handleSaveOrUpdateDriveLink = (targetOrder: BookingOrder, customVal?: string) => {
     const valToSave = (customVal !== undefined ? customVal : driveLinkInput).trim();
@@ -541,7 +578,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       order.phone.includes(searchTerm) ||
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.packageName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.email && order.email.toLowerCase().includes(searchTerm.toLowerCase()));
+      (order.email && order.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.selectedPrintFiles && order.selectedPrintFiles.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus =
       statusFilter === 'all'
@@ -1696,6 +1734,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                 <th className="py-3.5 px-4">ID & Tgl Daftar</th>
                 <th className="py-3.5 px-4">Konsumen</th>
                 <th className="py-3.5 px-4">Paket & Tambahan</th>
+                <th className="py-3.5 px-4 text-center text-[#D4AF37]">File Cetak</th>
                 <th className="py-3.5 px-4">Jadwal Sesi & Lokasi</th>
                 <th className="py-3.5 px-4 text-right">Total Biaya</th>
                 <th className="py-3.5 px-4 text-center">Status Pesanan</th>
@@ -1705,7 +1744,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
             <tbody className="divide-y divide-white/5 text-[#E0E0E0]">
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gray-500 space-y-2">
+                  <td colSpan={8} className="py-12 text-center text-gray-500 space-y-2">
                     <p className="text-sm">Tidak ada data konsumen yang sesuai dengan pencarian / filter.</p>
                     <button
                       onClick={() => {
@@ -1756,7 +1795,7 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                       </td>
 
                       {/* Package & Addons */}
-                      <td className="py-3.5 px-4 max-w-[220px]">
+                      <td className="py-3.5 px-4 max-w-[200px]">
                         <div className="font-medium text-white line-clamp-1">{order.packageName}</div>
                         {order.addOnsTotal > 0 ? (
                           <div className="text-[10px] text-[#D4AF37] line-clamp-1 mt-0.5">
@@ -1764,6 +1803,25 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                           </div>
                         ) : (
                           <div className="text-[10px] text-gray-600 font-mono">Tanpa Add-on</div>
+                        )}
+                      </td>
+
+                      {/* Dedicated File Cetak Column (Keterangan Saja) */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {order.selectedPrintFiles ? (
+                          <button
+                            type="button"
+                            onClick={() => setDetailOrder(order)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-[#D4AF37]/50 text-[#D4AF37] hover:text-yellow-300 font-mono text-xs font-semibold cursor-pointer transition-colors"
+                            title="Klik untuk membuka rincian nomor file pilihan konsumen"
+                          >
+                            <Printer className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span>Sudah Diisi ({order.selectedPrintFiles.split(/[\n,;]+/).filter(Boolean).length} File)</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-gray-500 font-mono italic">
+                            Belum Diisi
+                          </span>
                         )}
                       </td>
 
@@ -2087,6 +2145,125 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* HIGHLIGHTED: KOLOM NOMOR FILE FOTO PILIHAN KONSUMEN (UNTUK CETAK / ALBUM) */}
+              <div className="p-4 bg-gradient-to-br from-[#1c180f] via-[#14120c] to-[#0d0c0a] border-2 border-[#D4AF37] shadow-xl space-y-3">
+                <div className="flex items-center justify-between gap-2 border-b border-[#D4AF37]/30 pb-2.5">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-[#D4AF37] text-black font-bold">
+                      <Printer className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold text-xs uppercase tracking-wider font-mono flex items-center gap-1.5">
+                        <span>Nomor File Pilihan yang Mau Dicetak</span>
+                      </h4>
+                      <p className="text-[11px] text-gray-300 font-sans">
+                        Diisi oleh konsumen di hasil lacak pesanan untuk cetak frame/album
+                      </p>
+                    </div>
+                  </div>
+                  {detailOrder.selectedPrintFiles ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 font-mono text-xs font-bold shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                      <span>{detailOrder.selectedPrintFiles.split(/[\n,;]+/).filter(Boolean).length} File Terdaftar</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/5 border border-white/20 text-gray-400 font-mono text-xs">
+                      Belum Diisi Klien
+                    </span>
+                  )}
+                </div>
+
+                {detailOrder.selectedPrintFiles ? (
+                  <div className="p-3.5 bg-black border border-[#D4AF37]/40 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">
+                        Daftar Nomor / Nama File Foto Klien:
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyAdminPrintFiles(detailOrder.selectedPrintFiles || '')}
+                        className="px-2.5 py-1 bg-[#D4AF37] hover:bg-[#e5c14b] text-black font-mono font-bold text-xs uppercase tracking-wider cursor-pointer transition-colors flex items-center gap-1.5"
+                      >
+                        {isCopiedPrintFilesAdmin ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-black" />
+                            <span>Tersalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Salin Nomor File</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="p-2.5 bg-[#0f0e0b] border border-white/10 font-mono text-sm font-bold text-yellow-300 select-all break-words leading-relaxed">
+                      {detailOrder.selectedPrintFiles}
+                    </div>
+
+                    {detailOrder.selectedPrintFilesNote && (
+                      <div className="text-xs text-gray-300 pt-1">
+                        <span className="text-gray-400 font-mono text-[10px] uppercase block">
+                          Catatan Tambahan Konsumen:
+                        </span>
+                        <div className="italic text-gray-200 mt-0.5">
+                          "{detailOrder.selectedPrintFilesNote}"
+                        </div>
+                      </div>
+                    )}
+
+                    {detailOrder.selectedPrintFilesUpdatedAt && (
+                      <div className="text-[10px] text-gray-500 font-mono pt-1">
+                        Terakhir diperbarui klien: {new Date(detailOrder.selectedPrintFilesUpdatedAt).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })} WIB
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="p-3 bg-black/60 border border-white/10 text-xs text-gray-400 font-mono flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span>Konsumen belum memasukkan nomor file foto pilihan di menu Lacak Pesanan mereka.</span>
+                  </div>
+                )}
+
+                {/* Edit / Input Manual Admin */}
+                <div className="pt-2 border-t border-white/10">
+                  <div className="text-xs text-gray-300 font-semibold mb-1.5 font-mono flex items-center justify-between">
+                    <span>Admin Edit / Tambah Nomor File:</span>
+                  </div>
+                  <div className="space-y-2">
+                    <textarea
+                      rows={2}
+                      placeholder="Contoh: DSC_0012, DSC_0045, DSC_0089, IMG_0240..."
+                      value={printFilesInput}
+                      onChange={(e) => setPrintFilesInput(e.target.value)}
+                      className="w-full px-3 py-1.5 bg-black border border-white/20 text-xs text-white font-mono focus:border-[#D4AF37] focus:outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Catatan tambahan (misal: DSC_0012 untuk kanvas)..."
+                        value={printFilesNoteInput}
+                        onChange={(e) => setPrintFilesNoteInput(e.target.value)}
+                        className="flex-1 px-3 py-1.5 bg-black border border-white/20 text-xs text-white font-mono focus:border-[#D4AF37] focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSaveAdminPrintFiles(detailOrder)}
+                        className="px-3.5 py-1.5 bg-white/10 hover:bg-[#D4AF37] hover:text-black text-white font-bold text-xs uppercase tracking-wider cursor-pointer font-mono transition-colors shrink-0"
+                      >
+                        Simpan
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Payment Proof Verification Section */}

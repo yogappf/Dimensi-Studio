@@ -67,6 +67,10 @@ export interface BookingOrder {
   review?: string;
   reviewedAt?: string;
   showInTestimonials?: boolean; // Admin moderation flag for public testimonial display
+  // File Pilihan Cetak Konsumen
+  selectedPrintFiles?: string; // Nomor-nomor atau nama file pilihan foto untuk dicetak (misal: "IMG_0012, IMG_0045, IMG_0099")
+  selectedPrintFilesNote?: string; // Catatan khusus cetak (misal: "IMG_0012 untuk frame 20R, sisanya album")
+  selectedPrintFilesUpdatedAt?: string; // ISO date string update terakhir
 }
 
 export interface PortfolioItem {

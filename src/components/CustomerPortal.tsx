@@ -44,6 +44,9 @@ import {
   ChevronRight,
   Printer,
   CalendarCheck,
+  CheckCheck,
+  FileText,
+  Send,
 } from 'lucide-react';
 
 interface CustomerPortalProps {
@@ -121,6 +124,89 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     } finally {
       setIsSubmittingReview(false);
     }
+  };
+
+  // State for Selected Print Files for each order
+  const [printFilesState, setPrintFilesState] = useState<Record<string, { files: string; note: string }>>({});
+  const [savingPrintFilesId, setSavingPrintFilesId] = useState<string | null>(null);
+  const [copiedPrintFilesId, setCopiedPrintFilesId] = useState<string | null>(null);
+
+  const handlePrintFilesChange = (orderId: string, field: 'files' | 'note', value: string, order: BookingOrder) => {
+    setPrintFilesState((prev) => {
+      const current = prev[orderId] || {
+        files: order.selectedPrintFiles || '',
+        note: order.selectedPrintFilesNote || '',
+      };
+      return {
+        ...prev,
+        [orderId]: {
+          ...current,
+          [field]: value,
+        },
+      };
+    });
+  };
+
+  const handleSavePrintFiles = async (order: BookingOrder) => {
+    const current = printFilesState[order.id];
+    const filesVal = (current?.files !== undefined ? current.files : (order.selectedPrintFiles || '')).trim();
+    const noteVal = (current?.note !== undefined ? current.note : (order.selectedPrintFilesNote || '')).trim();
+
+    if (!filesVal) {
+      toast.warning('Silakan masukkan nomor atau nama file foto terlebih dahulu.');
+      return;
+    }
+
+    setSavingPrintFilesId(order.id);
+    try {
+      const updates: Partial<BookingOrder> = {
+        selectedPrintFiles: filesVal,
+        selectedPrintFilesNote: noteVal || undefined,
+        selectedPrintFilesUpdatedAt: new Date().toISOString(),
+      };
+
+      if (onUpdateOrder) {
+        await onUpdateOrder(order.id, updates);
+      }
+
+      toast.success(
+        'Nomor file cetak berhasil disimpan!',
+        'Tim studio Dimensi akan memproses pencetakan untuk nomor file foto pilihan Anda.'
+      );
+    } catch (err) {
+      console.error('Error saving print files:', err);
+      toast.error('Gagal menyimpan nomor file cetak');
+    } finally {
+      setSavingPrintFilesId(null);
+    }
+  };
+
+  const handleSendPrintFilesToWA = (order: BookingOrder) => {
+    const current = printFilesState[order.id];
+    const filesVal = (current?.files !== undefined ? current.files : (order.selectedPrintFiles || '')).trim();
+    const noteVal = (current?.note !== undefined ? current.note : (order.selectedPrintFilesNote || '')).trim();
+
+    if (!filesVal) {
+      toast.warning('Silakan masukkan nomor file foto pilihan sebelum mengirim ke WhatsApp.');
+      return;
+    }
+
+    const message = `Halo Admin *Dimensi Fotografi*, saya ingin konfirmasi *Nomor File Foto Pilihan yang Mau Dicetak*:\n\n` +
+      `📋 *No. Pesanan:* ${order.id}\n` +
+      `👤 *Nama Klien:* ${order.clientName}\n` +
+      `📸 *Paket:* ${order.packageName}\n\n` +
+      `🖼️ *Daftar Nomor File Foto yang Mau Dicetak:*\n${filesVal}\n` +
+      (noteVal ? `\n📝 *Catatan Tambahan Cetak:*\n${noteVal}\n` : '') +
+      `\nMohon bantuannya untuk diproses cetak ya kak. Terima kasih! ✨`;
+
+    window.open(`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const handleCopyPrintFiles = (text: string, orderId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedPrintFilesId(orderId);
+    toast.info('Daftar nomor file cetak disalin ke clipboard');
+    setTimeout(() => setCopiedPrintFilesId(null), 2500);
   };
 
   const adminWhatsApp = normalizeWhatsAppNumber(
@@ -826,6 +912,192 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                     </div>
                   </div>
 
+                  {/* 3.5. Nomor File Pilihan yang Mau Dicetak (Print / Album / Frame) */}
+                  <div
+                    id={`print-files-card-${order.id}`}
+                    className="mb-5 p-4 bg-gradient-to-br from-[#16140f] via-[#111111] to-[#141414] border-2 border-[#D4AF37]/40 shadow-[0_4px_20px_rgba(0,0,0,0.5)] space-y-3 relative overflow-hidden"
+                  >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full blur-2xl pointer-events-none -mr-10 -mt-10" />
+
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5 relative z-10">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 bg-[#D4AF37]/15 border border-[#D4AF37]/40 text-[#D4AF37]">
+                          <Printer className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                              <span>Nomor File Pilihan yang Mau Dicetak</span>
+                            </h4>
+                            <span className="text-[10px] text-[#D4AF37] font-mono bg-[#D4AF37]/10 px-2 py-0.5 border border-[#D4AF37]/25">
+                              Album • Frame • Cetak Foto
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            Ketik nomor/nama file foto yang Anda pilih dari Google Drive untuk dicetak oleh studio.
+                          </p>
+                        </div>
+                      </div>
+
+                      {order.selectedPrintFiles ? (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/40">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                          <span>Pilihan Cetak Tersimpan</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-mono uppercase bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                          <Clock className="w-3 h-3 text-amber-300" />
+                          <span>Belum Diisi</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 relative z-10">
+                      <div>
+                        <div className="flex justify-between items-center mb-1">
+                          <label
+                            htmlFor={`print-files-input-${order.id}`}
+                            className="text-[11px] font-mono text-gray-300 uppercase font-semibold flex items-center gap-1"
+                          >
+                            <span>Daftar Nomor / Nama File Foto:</span>
+                            <span className="text-rose-400">*</span>
+                          </label>
+                          {(() => {
+                            const currentVal =
+                              printFilesState[order.id]?.files !== undefined
+                                ? printFilesState[order.id].files
+                                : order.selectedPrintFiles || '';
+                            const count = currentVal.trim()
+                              ? currentVal.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean).length
+                              : 0;
+                            return count > 0 ? (
+                              <span className="text-[10px] font-mono text-[#D4AF37] bg-[#D4AF37]/10 px-2 py-0.5 border border-[#D4AF37]/20">
+                                {count} File Terdaftar
+                              </span>
+                            ) : null;
+                          })()}
+                        </div>
+                        <textarea
+                          id={`print-files-input-${order.id}`}
+                          rows={2}
+                          value={
+                            printFilesState[order.id]?.files !== undefined
+                              ? printFilesState[order.id].files
+                              : order.selectedPrintFiles || ''
+                          }
+                          onChange={(e) => handlePrintFilesChange(order.id, 'files', e.target.value, order)}
+                          placeholder="Contoh: DSC_0012, DSC_0045, DSC_0089, IMG_0240 (atau nomor urut 01, 05, 14, 22...)"
+                          className="w-full px-3 py-2 bg-black/90 border border-white/20 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-white text-xs font-mono placeholder:text-gray-600 transition-colors outline-none resize-y"
+                        />
+                        <p className="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                          <span className="text-[#D4AF37]">💡</span>
+                          <span>
+                            Pisahkan antar nomor file dengan tanda koma (<code>,</code>) atau baris baru (enter).
+                          </span>
+                        </p>
+                      </div>
+
+                      <div>
+                        <label
+                          htmlFor={`print-notes-input-${order.id}`}
+                          className="block text-[11px] font-mono text-gray-300 uppercase font-semibold mb-1"
+                        >
+                          Catatan Khusus Cetak (Opsional):
+                        </label>
+                        <input
+                          id={`print-notes-input-${order.id}`}
+                          type="text"
+                          value={
+                            printFilesState[order.id]?.note !== undefined
+                              ? printFilesState[order.id].note
+                              : order.selectedPrintFilesNote || ''
+                          }
+                          onChange={(e) => handlePrintFilesChange(order.id, 'note', e.target.value, order)}
+                          placeholder="Contoh: DSC_0012 untuk Frame Kanvas 20R, DSC_0045 & DSC_0089 untuk Cetak 4R Meja, sisanya Album..."
+                          className="w-full px-3 py-1.5 bg-black/90 border border-white/15 focus:border-[#D4AF37] focus:ring-1 focus:ring-[#D4AF37] text-white text-xs placeholder:text-gray-600 transition-colors outline-none font-mono"
+                        />
+                      </div>
+
+                      {order.selectedPrintFilesUpdatedAt && (
+                        <div className="text-[10px] font-mono text-gray-400 flex items-center gap-1.5 pt-0.5">
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>
+                            Terakhir disimpan: {new Date(order.selectedPrintFilesUpdatedAt).toLocaleDateString('id-ID', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })} WIB
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Action buttons: Simpan, Kirim via WA, Salin */}
+                      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => handleSavePrintFiles(order)}
+                          disabled={savingPrintFilesId === order.id}
+                          className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gold-metallic hover:brightness-110 text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-[0_0_12px_rgba(212,175,55,0.25)] disabled:opacity-50"
+                          id={`btn-save-print-files-${order.id}`}
+                        >
+                          {savingPrintFilesId === order.id ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <span>Menyimpan...</span>
+                            </>
+                          ) : (
+                            <>
+                              <CheckCheck className="w-3.5 h-3.5" />
+                              <span>Simpan Nomor File Cetak</span>
+                            </>
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSendPrintFilesToWA(order)}
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                          title="Kirim daftar file pilihan ke WhatsApp Studio"
+                          id={`btn-wa-print-files-${order.id}`}
+                        >
+                          <MessageCircle className="w-3.5 h-3.5" />
+                          <span>Kirim ke WA Studio</span>
+                        </button>
+
+                        {(() => {
+                          const valToCopy = (
+                            printFilesState[order.id]?.files !== undefined
+                              ? printFilesState[order.id].files
+                              : order.selectedPrintFiles || ''
+                          ).trim();
+                          return valToCopy ? (
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPrintFiles(valToCopy, order.id)}
+                              className="inline-flex items-center gap-1 px-3 py-2 bg-black hover:bg-white/10 text-gray-300 hover:text-white border border-white/15 text-xs font-mono uppercase tracking-wider transition-colors cursor-pointer"
+                              title="Salin daftar nomor file ke clipboard"
+                              id={`btn-copy-print-files-${order.id}`}
+                            >
+                              {copiedPrintFilesId === order.id ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span className="text-emerald-400">Tersalin!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5" />
+                                  <span>Salin File</span>
+                                </>
+                              )}
+                            </button>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* 4. Customer Review / Satisfaction Section */}
                   {order.rating ? (
                     <div className="mb-5 p-3.5 bg-[#D4AF37]/10 border border-[#D4AF37]/30 space-y-1.5">
@@ -1404,6 +1676,24 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                     <span>{selectedOrder.driveFolderUrl}</span>
                     <ExternalLink className="w-3 h-3 shrink-0" />
                   </a>
+                </div>
+              )}
+
+              {/* Selected Print Files if filled */}
+              {selectedOrder.selectedPrintFiles && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 text-[#D4AF37] font-bold font-mono text-[10px] uppercase">
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Nomor File Pilihan Cetak (Album / Frame):</span>
+                  </div>
+                  <div className="text-white font-mono font-medium pl-1">
+                    {selectedOrder.selectedPrintFiles}
+                  </div>
+                  {selectedOrder.selectedPrintFilesNote && (
+                    <div className="text-[11px] text-gray-400 italic pl-1">
+                      Catatan: {selectedOrder.selectedPrintFilesNote}
+                    </div>
+                  )}
                 </div>
               )}
 

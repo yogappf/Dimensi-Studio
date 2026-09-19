@@ -224,6 +224,24 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({
         </table>
       </div>
 
+      {/* 3.5. File Pilihan Cetak (Jika sudah diisi konsumen) */}
+      {order.selectedPrintFiles && (
+        <div className="mb-2 p-1.5 bg-yellow-50/70 border border-black text-[8px]">
+          <div className="font-mono font-bold uppercase text-black flex items-center justify-between">
+            <span>FILE FOTO PILIHAN CETAK (ALBUM / FRAME):</span>
+            <span className="text-[7px] text-gray-700 font-normal">Klien Terdaftar</span>
+          </div>
+          <div className="font-mono font-bold text-black mt-0.5 text-[8.5px] break-words">
+            {order.selectedPrintFiles}
+          </div>
+          {order.selectedPrintFilesNote && (
+            <div className="text-[7.5px] text-gray-700 italic mt-0.5">
+              Catatan Cetak: {order.selectedPrintFilesNote}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 4. Official Bank Account for Transfer & Payment Notice */}
       <div className="grid grid-cols-2 gap-2 mb-2 p-1.5 bg-gray-50 border border-black text-[8px]">
         <div>

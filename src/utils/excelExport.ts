@@ -39,6 +39,8 @@ export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_K
     'Tipe Lokasi 2': order.hasSecondSession && order.locationType2 ? (order.locationType2 === 'studio' ? 'Studio Dimensi' : order.locationType2 === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien') : '-',
     'Alamat Lokasi 2': order.hasSecondSession && order.locationAddress2 ? order.locationAddress2 : '-',
     'Catatan Sesi 2': order.hasSecondSession && order.notes2 ? order.notes2 : '-',
+    'File Pilihan Cetak (Konsumen)': order.selectedPrintFiles || '-',
+    'Catatan Khusus Cetak': order.selectedPrintFilesNote || '-',
     'Status Pesanan': order.status
   }));
 
@@ -70,6 +72,8 @@ export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_K
     { wch: 18 }, // Tipe Lokasi 2
     { wch: 35 }, // Alamat Lokasi 2
     { wch: 30 }, // Catatan 2
+    { wch: 35 }, // File Pilihan Cetak
+    { wch: 30 }, // Catatan Khusus Cetak
     { wch: 22 }  // Status
   ];
 
@@ -109,6 +113,8 @@ export function exportOrdersToCSV(orders: BookingOrder[], filename = 'Daftar_Kon
     'Waktu Sesi 2',
     'Lokasi Sesi 2',
     'Catatan Sesi 2',
+    'File Pilihan Cetak',
+    'Catatan Khusus Cetak',
     'Status'
   ];
 
@@ -134,6 +140,8 @@ export function exportOrdersToCSV(orders: BookingOrder[], filename = 'Daftar_Kon
     `"${order.hasSecondSession && order.sessionTime2 ? order.sessionTime2 : '-'}"`,
     `"${(order.hasSecondSession && order.locationAddress2 ? order.locationAddress2 : '-').replace(/"/g, '""')}"`,
     `"${(order.hasSecondSession && order.notes2 ? order.notes2 : '-').replace(/"/g, '""')}"`,
+    `"${(order.selectedPrintFiles || '-').replace(/"/g, '""')}"`,
+    `"${(order.selectedPrintFilesNote || '-').replace(/"/g, '""')}"`,
     `"${order.status}"`
   ]);
 

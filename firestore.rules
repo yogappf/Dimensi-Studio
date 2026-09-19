@@ -49,6 +49,9 @@ service cloud.firestore {
         (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000)) &&
         (!('driveFolderId' in data) || (data.driveFolderId is string && data.driveFolderId.size() <= 200)) &&
         (!('driveFolderUrl' in data) || (data.driveFolderUrl is string && data.driveFolderUrl.size() <= 500)) &&
+        (!('selectedPrintFiles' in data) || (data.selectedPrintFiles is string && data.selectedPrintFiles.size() <= 2000)) &&
+        (!('selectedPrintFilesNote' in data) || (data.selectedPrintFilesNote is string && data.selectedPrintFilesNote.size() <= 1000)) &&
+        (!('selectedPrintFilesUpdatedAt' in data) || (data.selectedPrintFilesUpdatedAt is string && data.selectedPrintFilesUpdatedAt.size() <= 100)) &&
         data.status is string && data.status in ['Menunggu Konfirmasi', 'Terkonfirmasi & Terjadwal', 'Proses Editing', 'Selesai', 'Dibatalkan'] &&
         data.paymentPreference is string && data.paymentPreference in ['DP 30%', 'DP 50%', 'Lunas'];
     }
