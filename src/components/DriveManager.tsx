@@ -9,6 +9,7 @@ import {
   createClientOrderFolderStructure,
 } from '../services/googleDrive';
 import { getCachedAccessToken } from '../firebase/services';
+import { copyToClipboard } from '../utils/clipboard';
 import { useToast } from '../context/ToastContext';
 import {
   HardDrive,
@@ -225,10 +226,14 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
     }
   };
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopyToast(`${label} disalin ke clipboard!`);
-    setTimeout(() => setCopyToast(null), 3000);
+  const handleCopyToClipboard = async (text: string, label: string) => {
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopyToast(`${label} disalin ke clipboard!`);
+      setTimeout(() => setCopyToast(null), 3000);
+    } else {
+      toast.error(`Gagal menyalin ${label}`);
+    }
   };
 
   const filteredFiles = files.filter((file) => {
@@ -436,7 +441,7 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                           </span>
                           <button
                             type="button"
-                            onClick={() => copyToClipboard(order.selectedPrintFiles!, `File Cetak ${order.clientName}`)}
+                            onClick={() => handleCopyToClipboard(order.selectedPrintFiles!, `File Cetak ${order.clientName}`)}
                             className="text-gray-300 hover:text-white p-0.5"
                             title="Salin nomor file"
                           >
@@ -487,7 +492,7 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                         <span>Buka Drive</span>
                       </a>
                       <button
-                        onClick={() => copyToClipboard(order.driveFolderUrl!, `Link Drive ${order.clientName}`)}
+                        onClick={() => handleCopyToClipboard(order.driveFolderUrl!, `Link Drive ${order.clientName}`)}
                         className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 text-xs transition-colors cursor-pointer"
                         title="Salin Link Google Drive"
                       >
@@ -719,7 +724,7 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                     <div className="flex items-center gap-1">
                       {file.webViewLink && (
                         <button
-                          onClick={() => copyToClipboard(file.webViewLink!, file.name)}
+                          onClick={() => handleCopyToClipboard(file.webViewLink!, file.name)}
                           className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 text-xs transition-colors cursor-pointer"
                           title="Salin Link Share"
                         >

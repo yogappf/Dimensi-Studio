@@ -8,6 +8,7 @@ import { printOrDownloadReceipt, downloadReceiptPDFFile } from '../utils/receipt
 import { getResolvedBankAccounts } from '../utils/bankOptions';
 import { saveReviewToFirestore } from "../firebase/services";
 import { compressImage } from '../utils/imageCompressor';
+import { copyToClipboard } from '../utils/clipboard';
 import { useToast } from '../context/ToastContext';
 import {
   Search,
@@ -202,11 +203,43 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     window.open(`https://wa.me/${adminWhatsApp}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
-  const handleCopyPrintFiles = (text: string, orderId: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedPrintFilesId(orderId);
-    toast.info('Daftar nomor file cetak disalin ke clipboard');
-    setTimeout(() => setCopiedPrintFilesId(null), 2500);
+  const handleCopyPrintFiles = async (text: string, orderId: string) => {
+    if (!text) return;
+    const success = await copyToClipboard(text);
+    if (success) {
+      setCopiedPrintFilesId(orderId);
+      toast.success('Daftar nomor file cetak disalin ke clipboard');
+      setTimeout(() => setCopiedPrintFilesId(null), 2500);
+    } else {
+      toast.error('Gagal menyalin nomor file');
+    }
+  };
+
+  const handleCopyDriveLink = async (url: string, orderId: string) => {
+    if (!url) {
+      toast.warning('Tautan Google Drive belum tersedia.');
+      return;
+    }
+    const success = await copyToClipboard(url);
+    if (success) {
+      setCopiedBankId(`drive-link-${orderId}`);
+      toast.success('Tautan Google Drive berhasil disalin ke clipboard!');
+      setTimeout(() => setCopiedBankId(null), 2500);
+    } else {
+      toast.error('Gagal menyalin tautan. Silakan salin secara manual.');
+    }
+  };
+
+  const handleCopyAccountNumber = async (accountNumber: string, bankId: string) => {
+    if (!accountNumber) return;
+    const success = await copyToClipboard(accountNumber);
+    if (success) {
+      setCopiedBankId(bankId);
+      toast.success('Nomor rekening berhasil disalin!');
+      setTimeout(() => setCopiedBankId(null), 2500);
+    } else {
+      toast.error('Gagal menyalin nomor rekening.');
+    }
   };
 
   const adminWhatsApp = normalizeWhatsAppNumber(
@@ -331,14 +364,6 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  // Copy bank number
-  const handleCopyAccountNumber = (accNumber: string, id: string) => {
-    navigator.clipboard.writeText(accNumber.replace(/[^0-9]/g, '') || accNumber);
-    setCopiedBankId(id);
-    toast.info('Nomor rekening disalin ke clipboard');
-    setTimeout(() => setCopiedBankId(null), 2500);
   };
 
   // Submit proof
@@ -767,7 +792,7 @@ Mohon untuk dikonfirmasi dan dicek verifikasinya. Terima kasih! 🙏`;
                             </a>
                             <button
                               type="button"
-                              onClick={() => handleCopyAccountNumber(order.driveFolderUrl || '', `drive-link-${order.id}`)}
+                              onClick={() => handleCopyDriveLink(order.driveFolderUrl || '', order.id)}
                               className="w-full py-1.5 bg-black/60 hover:bg-black text-gray-300 hover:text-white border border-white/15 text-[10px] font-mono uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
                             >
                               {copiedBankId === `drive-link-${order.id}` ? (

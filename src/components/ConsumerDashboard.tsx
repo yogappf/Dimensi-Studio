@@ -31,6 +31,7 @@ import {
   sendAdminUpcomingSessionEmail,
   sendAdminUpcomingSessionsDigestEmail,
 } from '../utils/emailNotifier';
+import { copyToClipboard } from '../utils/clipboard';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -434,11 +435,16 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     }
   };
 
-  const handleCopyAdminPrintFiles = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setIsCopiedPrintFilesAdmin(true);
-    toast.success('Nomor file cetak disalin ke clipboard!');
-    setTimeout(() => setIsCopiedPrintFilesAdmin(false), 2000);
+  const handleCopyAdminPrintFiles = async (text: string) => {
+    if (!text) return;
+    const success = await copyToClipboard(text);
+    if (success) {
+      setIsCopiedPrintFilesAdmin(true);
+      toast.success('Nomor file cetak disalin ke clipboard!');
+      setTimeout(() => setIsCopiedPrintFilesAdmin(false), 2000);
+    } else {
+      toast.error('Gagal menyalin nomor file');
+    }
   };
 
   const handleSaveOrUpdateDriveLink = (targetOrder: BookingOrder, customVal?: string) => {
@@ -483,11 +489,16 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     toast.success('Link Google Drive berhasil dihapus dari data konsumen!');
   };
 
-  const handleCopyDriveLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setIsCopiedDriveLink(true);
-    toast.success('Link Google Drive berhasil disalin ke clipboard!');
-    setTimeout(() => setIsCopiedDriveLink(false), 2000);
+  const handleCopyDriveLink = async (url: string) => {
+    if (!url) return;
+    const success = await copyToClipboard(url);
+    if (success) {
+      setIsCopiedDriveLink(true);
+      toast.success('Link Google Drive berhasil disalin ke clipboard!');
+      setTimeout(() => setIsCopiedDriveLink(false), 2000);
+    } else {
+      toast.error('Gagal menyalin link Google Drive.');
+    }
   };
 
   const confirmDeleteOrder = () => {
@@ -2691,10 +2702,16 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                     value={generateClientReminderMessage(reminderOrder)}
                   />
                   <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(generateClientReminderMessage(reminderOrder));
-                      setIsCopiedReminder(true);
-                      setTimeout(() => setIsCopiedReminder(false), 2000);
+                    onClick={async () => {
+                      const text = generateClientReminderMessage(reminderOrder);
+                      const success = await copyToClipboard(text);
+                      if (success) {
+                        setIsCopiedReminder(true);
+                        toast.success('Pesan pengingat disalin ke clipboard!');
+                        setTimeout(() => setIsCopiedReminder(false), 2000);
+                      } else {
+                        toast.error('Gagal menyalin pesan');
+                      }
                     }}
                     className="absolute top-2 right-2 p-1.5 bg-[#1f1f1f] border border-white/10 text-gray-300 hover:text-white hover:border-white/30 transition-colors"
                     title="Salin Teks"
