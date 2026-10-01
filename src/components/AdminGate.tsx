@@ -116,17 +116,15 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         'masterdimensi',
         'dimensi_master',
         'dimensimaster',
-        'master2026',
-        'master',
       ];
 
       const staffAcceptedPins = [
         STAFF_PASSCODE.toLowerCase(),
         cleanStaffConfig,
         'dimensi2026',
-        'dimensi',
         'staff2026',
         'staff',
+        'staf',
       ];
 
       const isMasterPin =
@@ -136,63 +134,52 @@ export const AdminGate: React.FC<AdminGateProps> = ({
         masterAcceptedPins.includes(cleanInput);
 
       const isStaffPin =
-        pInput === STAFF_PASSCODE ||
-        pInput.toLowerCase() === STAFF_PASSCODE.toLowerCase() ||
-        staffAcceptedPins.includes(pInput.toLowerCase()) ||
-        staffAcceptedPins.includes(cleanInput);
+        !isMasterPin &&
+        (pInput === STAFF_PASSCODE ||
+          pInput.toLowerCase() === STAFF_PASSCODE.toLowerCase() ||
+          staffAcceptedPins.includes(pInput.toLowerCase()) ||
+          staffAcceptedPins.includes(cleanInput));
 
       // Check registered active staff list
-      const matchedStaff = staffList.find(
-        (s) =>
-          s.status === 'active' &&
-          (s.email.toLowerCase() === uInput ||
-            s.name.toLowerCase() === uInput ||
-            s.id.toLowerCase() === uInput)
+      const matchedStaff = staffList.find((s) => {
+        if (s.status !== 'active') return false;
+        const sName = s.name.toLowerCase().trim();
+        const sEmail = s.email.toLowerCase().trim();
+        const sId = s.id.toLowerCase().trim();
+        return (
+          sName === uInput ||
+          sEmail === uInput ||
+          sId === uInput ||
+          sName.replace(/\s+/g, '') === uInput.replace(/\s+/g, '') ||
+          sName.includes(uInput) ||
+          uInput.includes(sName)
+        );
+      });
+
+      // Check if the staff has their own individual PIN assigned
+      const isIndividualStaffPin = Boolean(
+        matchedStaff &&
+        matchedStaff.pin &&
+        (matchedStaff.pin.trim() === pInput ||
+          matchedStaff.pin.trim().toLowerCase() === pInput.toLowerCase() ||
+          matchedStaff.pin.trim().toLowerCase().replace(/[\s\-_]/g, '') === cleanInput)
       );
 
-      const customMasterUsername = (studioConfig?.masterUsername || localConfig.masterUsername)?.trim().toLowerCase();
-      const customMasterEmail = (studioConfig?.masterEmail || localConfig.masterEmail)?.trim().toLowerCase();
-      const customStaffUsername = (studioConfig?.staffUsername || localConfig.staffUsername)?.trim().toLowerCase();
-
-      // Super admin usernames alias
-      const isSuperAdminAlias = [
-        'dimensi',
-        'master',
-        'superadmin',
-        'owner',
-        'adminmaster',
-        'admin',
-        'dimensi.idphoto@gmail.com',
-        ...(customMasterUsername ? [customMasterUsername] : []),
-        ...(customMasterEmail ? [customMasterEmail] : []),
-      ].includes(uInput);
-
-      const isStaffAlias = [
-        'staff',
-        'staf',
-        'editor',
-        'cs',
-        'fotografer',
-        ...(customStaffUsername ? [customStaffUsername] : []),
-      ].includes(uInput);
-
-      if (isMasterPin) {
-        // Success: Reset rate limit attempts and authenticate as Master
+      if (matchedStaff && isIndividualStaffPin) {
+        // Successfully authenticated with individual staff PIN
+        resetLoginAttempts();
+        setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
+        onAdminAuthenticated(matchedStaff.role === 'master');
+      } else if (isMasterPin) {
+        // Master PIN grants Super Admin access (Otoritas Penuh)
         resetLoginAttempts();
         setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
         onAdminAuthenticated(true);
       } else if (isStaffPin) {
-        if (isSuperAdminAlias || matchedStaff?.role === 'master') {
-          // Master username with staff PIN gets Master Admin
-          resetLoginAttempts();
-          setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
-          onAdminAuthenticated(true);
-        } else {
-          // Staff authentication
-          resetLoginAttempts();
-          setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
-          onAdminAuthenticated(false);
-        }
+        // Global Staff PIN grants Staff access (Hanya Pesanan & Operasional, tab Master terkunci)
+        resetLoginAttempts();
+        setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
+        onAdminAuthenticated(false);
       } else {
         // Failed login
         const newStatus = recordFailedLoginAttempt();
@@ -204,7 +191,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
             `🚨 Keamanan: Terlalu banyak percobaan salah (${newStatus.attemptsCount}x). Sistem dikunci selama ${newStatus.remainingSeconds} detik.`
           );
         } else {
-          setErrorMsg('Username atau PIN tidak sesuai. Silakan periksa kembali kredensial Anda.');
+          setErrorMsg('Nama staf atau PIN tidak sesuai. Silakan periksa kembali nama staf dan PIN yang telah didaftarkan.');
         }
       }
     }, 200);
