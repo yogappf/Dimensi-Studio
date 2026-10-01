@@ -76,6 +76,7 @@ import {
 import {
   sendTestAdminNotificationEmail,
   sendTestAdminUpcomingReminderEmail,
+  sendTestAdminReviewNotificationEmail,
 } from '../utils/emailNotifier';
 
 interface MasterAdminManagerProps {
@@ -153,6 +154,8 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const [testEmailFeedback, setTestEmailFeedback] = useState<{ success: boolean; message: string } | null>(null);
   const [isTesting24hEmail, setIsTesting24hEmail] = useState(false);
   const [test24hEmailFeedback, setTest24hEmailFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [isTestingReviewEmail, setIsTestingReviewEmail] = useState(false);
+  const [testReviewEmailFeedback, setTestReviewEmailFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleTestEmailNotification = async () => {
     const target = (configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com').trim();
@@ -185,6 +188,23 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       setTest24hEmailFeedback({ success: false, message: err?.message || 'Gagal mengirim email tes pengingat 24 jam' });
     } finally {
       setIsTesting24hEmail(false);
+    }
+  };
+
+  const handleTestReviewEmailNotification = async () => {
+    const target = (configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com').trim();
+    setIsTestingReviewEmail(true);
+    setTestReviewEmailFeedback(null);
+    try {
+      const res = await sendTestAdminReviewNotificationEmail(target, configForm.studioName || 'Dimensi Fotografi Studio');
+      setTestReviewEmailFeedback(res);
+      if (res.success) {
+        logAuditEvent('Master Admin', 'Uji Coba Email Ulasan', `Email tes notifikasi ulasan konsumen terkirim ke ${target}`, 'system');
+      }
+    } catch (err: any) {
+      setTestReviewEmailFeedback({ success: false, message: err?.message || 'Gagal mengirim email tes ulasan konsumen' });
+    } finally {
+      setIsTestingReviewEmail(false);
     }
   };
 
@@ -2163,6 +2183,93 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                       <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
                     )}
                     <span>{test24hEmailFeedback.message}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Customer Review & Rating Email Notification Settings */}
+              <div className="bg-[#111111] p-4 border border-[#D4AF37]/30 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-[#D4AF37] text-black">
+                      <Star className="w-4 h-4 fill-black stroke-black" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                        <span>Notifikasi Email Ulasan Konsumen (Rating & Bintang)</span>
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30">
+                          Review Alert
+                        </span>
+                      </h4>
+                      <p className="text-[11px] text-gray-400 mt-0.5">
+                        Mengirimkan notifikasi instan ke email Admin setiap kali ada konsumen yang memberikan ulasan atau bintang kepuasan di portal pesanan.
+                      </p>
+                    </div>
+                  </div>
+
+                  <label className="flex items-center gap-2 cursor-pointer select-none shrink-0 bg-black/40 px-3 py-1.5 border border-white/10">
+                    <input
+                      type="checkbox"
+                      checked={configForm.enableReviewEmailNotifications !== false}
+                      onChange={(e) => setConfigForm({ ...configForm, enableReviewEmailNotifications: e.target.checked })}
+                      className="w-4 h-4 accent-[#D4AF37] cursor-pointer"
+                    />
+                    <span className="text-xs font-mono text-gray-200">
+                      {configForm.enableReviewEmailNotifications !== false ? 'Aktif' : 'Nonaktif'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                  <div className="md:col-span-2 space-y-1.5">
+                    <label className="block text-[11px] font-mono uppercase tracking-wider text-gray-300">
+                      Email Admin Penerima Notifikasi Ulasan
+                    </label>
+                    <input
+                      type="email"
+                      value={configForm.notificationEmail || configForm.email || masterEmail || 'dimensi.idphoto@gmail.com'}
+                      onChange={(e) => setConfigForm({ ...configForm, notificationEmail: e.target.value })}
+                      placeholder="dimensi.idphoto@gmail.com"
+                      className="w-full px-3.5 py-2 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex flex-col justify-end">
+                    <button
+                      type="button"
+                      onClick={handleTestReviewEmailNotification}
+                      disabled={isTestingReviewEmail}
+                      className="w-full py-2 px-3 bg-[#D4AF37]/10 hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] font-mono text-xs font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 border border-[#D4AF37]/30 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isTestingReviewEmail ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Mengirim Tes Ulasan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Star className="w-3.5 h-3.5 text-[#D4AF37]" />
+                          <span>Tes Email Ulasan</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {testReviewEmailFeedback && (
+                  <div
+                    className={`p-3 text-xs font-mono border flex items-center gap-2 ${
+                      testReviewEmailFeedback.success
+                        ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
+                        : 'bg-rose-950/40 border-rose-500/50 text-rose-300'
+                    }`}
+                  >
+                    {testReviewEmailFeedback.success ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                    )}
+                    <span>{testReviewEmailFeedback.message}</span>
                   </div>
                 )}
               </div>

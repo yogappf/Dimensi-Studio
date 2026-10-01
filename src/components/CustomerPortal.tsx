@@ -9,6 +9,7 @@ import { getResolvedBankAccounts } from '../utils/bankOptions';
 import { saveReviewToFirestore } from "../firebase/services";
 import { compressImage } from '../utils/imageCompressor';
 import { copyToClipboard } from '../utils/clipboard';
+import { sendAdminReviewNotificationEmail } from '../utils/emailNotifier';
 import { useToast } from '../context/ToastContext';
 import {
   Search,
@@ -95,22 +96,57 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     if (!reviewOrder || !onUpdateOrder) return;
     setIsSubmittingReview(true);
     try {
+      const reviewedAt = new Date().toISOString();
       const updates: Partial<BookingOrder> = {
         rating: reviewRating,
         review: reviewComment.trim(),
-        reviewedAt: new Date().toISOString(),
+        reviewedAt: reviewedAt,
       };
       
       // Simpan juga ke koleksi khusus ulasan agar tidak terhapus saat pesanan dibersihkan
       await saveReviewToFirestore({
         id: reviewOrder.id,
         clientName: reviewOrder.clientName,
+        clientPhone: reviewOrder.phone,
+        clientEmail: reviewOrder.email,
         packageName: reviewOrder.packageName,
         rating: reviewRating,
         review: reviewComment.trim(),
-        reviewedAt: updates.reviewedAt as string,
+        reviewedAt: reviewedAt,
         showInTestimonials: true
       });
+
+      // DISPATCH NOTIFIKASI EMAIL KE ADMIN STUDIO
+      if (studioConfig?.enableReviewEmailNotifications !== false) {
+        const targetAdminEmail = (
+          studioConfig?.notificationEmail ||
+          studioConfig?.masterEmail ||
+          studioConfig?.email ||
+          'dimensi.idphoto@gmail.com'
+        ).trim();
+        const studioName = studioConfig?.studioName || STUDIO_INFO.name;
+
+        sendAdminReviewNotificationEmail(
+          {
+            orderId: reviewOrder.id,
+            clientName: reviewOrder.clientName,
+            clientPhone: reviewOrder.phone,
+            clientEmail: reviewOrder.email,
+            packageName: reviewOrder.packageName,
+            rating: reviewRating,
+            review: reviewComment.trim(),
+            reviewedAt: reviewedAt,
+          },
+          targetAdminEmail,
+          studioName
+        ).then((res) => {
+          if (res.success) {
+            console.log('Admin review notification email sent successfully:', res.message);
+          }
+        }).catch((err) => {
+          console.warn('Review notification email background dispatch notice:', err);
+        });
+      }
 
       await onUpdateOrder(reviewOrder.id, updates);
       setReviewSuccessMessage(true);

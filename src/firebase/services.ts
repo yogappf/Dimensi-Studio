@@ -84,6 +84,7 @@ export const DEFAULT_STUDIO_CONFIG: StudioConfig = {
   notificationEmail: 'dimensi.idphoto@gmail.com',
   enableEmailNotifications: true,
   enableUpcoming24hEmailNotifications: true,
+  enableReviewEmailNotifications: true,
 };
 
 export const INITIAL_ADMIN_STAFF: AdminStaff[] = [
@@ -1313,6 +1314,8 @@ export function subscribeToReviews(
           review: data.review || '',
           reviewedAt: data.reviewedAt || new Date().toISOString(),
           showInTestimonials: data.showInTestimonials !== undefined ? data.showInTestimonials : true,
+          clientPhone: data.clientPhone || undefined,
+          clientEmail: data.clientEmail || undefined,
         });
       });
 
@@ -1357,6 +1360,8 @@ export async function saveReviewToFirestore(review: ReviewItem): Promise<void> {
       reviewedAt: review.reviewedAt,
       showInTestimonials: review.showInTestimonials !== undefined ? review.showInTestimonials : true,
     };
+    if (review.clientPhone) cleanPayload.clientPhone = review.clientPhone;
+    if (review.clientEmail) cleanPayload.clientEmail = review.clientEmail;
 
     const docRef = doc(db, REVIEWS_COLLECTION, review.id);
     await setDoc(docRef, cleanPayload, { merge: true });

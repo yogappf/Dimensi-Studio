@@ -169,6 +169,7 @@ export interface StudioConfig {
   notificationEmail?: string;
   enableEmailNotifications?: boolean;
   enableUpcoming24hEmailNotifications?: boolean;
+  enableReviewEmailNotifications?: boolean;
 }
 
 export interface AuditLogItem {
@@ -189,4 +190,6 @@ export interface ReviewItem {
   review: string;
   reviewedAt: string;
   showInTestimonials?: boolean;
+  clientPhone?: string;
+  clientEmail?: string;
 }

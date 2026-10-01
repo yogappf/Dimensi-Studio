@@ -597,3 +597,175 @@ export async function sendTestAdminNotificationEmail(
   }
 }
 
+export interface ReviewNotificationPayload {
+  orderId?: string;
+  clientName: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  packageName: string;
+  rating: number; // 1 - 5
+  review: string;
+  reviewedAt?: string;
+}
+
+/**
+ * Builds a clear, professional plain-text summary of a customer review
+ */
+function buildReviewTextSummary(
+  reviewData: ReviewNotificationPayload,
+  studioName: string,
+  reviewedTimeStr: string,
+  clientWaClean: string
+): string {
+  const starIcons = '⭐'.repeat(Math.max(1, Math.min(5, reviewData.rating)));
+  let text = `=====================================================\n`;
+  text += `📸 ${studioName.toUpperCase()}\n`;
+  text += `NOTIFIKASI ULASAN & KEPUASAN PELANGGAN BARU\n`;
+  text += `=====================================================\n\n`;
+
+  text += `1. RATING & KEPUASAN KONSUMEN\n`;
+  text += `   - Skor Bintang : ${starIcons} (${reviewData.rating} dari 5 Bintang)\n`;
+  text += `   - Waktu Masuk  : ${reviewedTimeStr} WIB\n\n`;
+
+  text += `2. DATA KONSUMEN\n`;
+  text += `   - Nama Klien   : ${reviewData.clientName}\n`;
+  if (reviewData.clientPhone) {
+    text += `   - No. WhatsApp : ${reviewData.clientPhone} ( https://wa.me/${clientWaClean} )\n`;
+  }
+  if (reviewData.clientEmail) {
+    text += `   - Alamat Email : ${reviewData.clientEmail}\n`;
+  }
+  if (reviewData.orderId) {
+    text += `   - ID Pesanan   : #${reviewData.orderId}\n`;
+  }
+  text += `   - Paket Pilihan: ${reviewData.packageName}\n\n`;
+
+  text += `3. ISI ULASAN / TESTIMONIAL\n`;
+  text += `   "${reviewData.review || '(Konsumen memberikan rating bintang tanpa ulasan teks)'}"\n\n`;
+
+  text += `=====================================================\n`;
+  text += `*Email ini dikirim otomatis oleh sistem website ${studioName} setiap ada konsumen memberi ulasan.`;
+
+  return text;
+}
+
+/**
+ * Sends an automated email notification to Studio Admin in the background
+ * whenever a customer submits a new review / rating.
+ */
+export async function sendAdminReviewNotificationEmail(
+  reviewData: ReviewNotificationPayload,
+  targetEmail = 'dimensi.idphoto@gmail.com',
+  studioName = 'Dimensi Fotografi Studio'
+): Promise<EmailDispatchResult> {
+  const cleanEmail = (targetEmail || 'dimensi.idphoto@gmail.com').trim();
+  const rawDate = reviewData.reviewedAt ? new Date(reviewData.reviewedAt) : new Date();
+  const reviewedTimeStr = rawDate.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const clientWaClean = reviewData.clientPhone ? normalizeWhatsAppNumber(reviewData.clientPhone) : '';
+  const starStr = '⭐'.repeat(Math.max(1, Math.min(5, reviewData.rating)));
+  const subject = `⭐ [ULASAN BARU ${reviewData.rating}/5] ${reviewData.clientName} - ${reviewData.packageName}`;
+
+  const fullSummaryText = buildReviewTextSummary(reviewData, studioName, reviewedTimeStr, clientWaClean);
+
+  const payload: Record<string, string> = {
+    _subject: subject,
+    _template: 'table',
+    _captcha: 'false',
+
+    // Header
+    Studio: studioName,
+    Status_Notifikasi: '⭐ ULASAN & KEPUASAN PELANGGAN BARU MASUK',
+    Waktu_Ulasan_Diberikan: `${reviewedTimeStr} WIB`,
+
+    // Rating & Info
+    Rating_Kepuasan: `${starStr} (${reviewData.rating} dari 5 Bintang)`,
+    Nama_Konsumen: reviewData.clientName,
+    Paket_Foto_Dipilih: reviewData.packageName,
+  };
+
+  if (reviewData.orderId) {
+    payload.ID_Pesanan = `#${reviewData.orderId}`;
+  }
+  if (reviewData.clientPhone) {
+    payload.Nomor_WhatsApp_Konsumen = reviewData.clientPhone;
+    if (clientWaClean) {
+      payload.Link_WhatsApp_Konsumen = `https://wa.me/${clientWaClean}`;
+    }
+  }
+  if (reviewData.clientEmail) {
+    payload.Email_Konsumen = reviewData.clientEmail;
+  }
+
+  payload.Isi_Ulasan_Konsumen = reviewData.review ? `"${reviewData.review}"` : '(Tanpa catatan ulasan tertulis)';
+  payload.RINGKASAN_LENGKAP_ULASAN = fullSummaryText;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 9000);
+
+    const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(cleanEmail)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(payload),
+      keepalive: true,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (response.ok) {
+      return {
+        success: true,
+        message: `Email notifikasi ulasan dari ${reviewData.clientName} berhasil dikirim ke ${cleanEmail}`,
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      const errText = await response.text().catch(() => '');
+      return {
+        success: false,
+        message: `Pengiriman email ulasan gagal (Status ${response.status}): ${errText}`,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  } catch (error: any) {
+    console.warn('Review email notification dispatch notice:', error);
+    return {
+      success: false,
+      message: error?.message || 'Gagal mengirim email ulasan otomatis (koneksi jaringan)',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+/**
+ * Sends a sample customer review email notification to verify the format received in the admin inbox.
+ */
+export async function sendTestAdminReviewNotificationEmail(
+  targetEmail: string,
+  studioName = 'Dimensi Fotografi Studio'
+): Promise<EmailDispatchResult> {
+  const cleanEmail = (targetEmail || 'dimensi.idphoto@gmail.com').trim();
+  const sampleReview: ReviewNotificationPayload = {
+    orderId: `DIM-${new Date().getFullYear()}-0772`,
+    clientName: 'Nadia Rahmadani (Contoh Ulasan Konsumen)',
+    clientPhone: '081234567890',
+    clientEmail: cleanEmail,
+    packageName: 'Prewedding Cinematic Signature 4K',
+    rating: 5,
+    review: 'Hasil fotonya luar biasa bagus, warnanya sangat estetik dan cinematic! Tim fotografer ramah & sabar mengarahkan pose kami. Sangat recommended untuk momen spesial! Terima kasih Dimensi Studio! ⭐⭐⭐⭐⭐',
+    reviewedAt: new Date().toISOString(),
+  };
+
+  return sendAdminReviewNotificationEmail(sampleReview, cleanEmail, studioName);
+}
+
