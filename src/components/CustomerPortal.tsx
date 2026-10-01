@@ -10,6 +10,7 @@ import { saveReviewToFirestore } from "../firebase/services";
 import { compressImage } from '../utils/imageCompressor';
 import { copyToClipboard } from '../utils/clipboard';
 import { sendAdminReviewNotificationEmail } from '../utils/emailNotifier';
+import { sanitizePlainText } from '../utils/security';
 import { useToast } from '../context/ToastContext';
 import {
   Search,
@@ -97,21 +98,22 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
     setIsSubmittingReview(true);
     try {
       const reviewedAt = new Date().toISOString();
+      const sanitizedComment = sanitizePlainText(reviewComment, 1500);
       const updates: Partial<BookingOrder> = {
         rating: reviewRating,
-        review: reviewComment.trim(),
+        review: sanitizedComment,
         reviewedAt: reviewedAt,
       };
       
       // Simpan juga ke koleksi khusus ulasan agar tidak terhapus saat pesanan dibersihkan
       await saveReviewToFirestore({
         id: reviewOrder.id,
-        clientName: reviewOrder.clientName,
+        clientName: sanitizePlainText(reviewOrder.clientName, 100),
         clientPhone: reviewOrder.phone,
         clientEmail: reviewOrder.email,
         packageName: reviewOrder.packageName,
         rating: reviewRating,
-        review: reviewComment.trim(),
+        review: sanitizedComment,
         reviewedAt: reviewedAt,
         showInTestimonials: true
       });
@@ -427,7 +429,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
         paymentProofUploadedAt: new Date().toISOString(),
         paymentProofType: proofType,
         paymentProofBank: bankLabel,
-        paymentProofNote: proofNote.trim() || undefined,
+        paymentProofNote: sanitizePlainText(proofNote, 500) || undefined,
       };
 
       if (onUpdateOrder) {

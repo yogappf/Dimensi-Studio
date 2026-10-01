@@ -1262,6 +1262,7 @@ export default function App() {
               isMasterEmail={isGoogleAdminEmail || isMasterStaffUser}
               studioConfig={studioConfig}
               staffList={staffList}
+              onGoogleSignIn={handleGoogleSignIn}
             />
           )
         )}

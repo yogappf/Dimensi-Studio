@@ -1477,6 +1477,76 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
               </button>
             </div>
           </form>
+
+          {/* Security Shield & Safeguards Status Overview */}
+          <div className="pt-6 border-t border-white/10 space-y-4">
+            <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 uppercase tracking-wider">
+              <ShieldCheck className="w-4 h-4" />
+              <span>Status Proteksi Keamanan Sistem Berlapis (Active)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 bg-[#0D0D0D] border border-emerald-500/30 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Anti-Brute Force</span>
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase">
+                    Aktif
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Penguncian otomatis dengan penundaan eksponensial setelah 5x percobaan PIN/password yang salah.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0D0D0D] border border-emerald-500/30 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Firestore Rules Hardened</span>
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase">
+                    Deployed
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Semua operasi database Cloud Firestore divalidasi ketat dan menolak akses ilegal tanpa hak akses.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0D0D0D] border border-emerald-500/30 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <History className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Immutable Audit Trail</span>
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase">
+                    Anti-Tamper
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Setiap login, modifikasi pesanan, dan tindakan admin dicatat permanen dalam log keamanan tanpa bisa dihapus.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-[#0D0D0D] border border-emerald-500/30 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                    <CheckSquare className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Anti-XSS & Sanitasi</span>
+                  </span>
+                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase">
+                    Protected
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-400 leading-relaxed">
+                  Penyaringan menyeluruh terhadap tag script berbahaya pada formulir pemesanan, catatan, dan ulasan pelanggan.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -8,6 +8,7 @@ import {
   getBookedSlotsForDate,
   getBookedTimeWindowsForDate,
 } from '../utils/formatters';
+import { sanitizePlainText } from '../utils/security';
 import { AnimatedClockPicker } from './AnimatedClockPicker';
 import confetti from 'canvas-confetti';
 import {
@@ -292,9 +293,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     const newOrder: BookingOrder = {
       id: newBookingId,
       createdAt: new Date().toISOString(),
-      clientName: clientName.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
+      clientName: sanitizePlainText(clientName, 100),
+      phone: sanitizePlainText(phone, 30),
+      email: sanitizePlainText(email, 120),
       packageId: currentPackage.id,
       packageName: currentPackage.name,
       packagePrice: currentPackage.price,
@@ -304,17 +305,17 @@ export const BookingForm: React.FC<BookingFormProps> = ({
       totalPrice: totalPrice,
       // Acara Pertama (Sesi 1)
       sessionDate: sessionDate,
-      sessionTime: sessionTime.trim(),
+      sessionTime: sanitizePlainText(sessionTime, 30),
       locationType: locationType,
-      locationAddress: locationAddress.trim(),
-      notes: notes.trim(),
+      locationAddress: sanitizePlainText(locationAddress, 300),
+      notes: sanitizePlainText(notes, 1000),
       // Acara Kedua (Sesi 2)
       hasSecondSession: hasSecondSession,
       sessionDate2: hasSecondSession ? sessionDate2 : undefined,
-      sessionTime2: hasSecondSession ? sessionTime2.trim() : undefined,
+      sessionTime2: hasSecondSession ? sanitizePlainText(sessionTime2, 30) : undefined,
       locationType2: hasSecondSession ? locationType2 : undefined,
-      locationAddress2: hasSecondSession ? locationAddress2.trim() : undefined,
-      notes2: hasSecondSession ? notes2.trim() : undefined,
+      locationAddress2: hasSecondSession ? sanitizePlainText(locationAddress2, 300) : undefined,
+      notes2: hasSecondSession ? sanitizePlainText(notes2, 1000) : undefined,
       status: 'Menunggu Konfirmasi',
       paymentPreference: paymentPreference,
     };

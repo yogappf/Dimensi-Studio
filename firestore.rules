@@ -27,7 +27,8 @@ service cloud.firestore {
     function isStudioAdmin() {
       return isSignedIn() && (
         (request.auth.token.email == 'dimensi.idphoto@gmail.com' && request.auth.token.email_verified == true) ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        exists(/databases/$(database)/documents/admin_staff/$(request.auth.uid))
       );
     }
 
@@ -35,7 +36,7 @@ service cloud.firestore {
       return data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 100 &&
         data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30 &&
         (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
-        data.packageId is string && data.packageId.size() > 0 && data.packageId.size() <= 50 &&
+        data.packageId is string && data.packageId.size() > 0 && data.packageId.size() <= 60 &&
         data.packageName is string && data.packageName.size() > 0 && data.packageName.size() <= 120 &&
         data.packagePrice is number && data.packagePrice >= 0 &&
         (!('addOnIds' in data) || (data.addOnIds is list && data.addOnIds.size() <= 20)) &&
@@ -56,6 +57,13 @@ service cloud.firestore {
         data.paymentPreference is string && data.paymentPreference in ['DP 30%', 'DP 50%', 'Lunas'];
     }
 
+    function isValidReview(data) {
+      return data.clientName is string && data.clientName.size() >= 2 && data.clientName.size() <= 100 &&
+        data.packageName is string && data.packageName.size() > 0 && data.packageName.size() <= 120 &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        (!('review' in data) || (data.review is string && data.review.size() <= 2000));
+    }
+
     // Admins Collection
     match /admins/{adminId} {
       allow get: if isSignedIn() && (request.auth.uid == adminId || isStudioAdmin());
@@ -63,57 +71,65 @@ service cloud.firestore {
       allow create, update, delete: if isStudioAdmin();
     }
 
-    // Bookings Collection
+    // Bookings Collection (Customer Orders & Photoshoot Schedules)
     match /bookings/{bookingId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create: if isValidId(bookingId) && isValidBooking(incoming());
+      allow update: if isValidId(bookingId) && (isStudioAdmin() || isValidBooking(incoming()));
+      allow delete: if isStudioAdmin();
     }
 
-    // Packages Collection
+    // Packages Collection (Studio Photography Packages)
     match /packages/{packageId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create, update, delete: if isStudioAdmin() || (isValidId(packageId) && incoming().name is string && incoming().price is number);
     }
 
-    // Addons Collection
+    // Addons Collection (Extra Services)
     match /addons/{addonId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create, update, delete: if isStudioAdmin() || (isValidId(addonId) && incoming().name is string && incoming().price is number);
     }
 
-    // Portfolios Collection
+    // Portfolios Collection (Visual Gallery)
     match /portfolios/{portfolioId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create, update, delete: if isStudioAdmin() || (isValidId(portfolioId) && incoming().imageUrl is string);
     }
 
-    // Reviews Collection
+    // Reviews Collection (Customer Ratings & Testimonials)
     match /reviews/{reviewId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create, update: if isValidId(reviewId) && isValidReview(incoming());
+      allow delete: if isStudioAdmin();
     }
 
-    // Settings Collection (Studio Config & Business Profile)
+    // Settings Collection (Studio Configuration & Bank Accounts)
     match /settings/{settingId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create, update: if isStudioAdmin() || isValidId(settingId);
+      allow delete: if isStudioAdmin();
     }
 
     // Admin Staff Collection (Staff Directory & Roles)
     match /admin_staff/{staffId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create, update: if isStudioAdmin() || (isValidId(staffId) && incoming().name is string && incoming().email is string);
+      allow delete: if isStudioAdmin();
     }
 
-    // Audit Logs Collection
+    // Audit Logs Collection (Security & Operation Trail - IMMUTABLE)
     match /audit_logs/{logId} {
       allow get, list: if true;
-      allow create, update, delete: if isStudioAdmin() || true;
+      allow create: if isValidId(logId) && incoming().action is string && incoming().actor is string;
+      // Strict security: Never allow modifying or deleting audit logs to prevent tampering
+      allow update, delete: if false;
     }
 
     // Connection test document
     match /test/{testId} {
       allow read: if true;
+      allow write: if false;
     }
   }
 }

@@ -32,6 +32,7 @@ import {
   sendAdminUpcomingSessionsDigestEmail,
 } from '../utils/emailNotifier';
 import { copyToClipboard } from '../utils/clipboard';
+import { sanitizePlainText } from '../utils/security';
 import { exportOrdersToExcel, exportOrdersToCSV } from '../utils/excelExport';
 import { PackageManager } from './PackageManager';
 import { AddonManager } from './AddonManager';
@@ -677,9 +678,9 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     const newOrder: BookingOrder = {
       id: `DMS-${new Date().getFullYear()}-${randomSuffix}`,
       createdAt: new Date().toISOString(),
-      clientName: manualName.trim(),
-      phone: manualPhone.trim(),
-      email: manualEmail.trim(),
+      clientName: sanitizePlainText(manualName, 100),
+      phone: sanitizePlainText(manualPhone, 30),
+      email: sanitizePlainText(manualEmail, 120),
       packageId: pkg.id,
       packageName: pkg.name,
       packagePrice: pkg.price,
@@ -689,17 +690,17 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       totalPrice: pkg.price + addonsTotal,
       // Sesi 1
       sessionDate: targetDate,
-      sessionTime: manualTime,
+      sessionTime: sanitizePlainText(manualTime, 30),
       locationType: manualLocationType,
-      locationAddress: manualLocation.trim() || (manualLocationType === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 1'),
-      notes: manualNotes.trim(),
+      locationAddress: sanitizePlainText(manualLocation, 300) || (manualLocationType === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 1'),
+      notes: sanitizePlainText(manualNotes, 1000),
       // Sesi 2
       hasSecondSession: manualHasSecondSession,
       sessionDate2: manualHasSecondSession ? targetDate2 : undefined,
-      sessionTime2: manualHasSecondSession ? manualTime2 : undefined,
+      sessionTime2: manualHasSecondSession ? sanitizePlainText(manualTime2, 30) : undefined,
       locationType2: manualHasSecondSession ? manualLocationType2 : undefined,
-      locationAddress2: manualHasSecondSession ? (manualLocation2.trim() || (manualLocationType2 === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 2')) : undefined,
-      notes2: manualHasSecondSession ? manualNotes2.trim() : undefined,
+      locationAddress2: manualHasSecondSession ? (sanitizePlainText(manualLocation2, 300) || (manualLocationType2 === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 2')) : undefined,
+      notes2: manualHasSecondSession ? sanitizePlainText(manualNotes2, 1000) : undefined,
       status: manualStatus,
       completedAt: manualStatus === 'Selesai' ? new Date().toISOString() : undefined,
       paymentPreference: manualPayment,
