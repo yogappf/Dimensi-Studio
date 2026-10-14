@@ -60,7 +60,6 @@ import {
   deleteStaffFromFirestore,
   logAuditEvent,
   signInWithGoogle,
-  setCachedAccessToken,
   logOut,
   DEFAULT_STUDIO_CONFIG,
   INITIAL_ADMIN_STAFF,
@@ -1149,12 +1148,6 @@ export default function App() {
   const handleGoogleSignIn = async () => {
     try {
       const res = await signInWithGoogle();
-      if (res?.user) {
-        setCurrentUser(res.user);
-      }
-      if (res?.accessToken) {
-        setCachedAccessToken(res.accessToken);
-      }
       if (res?.user?.email) {
         const email = res.user.email.toLowerCase();
         const isMaster =
@@ -1169,11 +1162,9 @@ export default function App() {
           handleAdminAuthenticated(false);
         }
       }
-      toast.success('Google Drive Terhubung', `Akun: ${res?.user?.email || 'Google'}`);
       return res;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Google login error:', err);
-      toast.error('Gagal menghubungkan Google Drive', err?.message || 'Pastikan pop-up diizinkan dan akun Google dipilih.');
       throw err;
     }
   };
