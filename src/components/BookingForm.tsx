@@ -85,15 +85,15 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   const [email, setEmail] = useState('');
   const [sessionDate, setSessionDate] = useState('');
   const [sessionTime, setSessionTime] = useState('10:00 WIB');
-  const [locationType, setLocationType] = useState<'studio' | 'outdoor' | 'venue'>('studio');
-  const [locationAddress, setLocationAddress] = useState('Dimensi Photo Studio (Studio 1 Utama)');
+  const [locationType, setLocationType] = useState<'outdoor' | 'venue'>('venue');
+  const [locationAddress, setLocationAddress] = useState('');
   const [notes, setNotes] = useState('');
 
   // Acara Kedua Fields (Multi-Event / Wedding)
   const [hasSecondSession, setHasSecondSession] = useState(false);
   const [sessionDate2, setSessionDate2] = useState('');
   const [sessionTime2, setSessionTime2] = useState('18:30 WIB');
-  const [locationType2, setLocationType2] = useState<'studio' | 'outdoor' | 'venue'>('venue');
+  const [locationType2, setLocationType2] = useState<'outdoor' | 'venue'>('venue');
   const [locationAddress2, setLocationAddress2] = useState('');
   const [notes2, setNotes2] = useState('');
 
@@ -194,11 +194,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   };
 
   // Auto set default address when locationType changes
-  const handleLocationTypeChange = (type: 'studio' | 'outdoor' | 'venue') => {
+  const handleLocationTypeChange = (type: 'outdoor' | 'venue') => {
     setLocationType(type);
-    if (type === 'studio') {
-      setLocationAddress('Dimensi Photo Studio (Jl. Melati Indah No. 45, Studio Dimensi Visual)');
-    } else if (type === 'outdoor') {
+    if (type === 'outdoor') {
       setLocationAddress('Lokasi Outdoor (Contoh: Hutan Kota GBK / PIK / Pantai)');
     } else {
       setLocationAddress('');
@@ -206,11 +204,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
   };
 
   // Auto set default address when locationType2 changes
-  const handleLocationTypeChange2 = (type: 'studio' | 'outdoor' | 'venue') => {
+  const handleLocationTypeChange2 = (type: 'outdoor' | 'venue') => {
     setLocationType2(type);
-    if (type === 'studio') {
-      setLocationAddress2('Dimensi Photo Studio (Jl. Melati Indah No. 45, Studio Dimensi Visual)');
-    } else if (type === 'outdoor') {
+    if (type === 'outdoor') {
       setLocationAddress2('Lokasi Outdoor (Contoh: Hutan Kota GBK / PIK / Pantai)');
     } else {
       setLocationAddress2('');
@@ -347,9 +343,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({
     setHasSecondSession(false);
     setSessionTime('10:00 WIB');
     setSessionTime2('18:30 WIB');
-    setLocationType('studio');
+    setLocationType('venue');
     setLocationType2('venue');
-    setLocationAddress('Dimensi Photo Studio (Studio 1 Utama)');
+    setLocationAddress('');
     setLocationAddress2('');
     setSelectedAddOns([]);
     setFormError('');
@@ -764,9 +760,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                     <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
                       tipe tempat pemotretan :
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {[
-                        { id: 'studio', label: 'Studio Dimensi' },
                         { id: 'outdoor', label: 'Outdoor / Alam' },
                         { id: 'venue', label: 'Gedung / Klien' },
                       ].map((loc) => (
@@ -933,9 +928,8 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                       <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1.5 font-mono">
                         tipe tempat pemotretan :
                       </label>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2">
                         {[
-                          { id: 'studio', label: 'Studio Dimensi' },
                           { id: 'outdoor', label: 'Outdoor / Alam' },
                           { id: 'venue', label: 'Gedung / Klien' },
                         ].map((loc) => (
@@ -1084,7 +1078,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                     {sessionDate ? formatDateIndonesian(sessionDate) : '(Pilih tanggal di formulir)'}
                   </div>
                   <div className="text-gray-400 text-[11px] font-mono">
-                    {sessionTime} • {locationType === 'studio' ? 'Studio Dimensi' : locationType === 'outdoor' ? 'Outdoor / Alam' : 'Gedung / Klien'}
+                    {sessionTime} • {locationType === 'outdoor' ? 'Outdoor / Alam' : 'Gedung / Klien'}
                   </div>
                   {locationAddress && (
                     <div className="text-gray-400 text-[11px] truncate">
@@ -1103,7 +1097,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
                       {sessionDate2 ? formatDateIndonesian(sessionDate2) : '(Pilih tanggal Acara 2)'}
                     </div>
                     <div className="text-gray-400 text-[11px] font-mono">
-                      {sessionTime2} • {locationType2 === 'studio' ? 'Studio Dimensi' : locationType2 === 'outdoor' ? 'Outdoor / Alam' : 'Gedung / Klien'}
+                      {sessionTime2} • {locationType2 === 'outdoor' ? 'Outdoor / Alam' : 'Gedung / Klien'}
                     </div>
                     {locationAddress2 && (
                       <div className="text-gray-400 text-[11px] truncate">

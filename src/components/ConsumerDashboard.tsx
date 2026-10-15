@@ -546,37 +546,33 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
   // Sesi 1 State
   const [manualDate, setManualDate] = useState('');
   const [manualTime, setManualTime] = useState('10:00 WIB');
-  const [manualLocationType, setManualLocationType] = useState<'studio' | 'outdoor' | 'venue'>('studio');
-  const [manualLocation, setManualLocation] = useState('Dimensi Photo Studio (Studio 1 Utama)');
+  const [manualLocationType, setManualLocationType] = useState<'outdoor' | 'venue'>('venue');
+  const [manualLocation, setManualLocation] = useState('');
   const [manualNotes, setManualNotes] = useState('');
 
   // Sesi 2 State (Opsional / 2 Acara)
   const [manualHasSecondSession, setManualHasSecondSession] = useState(false);
   const [manualDate2, setManualDate2] = useState('');
   const [manualTime2, setManualTime2] = useState('18:30 WIB');
-  const [manualLocationType2, setManualLocationType2] = useState<'studio' | 'outdoor' | 'venue'>('venue');
+  const [manualLocationType2, setManualLocationType2] = useState<'outdoor' | 'venue'>('venue');
   const [manualLocation2, setManualLocation2] = useState('');
   const [manualNotes2, setManualNotes2] = useState('');
 
   const [manualStatus, setManualStatus] = useState<OrderStatus>('Terkonfirmasi & Terjadwal');
   const [manualPayment, setManualPayment] = useState<'DP 30%' | 'DP 50%' | 'Lunas'>('DP 50%');
 
-  const handleManualLocationTypeChange = (type: 'studio' | 'outdoor' | 'venue') => {
+  const handleManualLocationTypeChange = (type: 'outdoor' | 'venue') => {
     setManualLocationType(type);
-    if (type === 'studio') {
-      setManualLocation('Dimensi Photo Studio (Studio 1 Utama)');
-    } else if (type === 'outdoor') {
+    if (type === 'outdoor') {
       setManualLocation('Lokasi Outdoor / Alam Pilihan Klien');
     } else {
       setManualLocation('');
     }
   };
 
-  const handleManualLocationType2Change = (type: 'studio' | 'outdoor' | 'venue') => {
+  const handleManualLocationType2Change = (type: 'outdoor' | 'venue') => {
     setManualLocationType2(type);
-    if (type === 'studio') {
-      setManualLocation2('Dimensi Photo Studio (Studio 1 Utama)');
-    } else if (type === 'outdoor') {
+    if (type === 'outdoor') {
       setManualLocation2('Lokasi Outdoor / Alam Pilihan Klien');
     } else {
       setManualLocation2('');
@@ -692,14 +688,14 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
       sessionDate: targetDate,
       sessionTime: sanitizePlainText(manualTime, 30),
       locationType: manualLocationType,
-      locationAddress: sanitizePlainText(manualLocation, 300) || (manualLocationType === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 1'),
+      locationAddress: sanitizePlainText(manualLocation, 300) || (manualLocationType === 'outdoor' ? 'Lokasi Outdoor' : 'Lokasi Sesi 1'),
       notes: sanitizePlainText(manualNotes, 1000),
       // Sesi 2
       hasSecondSession: manualHasSecondSession,
       sessionDate2: manualHasSecondSession ? targetDate2 : undefined,
       sessionTime2: manualHasSecondSession ? sanitizePlainText(manualTime2, 30) : undefined,
       locationType2: manualHasSecondSession ? manualLocationType2 : undefined,
-      locationAddress2: manualHasSecondSession ? (sanitizePlainText(manualLocation2, 300) || (manualLocationType2 === 'studio' ? 'Dimensi Photo Studio' : 'Lokasi Sesi 2')) : undefined,
+      locationAddress2: manualHasSecondSession ? (sanitizePlainText(manualLocation2, 300) || (manualLocationType2 === 'outdoor' ? 'Lokasi Outdoor' : 'Lokasi Sesi 2')) : undefined,
       notes2: manualHasSecondSession ? sanitizePlainText(manualNotes2, 1000) : undefined,
       status: manualStatus,
       completedAt: manualStatus === 'Selesai' ? new Date().toISOString() : undefined,
@@ -716,8 +712,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
     setManualAddonIds([]);
     setManualDate('');
     setManualTime('10:00 WIB');
-    setManualLocationType('studio');
-    setManualLocation('Dimensi Photo Studio (Studio 1 Utama)');
+    setManualLocationType('venue');
+    setManualLocation('');
     setManualHasSecondSession(false);
     setManualDate2('');
     setManualTime2('18:30 WIB');
@@ -2967,9 +2963,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                         <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
                           Tipe Tempat Pemotretan 1:
                         </label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                           {[
-                            { id: 'studio', label: 'Studio Dimensi' },
                             { id: 'outdoor', label: 'Outdoor / Alam' },
                             { id: 'venue', label: 'Gedung / Klien' },
                           ].map((loc) => (
@@ -3062,9 +3057,8 @@ export const ConsumerDashboard: React.FC<ConsumerDashboardProps> = ({
                           <label className="block text-gray-400 uppercase tracking-widest text-[10px] font-mono mb-1">
                             Tipe Tempat Pemotretan 2:
                           </label>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-2 gap-2">
                             {[
-                              { id: 'studio', label: 'Studio Dimensi' },
                               { id: 'outdoor', label: 'Outdoor / Alam' },
                               { id: 'venue', label: 'Gedung / Klien' },
                             ].map((loc) => (
