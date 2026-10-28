@@ -118,7 +118,6 @@ export interface AdminStaff {
   email: string;
   role: AdminRole;
   phone?: string;
-  pin?: string; // Individual PIN for staff login
   addedAt: string;
   lastActive?: string;
   status: 'active' | 'inactive';

@@ -142,8 +142,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
   const [staffEmail, setStaffEmail] = useState('');
   const [staffRole, setStaffRole] = useState<AdminRole>('editor');
   const [staffPhone, setStaffPhone] = useState('');
-  const [staffPin, setStaffPin] = useState('');
-  const [showStaffPin, setShowStaffPin] = useState(false);
   const [staffStatus, setStaffStatus] = useState<'active' | 'inactive'>('active');
 
   // Studio Profile Form State
@@ -682,8 +680,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     setStaffEmail('');
     setStaffRole('editor');
     setStaffPhone('');
-    setStaffPin('123456');
-    setShowStaffPin(false);
     setStaffStatus('active');
     setIsStaffModalOpen(true);
   };
@@ -694,8 +690,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
     setStaffEmail(st.email);
     setStaffRole(st.role);
     setStaffPhone(st.phone || '');
-    setStaffPin(st.pin || '123456');
-    setShowStaffPin(false);
     setStaffStatus(st.status);
     setIsStaffModalOpen(true);
   };
@@ -707,15 +701,12 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
       return;
     }
 
-    const assignedPin = staffPin.trim() || 'DIMENSI2026';
-
     if (editingStaffId) {
       const updates: Partial<AdminStaff> = {
         name: staffName.trim(),
         email: staffEmail.trim().toLowerCase(),
         role: staffRole,
         phone: staffPhone.trim(),
-        pin: assignedPin,
         status: staffStatus,
       };
       onUpdateStaff(editingStaffId, updates);
@@ -724,7 +715,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         await logAuditEvent(
           currentUser?.email || 'Master Admin',
           'Edit Data Staf Admin',
-          `Memperbarui staf: ${staffName} (${staffRole}), PIN disesuaikan.`,
+          `Memperbarui staf: ${staffName} (${staffRole})`,
           'security'
         );
       } catch (err) {
@@ -737,7 +728,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         email: staffEmail.trim().toLowerCase(),
         role: staffRole,
         phone: staffPhone.trim(),
-        pin: assignedPin,
         addedAt: new Date().toISOString(),
         status: staffStatus,
       };
@@ -747,7 +737,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
         await logAuditEvent(
           currentUser?.email || 'Master Admin',
           'Tambah Staf Admin Baru',
-          `Menambahkan staf baru: ${staffName} (${staffRole}) dengan PIN khusus.`,
+          `Menambahkan staf: ${staffName} (${staffRole})`,
           'security'
         );
       } catch (err) {
@@ -1250,7 +1240,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                 Daftar Staf Administrator & Fotografer
               </h3>
               <p className="text-xs text-gray-400 mt-0.5">
-                Super Admin dapat membuat PIN berbeda untuk setiap staf agar dapat login mandiri menggunakan nama staf dan PIN masing-masing.
+                Staf terdaftar dapat mengakses portal admin sesuai peran (Master Admin, Lead Editor, Finance/CS).
               </p>
             </div>
             <button
@@ -1262,13 +1252,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
             </button>
           </div>
 
-          <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2.5">
-            <Key className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>
-              💡 <strong>Login Staf Mandiri:</strong> Staf dapat login pada portal login dengan memasukkan <strong>Nama Staf</strong> (atau Email) dan <strong>PIN Khusus</strong> yang telah dibuat di bawah.
-            </span>
-          </div>
-
           <div className="bg-[#141414] border border-white/10 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
@@ -1277,7 +1260,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                     <th className="p-3.5">Nama & Kontak</th>
                     <th className="p-3.5">Email Akun</th>
                     <th className="p-3.5">Peran / Role</th>
-                    <th className="p-3.5">PIN Login Staf</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5">Terdaftar</th>
                     <th className="p-3.5 text-right">Aksi</th>
@@ -1297,11 +1279,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                         {getRoleBadge(st.role)}
                       </td>
                       <td className="p-3.5">
-                        <span className="px-2 py-1 bg-[#0A0A0A] border border-amber-500/30 text-amber-300 font-mono font-bold text-xs tracking-wider">
-                          {st.pin || 'DIMENSI2026'}
-                        </span>
-                      </td>
-                      <td className="p-3.5">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-mono uppercase ${
                           st.status === 'active'
                             ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/30'
@@ -1318,7 +1295,7 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                         <button
                           onClick={() => handleOpenEditStaff(st)}
                           className="p-1.5 bg-[#1F1F1F] hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 transition-colors cursor-pointer"
-                          title="Edit Staf & PIN"
+                          title="Edit Staf"
                         >
                           <Edit2 className="w-3.5 h-3.5 text-[#D4AF37]" />
                         </button>
@@ -2660,38 +2637,6 @@ export const MasterAdminManager: React.FC<MasterAdminManagerProps> = ({
                   placeholder="08123456789"
                   className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-white/15 text-white text-xs font-mono focus:border-[#D4AF37] focus:outline-none"
                 />
-              </div>
-
-              {/* Kolom PIN Login Khusus Staf */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-mono uppercase tracking-wider text-amber-300 font-bold flex items-center gap-1.5">
-                    <Key className="w-3.5 h-3.5 text-amber-400" />
-                    <span>PIN Login Khusus Staf</span>
-                  </label>
-                  <span className="text-[10px] text-gray-400 font-mono">Bisa Berbeda Tiap Staf</span>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showStaffPin ? 'text' : 'password'}
-                    required
-                    value={staffPin}
-                    onChange={(e) => setStaffPin(e.target.value)}
-                    placeholder="Contoh: 123456 atau PIN_STAF_01"
-                    className="w-full px-3.5 py-2.5 bg-[#0A0A0A] border border-amber-500/40 text-amber-200 text-xs font-mono tracking-wider focus:border-amber-400 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowStaffPin(!showStaffPin)}
-                    className="absolute right-3.5 top-2.5 text-gray-400 hover:text-white cursor-pointer p-0.5"
-                    tabIndex={-1}
-                  >
-                    {showStaffPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-                <p className="text-[11px] text-gray-400">
-                  Staf akan login ke portal menggunakan <strong>Nama Staf</strong> dan <strong>PIN Khusus</strong> ini.
-                </p>
               </div>
 
               <div className="space-y-1.5">

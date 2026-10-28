@@ -60,7 +60,6 @@ import {
   deleteStaffFromFirestore,
   logAuditEvent,
   signInWithGoogle,
-  setCachedAccessToken,
   logOut,
   DEFAULT_STUDIO_CONFIG,
   INITIAL_ADMIN_STAFF,
@@ -72,7 +71,6 @@ const PACKAGES_STORAGE_KEY = 'dimensi_photo_packages_v1';
 const ADDONS_STORAGE_KEY = 'dimensi_photo_addons_v1';
 const PORTFOLIOS_STORAGE_KEY = 'dimensi_photo_portfolios_v1';
 const CONFIG_STORAGE_KEY = 'dimensi_studio_config_v1';
-const STAFF_STORAGE_KEY = 'dimensi_admin_staff_v1';
 const ADMIN_SESSION_KEY = 'dimensi_admin_session_v1';
 const MASTER_SESSION_KEY = 'dimensi_master_session_v1';
 const STUDIO_ADMIN_EMAIL = 'dimensi.idphoto@gmail.com';
@@ -153,20 +151,7 @@ export default function App() {
     return DEFAULT_STUDIO_CONFIG;
   });
 
-  const [staffList, setStaffList] = useState<AdminStaff[]>(() => {
-    try {
-      const saved = localStorage.getItem(STAFF_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore
-    }
-    return INITIAL_ADMIN_STAFF;
-  });
+  const [staffList, setStaffList] = useState<AdminStaff[]>(INITIAL_ADMIN_STAFF);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [reviews, setReviews] = useState<ReviewItem[]>(() => {
     try {
@@ -439,14 +424,6 @@ export default function App() {
       // ignore
     }
   }, [portfolios]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(staffList));
-    } catch {
-      // ignore
-    }
-  }, [staffList]);
 
   // Handle new booking creation
   const handleOrderCreated = async (newOrder: BookingOrder) => {
@@ -1043,18 +1020,10 @@ export default function App() {
 
   // Staff Handlers
   const handleAddStaff = async (staff: AdminStaff) => {
-    setStaffList((prev) => {
-      const next = [staff, ...prev];
-      try {
-        localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    setStaffList((prev) => [staff, ...prev]);
     try {
       await saveStaffToFirestore(staff);
-      await logAuditEvent(currentUser?.email || 'Master Admin', 'Tambah Staf Admin', `Staf baru ${staff.name} (${staff.role}) didaftarkan dengan PIN.`, 'staff');
+      await logAuditEvent(currentUser?.email || 'Master Admin', 'Tambah Staf Admin', `Staf baru ${staff.name} (${staff.role}) didaftarkan.`, 'staff');
       toast.success('Staf admin berhasil ditambahkan', staff.name);
     } catch (err) {
       console.error('Error adding staff:', err);
@@ -1063,19 +1032,11 @@ export default function App() {
   };
 
   const handleUpdateStaff = async (id: string, updates: Partial<AdminStaff>) => {
-    setStaffList((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, ...updates } : s));
-      try {
-        localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    setStaffList((prev) => prev.map((s) => (s.id === id ? { ...s, ...updates } : s)));
     try {
       await updateStaffInFirestore(id, updates);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Update Data Staf', `Data staf ID ${id} diperbarui.`, 'staff');
-      toast.success('Data staf & PIN berhasil diperbarui');
+      toast.success('Data staf berhasil diperbarui');
     } catch (err) {
       console.error('Error updating staff:', err);
       toast.error('Gagal memperbarui staf');
@@ -1083,15 +1044,7 @@ export default function App() {
   };
 
   const handleDeleteStaff = async (id: string) => {
-    setStaffList((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      try {
-        localStorage.setItem(STAFF_STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // ignore
-      }
-      return next;
-    });
+    setStaffList((prev) => prev.filter((s) => s.id !== id));
     try {
       await deleteStaffFromFirestore(id);
       await logAuditEvent(currentUser?.email || 'Master Admin', 'Hapus Staf Admin', `Staf ID ${id} telah dinonaktifkan/dihapus.`, 'staff');
@@ -1149,12 +1102,6 @@ export default function App() {
   const handleGoogleSignIn = async () => {
     try {
       const res = await signInWithGoogle();
-      if (res?.user) {
-        setCurrentUser(res.user);
-      }
-      if (res?.accessToken) {
-        setCachedAccessToken(res.accessToken);
-      }
       if (res?.user?.email) {
         const email = res.user.email.toLowerCase();
         const isMaster =
@@ -1169,11 +1116,9 @@ export default function App() {
           handleAdminAuthenticated(false);
         }
       }
-      toast.success('Google Drive Terhubung', `Akun: ${res?.user?.email || 'Google'}`);
       return res;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Google login error:', err);
-      toast.error('Gagal menghubungkan Google Drive', err?.message || 'Pastikan pop-up diizinkan dan akun Google dipilih.');
       throw err;
     }
   };
