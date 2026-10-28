@@ -30,13 +30,13 @@ export function exportOrdersToExcel(orders: BookingOrder[], filename = 'Daftar_K
     // Sesi 1
     'Tanggal Sesi 1': order.sessionDate,
     'Waktu Sesi 1': order.sessionTime,
-    'Tipe Lokasi 1': order.locationType === 'studio' ? 'Studio Dimensi' : order.locationType === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien',
+    'Tipe Lokasi 1': order.locationType === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien',
     'Alamat Lokasi 1': order.locationAddress,
     'Catatan Sesi 1': order.notes || '-',
     // Sesi 2
     'Tanggal Sesi 2': order.hasSecondSession && order.sessionDate2 ? order.sessionDate2 : '-',
     'Waktu Sesi 2': order.hasSecondSession && order.sessionTime2 ? order.sessionTime2 : '-',
-    'Tipe Lokasi 2': order.hasSecondSession && order.locationType2 ? (order.locationType2 === 'studio' ? 'Studio Dimensi' : order.locationType2 === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien') : '-',
+    'Tipe Lokasi 2': order.hasSecondSession && order.locationType2 ? (order.locationType2 === 'outdoor' ? 'Outdoor' : 'Venue / Gedung Klien') : '-',
     'Alamat Lokasi 2': order.hasSecondSession && order.locationAddress2 ? order.locationAddress2 : '-',
     'Catatan Sesi 2': order.hasSecondSession && order.notes2 ? order.notes2 : '-',
     'File Pilihan Cetak (Konsumen)': order.selectedPrintFiles || '-',

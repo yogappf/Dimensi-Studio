@@ -50,7 +50,6 @@ export const AdminGate: React.FC<AdminGateProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const [rateLimit, setRateLimit] = useState<RateLimitStatus>(getLoginRateLimitStatus);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Interval timer for countdown if currently locked out
   useEffect(() => {
@@ -141,21 +140,42 @@ export const AdminGate: React.FC<AdminGateProps> = ({
           staffAcceptedPins.includes(cleanInput));
 
       // Check registered active staff list
-      const matchedStaff = staffList.find(
-        (s) =>
-          s.status === 'active' &&
-          (s.email.toLowerCase() === uInput ||
-            s.name.toLowerCase() === uInput ||
-            s.id.toLowerCase() === uInput)
+      const matchedStaff = staffList.find((s) => {
+        if (s.status !== 'active') return false;
+        const sName = s.name.toLowerCase().trim();
+        const sEmail = s.email.toLowerCase().trim();
+        const sId = s.id.toLowerCase().trim();
+        return (
+          sName === uInput ||
+          sEmail === uInput ||
+          sId === uInput ||
+          sName.replace(/\s+/g, '') === uInput.replace(/\s+/g, '') ||
+          sName.includes(uInput) ||
+          uInput.includes(sName)
+        );
+      });
+
+      // Check if the staff has their own individual PIN assigned
+      const isIndividualStaffPin = Boolean(
+        matchedStaff &&
+        matchedStaff.pin &&
+        (matchedStaff.pin.trim() === pInput ||
+          matchedStaff.pin.trim().toLowerCase() === pInput.toLowerCase() ||
+          matchedStaff.pin.trim().toLowerCase().replace(/[\s\-_]/g, '') === cleanInput)
       );
 
-      if (isMasterPin) {
+      if (matchedStaff && isIndividualStaffPin) {
+        // Successfully authenticated with individual staff PIN
+        resetLoginAttempts();
+        setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
+        onAdminAuthenticated(matchedStaff.role === 'master');
+      } else if (isMasterPin) {
         // Master PIN grants Super Admin access (Otoritas Penuh)
         resetLoginAttempts();
         setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
         onAdminAuthenticated(true);
       } else if (isStaffPin) {
-        // Staff PIN grants Staff access (Hanya Pesanan & Operasional, tab Master terkunci)
+        // Global Staff PIN grants Staff access (Hanya Pesanan & Operasional, tab Master terkunci)
         resetLoginAttempts();
         setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
         onAdminAuthenticated(false);
@@ -170,7 +190,7 @@ export const AdminGate: React.FC<AdminGateProps> = ({
             `🚨 Keamanan: Terlalu banyak percobaan salah (${newStatus.attemptsCount}x). Sistem dikunci selama ${newStatus.remainingSeconds} detik.`
           );
         } else {
-          setErrorMsg('Username atau PIN tidak sesuai. Silakan periksa kembali kredensial Anda.');
+          setErrorMsg('Nama staf atau PIN tidak sesuai. Silakan periksa kembali nama staf dan PIN yang telah didaftarkan.');
         }
       }
     }, 200);
@@ -180,19 +200,6 @@ export const AdminGate: React.FC<AdminGateProps> = ({
     resetLoginAttempts();
     setRateLimit({ isLocked: false, remainingSeconds: 0, attemptsCount: 0 });
     setErrorMsg('');
-  };
-
-  const handleDirectGoogleLogin = async () => {
-    if (!onGoogleSignIn) return;
-    setIsGoogleLoading(true);
-    setErrorMsg('');
-    try {
-      await onGoogleSignIn();
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Gagal login via Google');
-    } finally {
-      setIsGoogleLoading(false);
-    }
   };
 
   return (
@@ -227,44 +234,6 @@ export const AdminGate: React.FC<AdminGateProps> = ({
             Akses resmi khusus tim manajemen dan fotografer Dimensi Studio.
           </p>
         </div>
-
-        {/* Google One-Click Login Button */}
-        {onGoogleSignIn && (
-          <div className="mb-5">
-            <button
-              type="button"
-              onClick={handleDirectGoogleLogin}
-              disabled={isGoogleLoading}
-              className="w-full py-2.5 px-4 bg-white/5 hover:bg-white/10 text-white border border-white/15 text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2.5 transition-all cursor-pointer shadow-sm disabled:opacity-50"
-              id="btn-google-login-admin-gate"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.4l3.7 2.9C6.5 7.1 9 5 12 5z"
-                />
-                <path
-                  fill="#4285F4"
-                  d="M23.5 12.3c0-.8-.1-1.7-.2-2.3H12v4.6h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.9z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.6 14.7c-.2-.7-.4-1.5-.4-2.7s.1-2 .4-2.7L1.9 6.4C.7 8.8 0 10.3 0 12s.7 3.2 1.9 5.6l3.7-2.9z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.1-6.4-5.3L1.9 16c1.8 3.8 5.6 7 10.1 7z"
-                />
-              </svg>
-              <span>{isGoogleLoading ? 'Menghubungkan Google...' : 'Login Cepat dengan Akun Google'}</span>
-            </button>
-            <div className="flex items-center gap-3 my-4">
-              <div className="flex-1 h-[1px] bg-white/10" />
-              <span className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">atau gunakan PIN</span>
-              <div className="flex-1 h-[1px] bg-white/10" />
-            </div>
-          </div>
-        )}
 
         {/* Rate Limit Lockout Banner */}
         {rateLimit.isLocked && (

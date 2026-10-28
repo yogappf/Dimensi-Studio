@@ -109,9 +109,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-2">
                 <p className="text-[10px] text-gray-400 uppercase tracking-[0.25em]">Photography & Visual Art</p>
                 {isFirebaseConnected && (
-                  <span className="inline-flex items-center gap-1 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                    Firebase
+                  <span
+                    className="inline-flex items-center gap-1 text-[8.5px] font-mono text-gray-500/60 opacity-40 hover:opacity-90 transition-opacity select-none cursor-default"
+                    title="Cloud Database & Backup Aktif"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-emerald-500/50"></span>
+                    <span className="tracking-widest uppercase">Cloud</span>
                   </span>
                 )}
               </div>

@@ -294,7 +294,7 @@ export function generateReceiptHTML(order: BookingOrder, studioConfig?: StudioCo
           </div>
           <div class="info-row">
             <span class="info-label">Lokasi:</span>
-            <span class="info-value" style="text-transform: uppercase;">${order.locationType || 'studio'}</span>
+            <span class="info-value" style="text-transform: uppercase;">${order.locationType || 'outdoor'}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Alamat:</span>

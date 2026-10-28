@@ -82,6 +82,8 @@ export interface PortfolioItem {
   imageUrl: string;
   imageUrls?: string[];
   description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DriveFileItem {
@@ -118,6 +120,7 @@ export interface AdminStaff {
   email: string;
   role: AdminRole;
   phone?: string;
+  pin?: string; // Individual PIN for staff login
   addedAt: string;
   lastActive?: string;
   status: 'active' | 'inactive';

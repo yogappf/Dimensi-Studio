@@ -95,6 +95,25 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
     setAccessToken(token);
   }, [currentUser]);
 
+  const handleConnectDrive = async () => {
+    if (!onGoogleSignIn) return;
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+      await onGoogleSignIn();
+      const token = getCachedAccessToken();
+      if (token) {
+        setAccessToken(token);
+        await loadFiles(currentFolderId, searchQuery);
+      }
+    } catch (err: any) {
+      console.error('Error connecting Google Drive:', err);
+      setErrorMessage(err?.message || 'Gagal menghubungkan Google Drive. Pastikan pop-up diizinkan.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Load files when folder or token changes
   useEffect(() => {
     if (accessToken) {
@@ -307,9 +326,10 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
             </div>
           ) : (
             <button
-              onClick={onGoogleSignIn}
+              onClick={handleConnectDrive}
+              disabled={isLoading}
               id="btn-connect-google-drive"
-              className="px-4 py-2.5 bg-white text-gray-800 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all border border-gray-300 cursor-pointer"
+              className="px-4 py-2.5 bg-white text-gray-800 hover:bg-gray-100 font-bold text-xs uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all border border-gray-300 cursor-pointer disabled:opacity-50"
             >
               <svg className="w-4 h-4" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
@@ -317,7 +337,7 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
               </svg>
-              <span>Hubungkan Google Drive</span>
+              <span>{isLoading ? 'Menghubungkan...' : 'Hubungkan Google Drive'}</span>
             </button>
           )}
 
@@ -598,11 +618,12 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
                 Klik tombol di bawah ini untuk menghubungkan akun Google Anda dengan izin akses Google Drive untuk mengelola dan membagikan folder foto studio.
               </p>
               <button
-                onClick={onGoogleSignIn}
-                className="px-6 py-3 bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors shadow-lg cursor-pointer inline-flex items-center gap-2"
+                onClick={handleConnectDrive}
+                disabled={isLoading}
+                className="px-6 py-3 bg-[#D4AF37] text-black font-bold text-xs uppercase tracking-wider hover:bg-[#E5C158] transition-colors shadow-lg cursor-pointer inline-flex items-center gap-2 disabled:opacity-50"
               >
                 <HardDrive className="w-4 h-4" />
-                <span>Masuk & Otorisasi Google Drive</span>
+                <span>{isLoading ? 'Menghubungkan...' : 'Masuk & Otorisasi Google Drive'}</span>
               </button>
             </div>
           ) : isLoading ? (
@@ -614,12 +635,20 @@ export const DriveManager: React.FC<DriveManagerProps> = ({
             <div className="p-6 bg-rose-500/10 border border-rose-500/30 text-center my-4">
               <AlertCircle className="w-8 h-8 text-rose-400 mx-auto mb-2" />
               <p className="text-xs text-rose-300 mb-3">{errorMessage}</p>
-              <button
-                onClick={() => loadFiles(currentFolderId)}
-                className="px-4 py-2 bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold hover:bg-rose-500/30 cursor-pointer"
-              >
-                Coba Lagi
-              </button>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={() => loadFiles(currentFolderId)}
+                  className="px-4 py-2 bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold hover:bg-rose-500/30 cursor-pointer"
+                >
+                  Coba Lagi
+                </button>
+                <button
+                  onClick={handleConnectDrive}
+                  className="px-4 py-2 bg-[#D4AF37] text-black text-xs font-bold hover:bg-white transition-colors cursor-pointer"
+                >
+                  Hubungkan Ulang Google Drive
+                </button>
+              </div>
             </div>
           ) : filteredFiles.length === 0 ? (
             <div className="py-16 text-center">

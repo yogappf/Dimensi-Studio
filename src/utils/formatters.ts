@@ -90,7 +90,7 @@ ${dpLabelText}
 📌 *Acara Pertama (Sesi 1)*:
 - Tanggal: ${formatDateIndonesian(order.sessionDate)}
 - Waktu: ${order.sessionTime}
-- Tipe Tempat: ${(order.locationType || 'studio').toUpperCase()}
+- Tipe Tempat: ${(order.locationType || 'outdoor').toUpperCase()}
 - Alamat: ${order.locationAddress}
 - Catatan: ${order.notes || '-'}`;
 
@@ -135,7 +135,7 @@ Kami dari *Dimensi Fotografi Studio* ingin mengonfirmasi pendaftaran / pesanan s
 
 *Jadwal Sesi*: ${formatDateIndonesian(order.sessionDate)}
 *Waktu Sesi*: ${order.sessionTime}
-*Lokasi*: ${order.locationAddress} (${(order.locationType || 'studio').toUpperCase()})
+*Lokasi*: ${order.locationAddress} (${(order.locationType || 'outdoor').toUpperCase()})
 
 Silakan lakukan transfer DP ke rekening resmi studio dan balas pesan ini ya Kak. Terima kasih! 🙏`;
 

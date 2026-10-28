@@ -318,8 +318,8 @@ export const INITIAL_CLIENT_ORDERS: BookingOrder[] = [
     totalPrice: 1100000,
     sessionDate: '2026-08-28',
     sessionTime: '13:30 WIB',
-    locationType: 'studio',
-    locationAddress: 'Dimensi Photo Studio (Studio 1 Main Area)',
+    locationType: 'venue',
+    locationAddress: 'Balai Samudera / Gedung Pertemuan Kelapa Gading',
     notes: 'Foto bersama orang tua dan adik. Ingin tema background beige aesthetic.',
     status: 'Terkonfirmasi & Terjadwal',
     paymentPreference: 'Lunas'
@@ -339,8 +339,8 @@ export const INITIAL_CLIENT_ORDERS: BookingOrder[] = [
     totalPrice: 1500000,
     sessionDate: '2026-08-25',
     sessionTime: '10:00 WIB',
-    locationType: 'studio',
-    locationAddress: 'Dimensi Studio - Tabletop Setup',
+    locationType: 'venue',
+    locationAddress: 'Outlet Cafe & Roastery Kenangan Senja, Tebet',
     notes: 'Produk cold brew botol kaca 6 varian rasa & biji kopi roasted dalam pouch hitam.',
     status: 'Proses Editing',
     paymentPreference: 'DP 50%'
@@ -381,8 +381,8 @@ export const INITIAL_CLIENT_ORDERS: BookingOrder[] = [
     totalPrice: 850000,
     sessionDate: '2026-08-17',
     sessionTime: '11:00 WIB',
-    locationType: 'studio',
-    locationAddress: 'Dimensi Studio - Family Living Room Set',
+    locationType: 'venue',
+    locationAddress: 'Kediaman Klien, Kebayoran Baru, Jakarta Selatan',
     notes: 'Ulang tahun pernikahan ke-10 bersama 3 anak.',
     status: 'Selesai',
     paymentPreference: 'Lunas'
